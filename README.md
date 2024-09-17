@@ -9,6 +9,7 @@ This project provides an ESP32 based music box with the following features:
 * MQTT status reporting / remote control
 * Home Assistant integration with device autodiscovery
 * Web-based user interface
+* Integrates into your local network with SSDP / mDNS protocol
 
 ## Supported hardware
 
