@@ -1,4 +1,4 @@
-# ESP32 Musicbox
+# ESP32 MusicBox
 
 This project provides an ESP32 based music box with the following features:
 
