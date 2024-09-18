@@ -4,6 +4,8 @@
 #include <Ministache.h>
 #include <WiFi.h>
 
+#include "logging.h"
+
 const char *INDEX_HTML = R"(
 <!DOCTYPE html>
 <html lang="en">
@@ -269,10 +271,6 @@ const char *INDEX_HTML = R"(
         <span class="status-icon">&#9881;</span>      
         <a href="/settings.html"><span>Device Configuration</span></a>      
       <div>
-      <div class="status-item">
-        <span class="status-icon">&#x1F50B;</span>
-        <span>Battery: 80%</span>
-      </div>
     </div>
   </div>
   <script>
@@ -445,10 +443,6 @@ const char *NETWORKS_HTML = R"(
         <span class="status-icon">&#9881;</span>      
         <a href="/settings.html"><span>Device Configuration</span></a>      
       <div>
-      <div class="status-item">
-        <span class="status-icon">&#x1F50B;</span>
-        <span>Battery: 80%</span>
-      </div>
     </div>
   </div>
 </body>
@@ -529,6 +523,19 @@ const char *SETTINGS_HTML = R"(
       color: black;
       text-decoration: none;
     }
+
+    #submit-button {
+        background-color: red;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    #error-message {
+        color: red;
+        margin-top: 10px;
+    }	
   </style>
 </head>
 <body>
@@ -537,9 +544,30 @@ const char *SETTINGS_HTML = R"(
     
     <div class="status-card">
       <h2>Settings as JSON</h2>
-      <textarea>{{settingsjson}}</textarea>
+      <form id="json-form" onsubmit="return validateAndSubmit();">
+        <textarea id="editor">{{settingsjson}}</textarea>
+        <div id="error-message"></div>
+        <button type="submit" id="submit-button">!! Save !!</button>
+      </form>	        
     </div>
     
+    <script>
+      function validateAndSubmit() {
+          var jsonString = document.getElementById('editor').value;
+          try {
+              JSON.parse(jsonString);
+              document.getElementById('error-message').textContent = '';
+              console.log('Form submitted with valid JSON:', jsonString);
+              // Here you would typically send the data to a server
+              return false;
+          } catch (e) {
+              console.log('Form submitted with valid JSON:', jsonString);
+              document.getElementById('error-message').textContent = 'Invalid JSON: ' + e.message;
+              return false;
+          }
+      }	
+    </script>
+
     <div class="system-status">
       <div class="status-item">
         <span class="status-icon">&#x1F4F6;</span>
@@ -549,10 +577,6 @@ const char *SETTINGS_HTML = R"(
         <span class="status-icon">&#9881;</span>      
         <a href="/settings.html"><span>Device Configuration</span></a>      
       <div>
-      <div class="status-item">
-        <span class="status-icon">&#x1F50B;</span>
-        <span>Battery: 80%</span>
-      </div>
     </div>
   </div>
 </body>
@@ -604,7 +628,7 @@ void Frontend::initialize()
     IPAddress apSubnetMask(255, 255, 255, 0);    
     if ((remote & apSubnetMask) == (apSubnet & apSubnetMask))
     {
-      Serial.println("(webserver) - Root request thru AP IP - Redirecting to configuration page");
+      INFO("Root request thru AP IP - Redirecting to configuration page");
       AsyncWebServerResponse *response = request->beginResponse(302, "text/html");
       response->addHeader("Cache-Control","no-cache, must-revalidate");            
       response->addHeader("Location","/settings.html");
@@ -793,7 +817,7 @@ void Frontend::initialize()
   // Toggle start stop
   this->server->on("/startstop", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
-    Serial.println("webserver() - /startstop received");
+    INFO("/startstop received");
     this->app->toggleActiveState();
 
     if (request->hasParam("path")) {
@@ -811,7 +835,7 @@ void Frontend::initialize()
   // Next
   this->server->on("/next", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
-    Serial.println("webserver() - /next received");
+    INFO("/next received");
     this->app->next();
 
     if (request->hasParam("path")) {
@@ -830,7 +854,7 @@ void Frontend::initialize()
   this->server->on("/previous", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
     
-    Serial.println("webserver() - /previous received");
+    INFO("/previous received");
     this->app->previous();
 
     if (request->hasParam("path")) {
@@ -849,7 +873,7 @@ void Frontend::initialize()
   this->server->on("/play", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
     
-    Serial.println("webserver() - /play received");
+    INFO("/play received");
 
     String path = request->getParam("path")->value();
     int index = request->getParam("index")->value().toInt();
@@ -865,7 +889,7 @@ void Frontend::initialize()
   this->server->on("/volume", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
     
-    Serial.println("webserver() - /volume received");
+    INFO("webserver() - /volume received");
 
     String path = request->getParam("path")->value();
     int volume = request->getParam("volume")->value().toInt();
@@ -880,7 +904,8 @@ void Frontend::initialize()
   // assign
   this->server->on("/assign", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
-    Serial.println("webserver() - /assign");
+    
+    INFO("/assign received");
 
     CommandData command;
     memset(&command, 0, 44);
@@ -909,7 +934,7 @@ void Frontend::initialize()
   // delete
   this->server->on("/delete", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
-    Serial.println("webserver() - /delete");
+    INFO("/delete received");
 
     this->app->clearTag();
 
@@ -928,14 +953,14 @@ void Frontend::initialize()
   this->server->on("/description.xml", HTTP_GET,
                    [&](AsyncWebServerRequest *request)
                    {
-                     Serial.println("webserver() - /description.xml received");
+                     INFO("/description.xml received");
 
                      request->send(200, "text/xml", app->getSSDPSchema());
                    });
 
   this->server->onNotFound([&](AsyncWebServerRequest *request)
                            {
-              Serial.println("webserver() - Not Found : " + request->url() + " Method " + request->methodToString());
+              INFO_VAR("Not Found : %s Method %s", request->url().c_str(), request->methodToString());
               request->send(404, "text/plain", "Not found"); });
 }
 

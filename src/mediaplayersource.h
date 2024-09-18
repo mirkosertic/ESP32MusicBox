@@ -2,18 +2,18 @@
 #define MEDIAPLAYERSOURCE_H
 
 #include <AudioTools.h>
-//#include <AudioLibs/AudioSourceSDMMC.h>
-#include <AudioLibs/AudioSourceSD.h>
+#include <AudioLibs/AudioSourceSDMMC.h>
+// #include <AudioLibs/AudioSourceSD.h>
 
-typedef std::function<void(Stream*)> ChangeIndexCallback;
+typedef std::function<void(Stream *)> ChangeIndexCallback;
 
-class MediaPlayerSource : public AudioSourceSD
+class MediaPlayerSource : public AudioSourceSDMMC
 {
 private:
     ChangeIndexCallback changeindexcallback;
 
 public:
-    MediaPlayerSource(const char *startFilePath = "/", const char *ext = ".mp3", int cspin = 5, bool setupIndex = true);
+    MediaPlayerSource(const char *startFilePath = "/", const char *ext = ".mp3", bool setupIndex = true);
 
     void setChangeIndexCallback(ChangeIndexCallback callback);
 

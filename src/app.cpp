@@ -6,6 +6,8 @@
 
 #include <esp_system.h>
 
+#include "logging.h"
+
 App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player)
 {
     this->tagscanner = tagscanner;
@@ -221,17 +223,17 @@ void App::announceMDNS()
     String technicalName = this->computeTechnicalName();
     if (MDNS.begin(technicalName))
     {
-        Serial.println("announceMDNS() - Registered as mDNS-Name " + technicalName);
+        INFO_VAR("Registered as mDNS-Name %s", technicalName.c_str());
     }
     else
     {
-        Serial.println("announceMDNS() - Registered as mDNS-Name " + technicalName + " failed");
+        WARN_VAR("Registered as mDNS-Name %s failed", technicalName.c_str());
     }
 }
 
 void App::announceSSDP()
 {
-    Serial.println("announceSSDP() - Initializing SSDP...");
+    INFO("Initializing SSDP...");
 
     SSDP.setSchemaURL("description.xml");
     SSDP.setHTTPPort(this->serverPort);
@@ -248,7 +250,14 @@ void App::announceSSDP()
 
     SSDP.setUUID(this->computeUUID().c_str());
 
-    SSDP.begin();
+    if (!SSDP.begin())
+    {
+        WARN("SSDP init failed!");
+    }
+    else
+    {
+        INFO("Done");
+    }
 }
 
 const char *App::getSSDPSchema()
@@ -258,7 +267,7 @@ const char *App::getSSDPSchema()
 
 void App::MQTT_init()
 {
-    Serial.println("MQTT_init() - Initializing MQTT client");
+    INFO("MQTT_init() - Initializing MQTT client");
     this->pubsubclient->setBufferSize(1024);
     this->pubsubclient->setServer(this->mqttBrokerHost.c_str(), this->mqttBrokerPort);
 
@@ -283,18 +292,16 @@ void App::MQTT_reconnect()
     int waitcount = 0;
     while (!this->pubsubclient->connected())
     {
-        Serial.print(F("MQTT_reconnect() - Attempting MQTT connection..."));
+        INFO("Attempting MQTT connection...");
         // Attempt to connect
         if (!this->pubsubclient->connect(this->computeTechnicalName().c_str(), this->mqttBrokerUsername.c_str(), this->mqttBrokerPassword.c_str()))
         {
-            Serial.print(F(" failed, rc="));
-            Serial.print(this->pubsubclient->state());
-            Serial.println(F(" try again..."));
+            WARN_VAR("failed, rc=%d, try again...", this->pubsubclient->state());
 
             waitcount++;
             if (waitcount > 20)
             {
-                Serial.println("Giving up, restarting.");
+                WARN("Giving up, restarting.");
                 ESP.restart();
             }
 
@@ -302,7 +309,7 @@ void App::MQTT_reconnect()
         }
         else
         {
-            Serial.println(F(" ok"));
+            INFO("ok");
         }
     }
     String subscribeWildCard = computeTechnicalName() + "/+/set";
@@ -344,9 +351,9 @@ String App::MQTT_announce_button(String buttonId, String title, String icon, con
     this->mqttCallbacks.push_back([commandTopic, clickHandler](String topic, String payload)
                                   {
             if (topic == commandTopic) {
-                Serial.println("button() - Got Message on " + commandTopic);
+                INFO_VAR("button() - Got Message on %s", commandTopic.c_str());
                 if (payload == "PRESS") {
-                    Serial.println("button() - Pressed!");
+                    INFO("Pressed!");
                     clickHandler();
                 }
             } });
@@ -394,7 +401,7 @@ String App::MQTT_announce_number(String numberId, String title, String icon, Str
     this->mqttCallbacks.push_back([commandTopic, changeHandler](String topic, String payload)
                                   {
             if (topic == commandTopic) {
-                Serial.println("number() - Changed");
+                INFO("Changed");
                 changeHandler(payload);
             } });
 
@@ -515,7 +522,7 @@ bool App::isActive()
     return this->player->isActive();
 }
 
-const char* App::currentTitle()
+const char *App::currentTitle()
 {
     return this->source->toStr();
 }
@@ -525,19 +532,22 @@ void App::setVolume(float volume)
     this->player->setVolume(volume);
 }
 
-void App::toggleActiveState() 
+void App::toggleActiveState()
 {
-    Serial.println("toggleActiveState() - Toggling player state");
+    INFO("Toggling player state");
     this->player->setActive(!this->player->isActive());
 }
 
 void App::previous()
 {
-    if (this->source->index() > 0) {
-        Serial.println("previous() - Previous title");
+    if (this->source->index() > 0)
+    {
+        INFO("Previous title");
         this->player->previous();
-    } else {
-        Serial.println("previous() - Already at the beginning!");
+    }
+    else
+    {
+        WARN("Already at the beginning!");
     }
 }
 

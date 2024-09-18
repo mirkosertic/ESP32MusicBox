@@ -1,5 +1,7 @@
 #include "tagscanner.h"
 
+#include "logging.h"
+
 String uint8ArrayToHexString(uint8_t *array, size_t length)
 {
     String result = "";
@@ -110,17 +112,13 @@ void TagScanner::scan()
             String uidStr = uint8ArrayToHexString(&tagscanneruid[0], tagscanneruidLength);
 
             // Display some basic information about the card
-            Serial.println("(nfcscanner) - Found an ISO14443A tag");
-            Serial.print("(nfcscanner) - UID Length: ");
-            Serial.print(tagscanneruidLength, DEC);
-            Serial.println(" bytes");
-            Serial.print("(nfcscanner) - UID Value: ");
-            Serial.println(uidStr);
+            INFO("Found an ISO14443A tag");
+            // INFO_VAR("UID Length: %d bytes, UID is %s", (int) tagscanneruidLength, uidStr.c_str());
 
             if (tagscanneruidLength == 4)
             {
                 // We probably have a Mifare Classic card ...
-                Serial.println("(nfcscanner) - Seems to be a Mifare Classic tag (4 byte UID)");
+                INFO("Seems to be a Mifare Classic tag (4 byte UID)");
 
                 String tagscannertagname = "Mifare Classic " + uidStr;
 
@@ -130,7 +128,7 @@ void TagScanner::scan()
                     std::lock_guard<std::mutex> lck(this->rwmutex);
                     if (this->datatowrite.size() > 0)
                     {
-                        Serial.println("(nfcscanner) - Data to write is pending");
+                        INFO("Data to write is pending");
 
                         this->pn532->PrintHexChar(&datatowrite[0], 16);
                         this->pn532->PrintHexChar(&datatowrite[16], 16);
@@ -151,7 +149,6 @@ void TagScanner::scan()
 
                     // Now we need to try to authenticate it for read/write access
                     // Try with the factory default KeyA: 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF
-                    Serial.println("(nfcscanner) - Trying to authenticate block 4 with default KEYA value");
                     uint8_t keya[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
                     // Start with block 4 (the first block of sector 1) since sector 0
@@ -164,25 +161,20 @@ void TagScanner::scan()
                         this->tagPresent = true;
                         this->currentTagName = tagscannertagname;
 
-                        // If you want to write something to block 4 to test with, uncomment
-                        // the following line and this text should be read back in a minute
-                        // memcpy(data, (const uint8_t[]){ 'a', 'd', 'a', 'f', 'r', 'u', 'i', 't', '.', 'c', 'o', 'm', 0, 0, 0, 0 }, sizeof data);
-                        // success = nfc.mifareclassic_WriteDataBlock (4, data);
-
-                        Serial.println("(nfcscanner) - Sector 1 (Blocks 4..7) has been authenticated");
+                        INFO("Sector 1 (Blocks 4..7) has been authenticated");
 
                         if (somethingtowrite)
                         {
-                            Serial.println("(nfcscanner) - Writing data to the tag");
+                            INFO("Writing data to the tag");
                             bool writestatusblock4 = this->pn532->mifareclassic_WriteDataBlock(4, &datatowrite[0]);
                             bool writestatusblock5 = this->pn532->mifareclassic_WriteDataBlock(5, &datatowrite[16]);
                             bool writestatusblock6 = this->pn532->mifareclassic_WriteDataBlock(6, &datatowrite[32]);
                             if (!writestatusblock4 || !writestatusblock5 || !writestatusblock6)
                             {
-                                Serial.println("(nfcscanner) - Error writing some blocks to the tag.");
+                                WARN("Error writing some blocks to the tag.");
                                 continue;
                             }
-                            Serial.println("(nfcscanner) - Data written");
+                            INFO("Data written");
 
                             this->noTagCallback();
                         }
@@ -193,7 +185,7 @@ void TagScanner::scan()
 
                         if (block4status && block5status && block6status)
                         {
-                            Serial.println("(nfcscanner) - Blocks 4-7 read");
+                            INFO("Blocks 4-7 read");
 
                             this->pn532->PrintHexChar(&data[0], 16);
                             this->pn532->PrintHexChar(&data[16], 16);
@@ -203,24 +195,24 @@ void TagScanner::scan()
 
                             if (validateDataPacket(tagdata))
                             {
-                                Serial.println("(nfcscanner) - Known tag detected");
+                                INFO("Known tag detected");
                                 this->tagDetectedCallback(true, true, &tagscanneruid[0], uidStr, tagscanneruidLength, tagscannertagname, tagdata);
                             }
                             else
                             {
-                                Serial.println("(nfcscanner) - Unknown tag detected");
+                                WARN("Unknown tag detected");
                                 this->tagDetectedCallback(true, false, &tagscanneruid[0], uidStr, tagscanneruidLength, tagscannertagname, tagdata);
                             }
                         }
                         else
                         {
-                            Serial.println("(nfcscanner) - Could not read all data blocks");
+                            WARN("Could not read all data blocks");
                             this->tagDetectedCallback(false, false, &tagscanneruid[0], uidStr, tagscanneruidLength, tagscannertagname, tagdata);
                         }
                     }
                     else
                     {
-                        Serial.println("(nfcscanner) - Card authentication error");
+                        WARN("Card authentication error");
                         this->tagDetectedCallback(false, false, &tagscanneruid[0], uidStr, tagscanneruidLength, tagscannertagname, tagdata);
                     }
                 }
@@ -229,7 +221,7 @@ void TagScanner::scan()
             if (tagscanneruidLength == 7)
             {
                 // We probably have a Mifare Ultralight card ...
-                Serial.println("(nfcscanner) - Seems to be a Mifare Ultralight tag (7 byte UID)");
+                INFO("Seems to be a Mifare Ultralight tag (7 byte UID)");
 
                 String tagscannertagname = "Mifare Ultralight " + uidStr;
 
@@ -257,7 +249,7 @@ void TagScanner::scan()
 
                     if (page4result && page5result && page6result && page7result && page8result && page9result && page10result && page11esult && page12result && page13result && page14result && page15result)
                     {
-                        Serial.println("(nfcscanner) - Pages 4-15 read");
+                        INFO("Pages 4-15 read");
 
                         this->pn532->PrintHexChar(&data[0], 16);
                         this->pn532->PrintHexChar(&data[16], 16);
@@ -267,18 +259,18 @@ void TagScanner::scan()
 
                         if (validateDataPacket(tagdata))
                         {
-                            Serial.println("(nfcscanner) - Known tag detected");
+                            INFO("Known tag detected");
                             this->tagDetectedCallback(true, true, &tagscanneruid[0], uidStr, tagscanneruidLength, tagscannertagname, tagdata);
                         }
                         else
                         {
-                            Serial.println("(nfcscanner) - Unknown tag detected");
+                            WARN("Unknown tag detected");
                             this->tagDetectedCallback(true, false, &tagscanneruid[0], uidStr, tagscanneruidLength, tagscannertagname, tagdata);
                         }
                     }
                     else
                     {
-                        Serial.println("(nfcscanner) - Could not read all data pages");
+                        WARN("Could not read all data pages");
                         this->tagDetectedCallback(false, false, &tagscanneruid[0], uidStr, tagscanneruidLength, tagscannertagname, tagdata);
                     }
                 }
@@ -288,7 +280,7 @@ void TagScanner::scan()
         {
             if (this->tagPresent)
             {
-                Serial.println("(nfcscanner) - No tag detected");
+                INFO("No tag detected");
                 this->noTagCallback();
                 this->tagPresent = false;
             }
@@ -304,16 +296,12 @@ void TagScanner::begin(TagDetectedCallback callback, NoTagCallback noTagCallback
     unsigned long versiondata = this->pn532->getFirmwareVersion();
     if (!versiondata)
     {
-        Serial.print("begin() - Could not find a board!");
+        WARN("Could not find a board!");
         while (true)
             ;
     }
-    Serial.print("begin() - Chip PN5 is ");
-    Serial.println((versiondata >> 24) & 0xFF, HEX);
-    Serial.print("begin() - Firmware ver. ");
-    Serial.print((versiondata >> 16) & 0xFF, DEC);
-    Serial.print('.');
-    Serial.println((versiondata >> 8) & 0xFF, DEC);
+    INFO_VAR("Chip PN5 is %d", (versiondata >> 24) & 0xFF);
+    INFO_VAR("Firmware ver. %d.%d", (versiondata >> 16) & 0xFF, (versiondata >> 8) & 0xFF);
     this->pn532->SAMConfig();
 
     xTaskCreate(scandispatcher, "NFC Scanner", 2048, this, 1, NULL);

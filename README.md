@@ -9,11 +9,13 @@ This project provides an ESP32 based music box with the following features:
 * MQTT status reporting / remote control
 * Home Assistant integration with device autodiscovery
 * Web-based user interface
-* Integrates into your local network with SSDP / mDNS protocol
+* Integrated into your local network with SSDP / mDNS protocol
 
 ## Supported hardware
 
-TBD
+* Ai-Thinker ESP32-A1S-Audiokit v2.2 (Tested with release A402)
+* PN532 RFID Reader (i2c-Mode)
+* Ai-Thinker Board uses SD-Card in MMC 1Bit Mode. Buttons on Board must be 1=off, 2=off, 3=on, 4=off, 5=off.
 
 ## Manual
 

@@ -19,6 +19,7 @@
 #include "mediaplayersource.h"
 #include "commands.h"
 #include "button.h"
+#include "logging.h"
 
 const char *CONFIGURATION_FILE = "/configuration.json";
 const char *STARTFILEPATH = "/";
@@ -28,7 +29,7 @@ const int HTTP_SERVER_PORT = 80;
 IPAddress apIP(192, 168, 4, 1);
 DNSServer dnsServer;
 
-MediaPlayerSource source(STARTFILEPATH, MP3_FILE, PIN_AUDIO_KIT_SD_CARD_CS, true);
+MediaPlayerSource source(STARTFILEPATH, MP3_FILE, true);
 AudioBoardStream kit(AudioKitEs8388V1);
 MP3DecoderHelix decoder;
 MediaPlayer player(source, kit, decoder);
@@ -39,11 +40,11 @@ String currentsongtopic;
 String playbackstatetopic;
 String volumestatetopic;
 
-Settings settings(&SD, CONFIGURATION_FILE);
+Settings settings(&SD_MMC, CONFIGURATION_FILE);
 
 TagScanner *tagscanner = new TagScanner(&Wire1, 19, 23);
 App *app = new App(tagscanner, &source, &player);
-Frontend *frontend = new Frontend(&SD, app, HTTP_SERVER_PORT, MP3_FILE, &settings);
+Frontend *frontend = new Frontend(&SD_MMC, app, HTTP_SERVER_PORT, MP3_FILE, &settings);
 
 std::vector<CommandData> commands;
 std::mutex commandsmutex;
@@ -66,10 +67,10 @@ Button prev(18, 300, [](ButtonAction action)
       float volume = app->getVolume();
       if (volume >= 0.01) 
       {
-        Serial.println("(button) Decrementing volume");        
+        INFO("Decrementing volume");
         app->setVolume(volume - 0.01);
       } else{
-        Serial.println("(button) Minimum volume reached"); 
+        INFO("Minimum volume reached");
       }
   } });
 
@@ -84,10 +85,10 @@ Button next(5, 300, [](ButtonAction action)
       float volume = app->getVolume();
       if (volume <= 0.99) 
       {
-        Serial.println("(button) Incrementing volume");
+        INFO("(button) Incrementing volume");
         app->setVolume(volume + 0.01);
       } else {
-        Serial.println("(button) Maximum volume reached");
+        INFO("(button) Maximum volume reached");
       }
   } });
 
@@ -97,10 +98,7 @@ void dummyhandler(bool, int, void *)
 
 void callbackPrintMetaData(MetaDataType type, const char *str, int len)
 {
-  Serial.print("==> ");
-  Serial.print(toStr(type));
-  Serial.print(": ");
-  Serial.println(str);
+  INFO_VAR("Detected Metadata %s : %s", toStr(type), str);
 }
 
 void rescanNetworks(void *parameter)
@@ -117,6 +115,8 @@ void setup()
 {
   Serial.begin(115200);
 
+  INFO("setup started!");
+
   esp_task_wdt_init(30, true); // 30 Sekunden Timeout
   esp_task_wdt_add(NULL);
 
@@ -132,7 +132,7 @@ void setup()
   auto cfg = kit.defaultConfig(TX_MODE);
   // sd_active is setting up SPI with the right SD pins by calling
   // SPI.begin(PIN_AUDIO_KIT_SD_CARD_CLK, PIN_AUDIO_KIT_SD_CARD_MISO, PIN_AUDIO_KIT_SD_CARD_MOSI, PIN_AUDIO_KIT_SD_CARD_CS);
-  cfg.sd_active = true;
+  cfg.sd_active = false; // We are running in SD 1bit mode!
   kit.begin(cfg);
 
   // AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
@@ -149,12 +149,13 @@ void setup()
   }
 
   WiFi.persistent(false);
-  WiFi.mode(WIFI_AP_STA);
+  WiFi.mode(WIFI_STA);
   WiFi.setHostname(app->computeTechnicalName().c_str());
   WiFi.setAutoReconnect(true);
-  WiFi.softAP(app->computeTechnicalName().c_str());
 
-  dnsServer.start(53, "*", apIP);
+  // WiFi.softAP(app->computeTechnicalName().c_str());
+
+  // dnsServer.start(53, "*", apIP);
 
   app->setMQTTBrokerHost(settings.getMQTTServer());
   app->setMQTTBrokerUsername(settings.getMQTTUsername());
@@ -162,7 +163,7 @@ void setup()
   app->setMQTTBrokerPort(settings.getMQTTPort());
 
   // Regularily check for better network connections
-  xTaskCreate(rescanNetworks, "WiFiScanner Scanner", 2048, NULL, 1, NULL);
+  xTaskCreatePinnedToCore(rescanNetworks, "WiFiScanner Scanner", 2048, NULL, 1, NULL, 0); // Pinned to core 0
 
   // Now we initialize the frontend with its webserver and routing
   frontend->initialize();
@@ -181,9 +182,9 @@ void setup()
 
   player.setMetadataCallback(callbackPrintMetaData);
 
-  Wire1.begin(3, 22, 10000); // Scan ok
+  Wire1.begin(3, 22, 100000); // Scan ok
 
-  Serial.println("setup() - NFC reader init");
+  INFO("NFC reader init");
   tagscanner->begin([](bool authenticated, bool knownTag, uint8_t *uid, String uidStr, uint8_t uidlength, String tagName, TagData tagdata)
                     {
     if (authenticated) 
@@ -235,7 +236,7 @@ void setup()
 
     app->noTagPresent(); });
 
-  Serial.println("setup() - NFC reader init finished");
+  INFO("NFC reader init finished");
 
   source.setChangeIndexCallback([](Stream *next)
                                 { 
@@ -280,7 +281,7 @@ void setup()
   // Init file browser
   strcpy(app->getCurrentPath(), "");
 
-  Serial.println("setup() - Init finish");
+  INFO("Init finish");
 }
 
 void wifiConnected()
@@ -289,8 +290,7 @@ void wifiConnected()
   char *status_ip = new char[40]();
   sprintf(status_ip, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 
-  Serial.print("wifiConnected() - Connected to WiFi network. Local IP: ");
-  Serial.println(status_ip);
+  INFO_VAR("Connected to WiFi network. Local IP: %s", status_ip);
 
   if (settings.isMQTTEnabled())
   {
@@ -322,14 +322,15 @@ void wifiConnected()
   app->announceMDNS();
   app->announceSSDP();
 
-  Serial.println("wifiConnected() - Init done");
+  INFO("Init done");
 }
 
 long lastbuttoncheck = millis();
 
 void loop()
 {
-  dnsServer.processNextRequest();
+  // dnsServer.processNextRequest();
+
   if (settings.isWiFiEnabled() && WiFi.status() == WL_CONNECTED && !app->isWifiConnected())
   {
     wifiConnected();
@@ -366,12 +367,7 @@ void loop()
       if (command.command == COMMAND_PLAY_DIRECTORY)
       {
         String path(String((char *)&command.path[0]));
-        Serial.print("loop() - Playing ");
-        Serial.print(path);
-        Serial.print(" from index ");
-        Serial.print(command.index);
-        Serial.print(" with volume ");
-        Serial.println(command.volume);
+        INFO_VAR("Playing %s from index %d with volume %d", path.c_str(), (int)command.index, (int)command.volume);
 
         player.setVolume(command.volume / 100.0);
         player.setActive(false);
@@ -384,12 +380,12 @@ void loop()
       }
       else
       {
-        Serial.println(String("loop() - Unknown command : ") + command.command);
+        WARN_VAR("Unknown command : %d", command.command);
       }
     }
     else
     {
-      Serial.println(String("loop() - Unknown version : ") + command.version);
+      WARN_VAR("Unknown version : %d", command.version);
     }
   }
 

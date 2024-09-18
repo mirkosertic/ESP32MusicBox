@@ -4,6 +4,8 @@
 #include <ArduinoJson.h>
 #include <WiFi.h>
 
+#include "logging.h"
+
 Settings::Settings(FS *fs, String configurationfilename)
 {
   this->fs = fs;
@@ -15,7 +17,7 @@ bool Settings::readFromConfig()
   File configFile = this->fs->open(configurationfilename, FILE_READ);
   if (!configFile)
   {
-    Serial.println("readFromConfig() - No configuration file detected!");
+    INFO("No configuration file detected!");
     return false;
   }
   else
@@ -27,14 +29,15 @@ bool Settings::readFromConfig()
 
     if (error)
     {
-      Serial.println("readFromConfig() - Could not read configuration file!");
+      WARN("Could not read configuration file!");
       return false;
     }
     else
     {
-      Serial.println("readFromConfig() - Configuration file read :");
+      String data;
+      serializeJsonPretty(document, data);
 
-      serializeJsonPretty(document, Serial);
+      INFO_VAR("Configuration file read : %s", data.c_str());
 
       JsonObject network = document["network"].as<JsonObject>();
       this->wlan_enabled = network["enabled"].as<bool>();
@@ -57,7 +60,6 @@ bool Settings::readFromConfig()
       this->mqtt_username = mqtt["user"].as<String>();
       this->mqtt_password = mqtt["password"].as<String>();
 
-      Serial.println();
       return true;
     }
   }
@@ -65,7 +67,8 @@ bool Settings::readFromConfig()
 
 bool Settings::writeToConfig()
 {
-  Serial.println("writeToConfig() - Writing configuration to FS..");
+  INFO("Writing configuration to FS..");
+
   JsonDocument doc;
   JsonObject network = doc["network"].to<JsonObject>();
   network["enabled"] = this->wlan_enabled;
@@ -92,7 +95,7 @@ bool Settings::writeToConfig()
   File configFile = this->fs->open(configurationfilename, FILE_WRITE, true);
   if (!configFile)
   {
-    Serial.println("writeToConfig() - Could not create config file!");
+    WARN("Could not create config file!");
   }
   else
   {
@@ -107,11 +110,13 @@ void Settings::initializeWifiFromSettings()
 {
   if (this->wlan_enabled)
   {
-    Serial.println("initializeWifiFromSettings() - Connecting to Wifi...");
+    INFO("Connecting to Wifi...");
+    WiFi.disconnect();
     WiFi.begin(this->wlan_sid, this->wlan_pwd, this->wlan_channel, this->wlan_bssid);
   }
-  else{
-    Serial.println("initializeWifiFromSettings() - Wifi is disabled!");    
+  else
+  {
+    WARN("WiFi is disabled!");
   }
 }
 
@@ -172,27 +177,32 @@ String Settings::getSettingsAsJson()
 
 void Settings::rescanForBetterNetworksAndReconfigure()
 {
-  Serial.println("rescanForBetterNetworksAndReconfigure() - Scanning for WiFi networks...");
-  int numNetworks = WiFi.scanNetworks();
-
-/*  WiFi.scanNetworks(true);
-
-  delay(100);
+  INFO("Scanning for WiFi networks...");
   int numNetworks = WiFi.scanComplete();
-  while(numNetworks < 0) {
-    if (numNetworks == WIFI_SCAN_FAILED) {
-      Serial.println("rescanForBetterNetworksAndReconfigure() - Scan failed!");
-      WiFi.scanDelete();
-      return;
-    }
-    delay(100);
+  if (numNetworks == WIFI_SCAN_FAILED)
+  {
+    WiFi.scanNetworks(true);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
     numNetworks = WiFi.scanComplete();
-  }*/
+  }
+  while (numNetworks == WIFI_SCAN_RUNNING)
+  {
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    numNetworks = WiFi.scanComplete();
+    ;
+  }
+
+  if (numNetworks == WIFI_SCAN_FAILED)
+  {
+    WARN("Scan failed!");
+    WiFi.scanDelete();
+    return;
+  }
 
   if (numNetworks == 0)
   {
-    Serial.println("rescanForBetterNetworksAndReconfigure() - No networks found");
-    WiFi.scanDelete();    
+    WARN("No networks found");
+    WiFi.scanDelete();
     return;
   }
 
@@ -213,7 +223,7 @@ void Settings::rescanForBetterNetworksAndReconfigure()
 
   if (bestIndex != -1 && bssid[0] != currentbssid[0] && bssid[1] != currentbssid[1] && bssid[2] != currentbssid[2] && bssid[3] != currentbssid[3] && bssid[4] != currentbssid[4] && bssid[5] != currentbssid[5])
   {
-    Serial.println("rescanForBetterNetworksAndReconfigure() - Better AP found. Reconnecting...");
+    INFO("Better AP found. Reconnecting...");
 
     uint8_t *bssid = WiFi.BSSID(bestIndex);
     this->wlan_channel = WiFi.channel(bestIndex);
@@ -226,10 +236,12 @@ void Settings::rescanForBetterNetworksAndReconfigure()
 
     WiFi.disconnect();
     WiFi.begin(this->wlan_sid, this->wlan_pwd, this->wlan_channel, this->wlan_bssid);
+
+    this->writeToConfig();
   }
   else
   {
-    Serial.println("rescanForBetterNetworksAndReconfigure() - No better AP found");
+    INFO("No better AP found");
   }
 
   WiFi.scanDelete();
