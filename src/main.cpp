@@ -9,7 +9,7 @@
 #include <vector>
 #include <mutex>
 #include <ArduinoJson.h>
-#include <DNSServer.h>
+// #include <DNSServer.h>
 
 #include "settings.h"
 #include "tagscanner.h"
@@ -20,14 +20,16 @@
 #include "commands.h"
 #include "button.h"
 #include "logging.h"
+#include "voiceassistant.h"
+#include "pins.h"
 
 const char *CONFIGURATION_FILE = "/configuration.json";
 const char *STARTFILEPATH = "/";
 const char *MP3_FILE = ".mp3";
 const int HTTP_SERVER_PORT = 80;
 
-IPAddress apIP(192, 168, 4, 1);
-DNSServer dnsServer;
+// IPAddress apIP(192, 168, 4, 1);
+// DNSServer dnsServer;
 
 MediaPlayerSource source(STARTFILEPATH, MP3_FILE, true);
 AudioBoardStream kit(AudioKitEs8388V1);
@@ -42,21 +44,22 @@ String volumestatetopic;
 
 Settings settings(&SD_MMC, CONFIGURATION_FILE);
 
-TagScanner *tagscanner = new TagScanner(&Wire1, 19, 23);
-App *app = new App(tagscanner, &source, &player);
+TagScanner *tagscanner = new TagScanner(&Wire1, PN532_IRQ, PN532_RST);
+VoiceAssistant *assistant = new VoiceAssistant(&kit);
+App *app = new App(tagscanner, &source, &player, assistant, &settings);
 Frontend *frontend = new Frontend(&SD_MMC, app, HTTP_SERVER_PORT, MP3_FILE, &settings);
 
 std::vector<CommandData> commands;
 std::mutex commandsmutex;
 
-Button play(23, 300, [](ButtonAction action)
+Button play(GPIO_STARTSTOP, 300, [](ButtonAction action)
             {
   if (action == PRESSED)
   {
     app->toggleActiveState();
   } });
 
-Button prev(18, 300, [](ButtonAction action)
+Button prev(GPIO_PREVIOUS, 300, [](ButtonAction action)
             {
   if (action == RELEASED) 
   {
@@ -74,7 +77,7 @@ Button prev(18, 300, [](ButtonAction action)
       }
   } });
 
-Button next(5, 300, [](ButtonAction action)
+Button next(GPIO_NEXT, 300, [](ButtonAction action)
             {
   if (action == RELEASED)
   {
@@ -85,30 +88,21 @@ Button next(5, 300, [](ButtonAction action)
       float volume = app->getVolume();
       if (volume <= 0.99) 
       {
-        INFO("(button) Incrementing volume");
+        INFO("Incrementing volume");
         app->setVolume(volume + 0.01);
       } else {
-        INFO("(button) Maximum volume reached");
+        INFO("Maximum volume reached");
       }
   } });
 
 void dummyhandler(bool, int, void *)
 {
+  INFO("Button pressed!");
 }
 
 void callbackPrintMetaData(MetaDataType type, const char *str, int len)
 {
   INFO_VAR("Detected Metadata %s : %s", toStr(type), str);
-}
-
-void rescanNetworks(void *parameter)
-{
-  while (true)
-  {
-    settings.rescanForBetterNetworksAndReconfigure();
-
-    vTaskDelay(60000 / portTICK_PERIOD_MS);
-  }
 }
 
 void setup()
@@ -129,10 +123,12 @@ void setup()
   app->setServerPort(HTTP_SERVER_PORT);
 
   // setup output
-  auto cfg = kit.defaultConfig(TX_MODE);
+  auto cfg = kit.defaultConfig(RXTX_MODE);
   // sd_active is setting up SPI with the right SD pins by calling
   // SPI.begin(PIN_AUDIO_KIT_SD_CARD_CLK, PIN_AUDIO_KIT_SD_CARD_MISO, PIN_AUDIO_KIT_SD_CARD_MOSI, PIN_AUDIO_KIT_SD_CARD_CS);
-  cfg.sd_active = false; // We are running in SD 1bit mode!
+  cfg.sd_active = false;              // We are running in SD 1bit mode, so no init needs to be done here!
+  cfg.input_device = ADC_INPUT_LINE2; // input from microphone
+
   kit.begin(cfg);
 
   // AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
@@ -152,7 +148,6 @@ void setup()
   WiFi.mode(WIFI_STA);
   WiFi.setHostname(app->computeTechnicalName().c_str());
   WiFi.setAutoReconnect(true);
-
   // WiFi.softAP(app->computeTechnicalName().c_str());
 
   // dnsServer.start(53, "*", apIP);
@@ -162,8 +157,9 @@ void setup()
   app->setMQTTBrokerPassword(settings.getMQTTPassword());
   app->setMQTTBrokerPort(settings.getMQTTPort());
 
-  // Regularily check for better network connections
-  xTaskCreatePinnedToCore(rescanNetworks, "WiFiScanner Scanner", 2048, NULL, 1, NULL, 0); // Pinned to core 0
+  app->setVoiceAssistantHost(settings.getVoiceAssistantServer());
+  app->setVoiceAssistantPort(settings.getVoiceAssistantPort());
+  app->setVoiceAssistantToken(settings.getVoiceAssistantAccessToken());
 
   // Now we initialize the frontend with its webserver and routing
   frontend->initialize();
@@ -182,7 +178,7 @@ void setup()
 
   player.setMetadataCallback(callbackPrintMetaData);
 
-  Wire1.begin(3, 22, 100000); // Scan ok
+  Wire1.begin(WIRE_SDA, WIRE_SCL, 100000); // Scan ok
 
   INFO("NFC reader init");
   tagscanner->begin([](bool authenticated, bool knownTag, uint8_t *uid, String uidStr, uint8_t uidlength, String tagName, TagData tagdata)
@@ -287,10 +283,8 @@ void setup()
 void wifiConnected()
 {
   IPAddress ip = WiFi.localIP();
-  char *status_ip = new char[40]();
-  sprintf(status_ip, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 
-  INFO_VAR("Connected to WiFi network. Local IP: %s", status_ip);
+  INFO_VAR("Connected to WiFi network. Local IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 
   if (settings.isMQTTEnabled())
   {
@@ -327,6 +321,9 @@ void wifiConnected()
 
 long lastbuttoncheck = millis();
 
+long startup = millis();
+bool rescandone = false;
+
 void loop()
 {
   // dnsServer.processNextRequest();
@@ -338,10 +335,14 @@ void loop()
 
     settings.writeToConfig();
   }
+  else if (WiFi.status() != WL_CONNECTED && !app->isWifiConnected() && millis() - startup > 30000 && !rescandone)
+  {
+    // Took more than 30 seconds after startup the get a WiFi connection, we try to find a better AP.
+    rescandone = true;
+    settings.rescanForBetterNetworksAndReconfigure();
+  }
 
   app->loop();
-
-  player.copy();
 
   // Check buttons only every 15ms
   long currenttime = millis();

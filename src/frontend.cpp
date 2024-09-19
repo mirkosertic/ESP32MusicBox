@@ -544,8 +544,8 @@ const char *SETTINGS_HTML = R"(
     
     <div class="status-card">
       <h2>Settings as JSON</h2>
-      <form id="json-form" onsubmit="return validateAndSubmit();">
-        <textarea id="editor">{{settingsjson}}</textarea>
+      <form action="/updateconfig" id="json-form" onsubmit="return validateAndSubmit();">
+        <textarea id="editor" name="configdata">{{settingsjson}}</textarea>
         <div id="error-message"></div>
         <button type="submit" id="submit-button">!! Save !!</button>
       </form>	        
@@ -558,8 +558,7 @@ const char *SETTINGS_HTML = R"(
               JSON.parse(jsonString);
               document.getElementById('error-message').textContent = '';
               console.log('Form submitted with valid JSON:', jsonString);
-              // Here you would typically send the data to a server
-              return false;
+              return true;
           } catch (e) {
               console.log('Form submitted with valid JSON:', jsonString);
               document.getElementById('error-message').textContent = 'Invalid JSON: ' + e.message;
@@ -813,6 +812,18 @@ void Frontend::initialize()
     AsyncWebServerResponse *response = request->beginResponse(200, "text/html", output);
     response->addHeader("Cache-Control","no-cache, must-revalidate");
     request->send(response); });
+
+  this->server->on("/updateconfig", HTTP_GET, [this](AsyncWebServerRequest *request)
+                   {
+                     String jsonconfig = request->getParam("configdata")->value();
+                     INFO_VAR("Got new config payload : %s", jsonconfig.c_str());
+
+                     this->settings->setSettingsFromJson(jsonconfig);
+
+                     AsyncWebServerResponse *response = request->beginResponse(302, "text/html");
+                     response->addHeader("Cache-Control", "no-cache, must-revalidate");
+                     response->addHeader("Location", "/settings.html");
+                     request->send(response); });
 
   // Toggle start stop
   this->server->on("/startstop", HTTP_GET, [this](AsyncWebServerRequest *request)

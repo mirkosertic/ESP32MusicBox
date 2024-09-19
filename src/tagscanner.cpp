@@ -304,7 +304,7 @@ void TagScanner::begin(TagDetectedCallback callback, NoTagCallback noTagCallback
     INFO_VAR("Firmware ver. %d.%d", (versiondata >> 16) & 0xFF, (versiondata >> 8) & 0xFF);
     this->pn532->SAMConfig();
 
-    xTaskCreate(scandispatcher, "NFC Scanner", 2048, this, 1, NULL);
+    xTaskCreate(scandispatcher, "NFC Scanner", 2048, this, 20, NULL);
 }
 
 void TagScanner::write(uint8_t *userdata, uint8_t size)

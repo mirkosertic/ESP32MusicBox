@@ -2,7 +2,7 @@
 
 String LoggingFormatString(const char *format, ...);
 
-#define LOGGING_ENABLED 1
+#define LOGGING_ENABLED true
 
 #ifdef LOGGING_ENABLED
 #define INFO(msg) Serial.printf("[INFO] %d %s:%s():%d - %s\n", millis(), __FILE__, __func__, __LINE__, msg)

@@ -12,6 +12,8 @@
 #include "commands.h"
 #include "mediaplayer.h"
 #include "mediaplayersource.h"
+#include "voiceassistant.h"
+#include "settings.h"
 
 typedef std::function<void(String, String)> MQTTCallback;
 
@@ -47,9 +49,15 @@ private:
 
     MediaPlayerSource *source;
     MediaPlayer *player;
+    VoiceAssistant *assistant;
+    Settings *settings;
+
+    String voiceAssistantHost;
+    String voiceAssistantToken;
+    int voiceAssistantPort;
 
 public:
-    App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player);
+    App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, VoiceAssistant *assistant, Settings *settings);
 
     ~App();
 
@@ -101,6 +109,12 @@ public:
 
     void setMQTTBrokerPort(int mqttBrokerPort);
 
+    void setVoiceAssistantHost(String host);
+
+    void setVoiceAssistantToken(String token);
+
+    void setVoiceAssistantPort(int port);
+
     void announceMDNS();
 
     void announceSSDP();
@@ -131,7 +145,7 @@ public:
 
     bool isActive();
 
-    const char* currentTitle();
+    const char *currentTitle();
 
     void setVolume(float volume);
 

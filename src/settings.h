@@ -21,6 +21,11 @@ private:
     String mqtt_username = MQTT_USERNAME;
     String mqtt_password = MQTT_PASSWORD;
 
+    bool voice_enabled = VOICE_ENABLED;
+    String voice_server = VOICE_SERVER;
+    int voice_port = VOICE_PORT;
+    String voice_token = VOICE_TOKEN;
+
 public:
     Settings(FS *fs, String configurationfilename);
 
@@ -35,11 +40,17 @@ public:
     String getMQTTUsername();
     String getMQTTPassword();
 
+    bool isVoiceAssistantEnabled();
+    String getVoiceAssistantServer();
+    int getVoiceAssistantPort();
+    String getVoiceAssistantAccessToken();
+
     void initializeWifiFromSettings();
 
     void rescanForBetterNetworksAndReconfigure();
 
     String getSettingsAsJson();
+    void setSettingsFromJson(String json);
 };
 
 #endif

@@ -8,7 +8,7 @@
 
 #include "logging.h"
 
-App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player)
+App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, VoiceAssistant *assistant, Settings *settings)
 {
     this->tagscanner = tagscanner;
     this->espclient = new WiFiClient();
@@ -22,19 +22,29 @@ App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player)
 
     this->source = source;
     this->player = player;
+    this->assistant = assistant;
+    this->settings = settings;
 }
 
 App::~App()
 {
     delete this->pubsubclient;
-    ;
     delete this->espclient;
-    ;
 }
 
 void App::setWifiConnected()
 {
     this->wificonnected = true;
+    if (this->settings->isVoiceAssistantEnabled())
+    {
+        this->assistant->begin(this->voiceAssistantHost, this->voiceAssistantPort, this->voiceAssistantToken, [this](HAState state)
+                               {
+            if (state == AUTHENTICATED || state == FINISHED) {
+                INFO("Got state change from VoiceAssistant, starting a new pipeline");
+                this->assistant->reset();
+                this->assistant->startPipeline(true);
+            } });
+    }
 }
 
 bool App::isWifiConnected()
@@ -218,6 +228,21 @@ void App::setMQTTBrokerPort(int mqttBrokerPort)
     this->mqttBrokerPort = mqttBrokerPort;
 }
 
+void App::setVoiceAssistantHost(String host)
+{
+    this->voiceAssistantHost = host;
+}
+
+void App::setVoiceAssistantToken(String token)
+{
+    this->voiceAssistantToken = token;
+}
+
+void App::setVoiceAssistantPort(int port)
+{
+    this->voiceAssistantPort = port;
+}
+
 void App::announceMDNS()
 {
     String technicalName = this->computeTechnicalName();
@@ -267,7 +292,7 @@ const char *App::getSSDPSchema()
 
 void App::MQTT_init()
 {
-    INFO("MQTT_init() - Initializing MQTT client");
+    INFO_VAR("MQTT_init() - Initializing MQTT client to %s:%d", this->settings->getMQTTServer().c_str(), this->settings->getMQTTPort());
     this->pubsubclient->setBufferSize(1024);
     this->pubsubclient->setServer(this->mqttBrokerHost.c_str(), this->mqttBrokerPort);
 
@@ -292,7 +317,7 @@ void App::MQTT_reconnect()
     int waitcount = 0;
     while (!this->pubsubclient->connected())
     {
-        INFO("Attempting MQTT connection...");
+        INFO_VAR("Attempting MQTT connection with user %s ...", this->settings->getMQTTUsername().c_str());
         // Attempt to connect
         if (!this->pubsubclient->connect(this->computeTechnicalName().c_str(), this->mqttBrokerUsername.c_str(), this->mqttBrokerPassword.c_str()))
         {
@@ -312,7 +337,7 @@ void App::MQTT_reconnect()
             INFO("ok");
         }
     }
-    String subscribeWildCard = computeTechnicalName() + "/+/set";
+    String subscribeWildCard = this->computeTechnicalName() + "/+/set";
     this->pubsubclient->subscribe(subscribeWildCard.c_str());
 }
 
@@ -497,7 +522,14 @@ void App::loop()
         }
 
         this->pubsubclient->loop();
+
+        if (this->settings->isVoiceAssistantEnabled())
+        {
+            this->assistant->loop();
+        }
     }
+
+    this->player->copy();
 }
 
 void App::writeCommandToTag(CommandData command)

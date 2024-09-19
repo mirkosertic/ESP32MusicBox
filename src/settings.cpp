@@ -41,8 +41,8 @@ bool Settings::readFromConfig()
 
       JsonObject network = document["network"].as<JsonObject>();
       this->wlan_enabled = network["enabled"].as<bool>();
-      this->wlan_sid = network["sid"].as<String>();
-      this->wlan_pwd = network["pwd"].as<String>();
+      this->wlan_sid = String(network["sid"].as<String>());
+      this->wlan_pwd = String(network["pwd"].as<String>());
       this->wlan_channel = network["channel"].as<int32_t>();
 
       JsonArray bssid = network["bssid"].as<JsonArray>();
@@ -55,10 +55,16 @@ bool Settings::readFromConfig()
 
       JsonObject mqtt = document["mqtt"].as<JsonObject>();
       this->mqtt_enabled = mqtt["enabled"].as<bool>();
-      this->mqtt_server = mqtt["host"].as<String>();
+      this->mqtt_server = String(mqtt["host"].as<String>());
       this->mqtt_port = mqtt["port"].as<int>();
-      this->mqtt_username = mqtt["user"].as<String>();
-      this->mqtt_password = mqtt["password"].as<String>();
+      this->mqtt_username = String(mqtt["user"].as<String>());
+      this->mqtt_password = String(mqtt["password"].as<String>());
+
+      JsonObject assistant = document["voiceassistant"].as<JsonObject>();
+      this->voice_enabled = assistant["enabled"].as<bool>();
+      this->voice_server = String(assistant["host"].as<String>());
+      this->voice_port = mqtt["port"].as<int>();
+      this->voice_token = String(assistant["accesstoken"].as<String>());
 
       return true;
     }
@@ -92,6 +98,12 @@ bool Settings::writeToConfig()
   mqtt["user"] = this->mqtt_username;
   mqtt["password"] = this->mqtt_password;
 
+  JsonObject voiceassistant = doc["voiceassistant"].to<JsonObject>();
+  voiceassistant["enabled"] = this->voice_enabled;
+  voiceassistant["host"] = this->voice_server;
+  voiceassistant["port"] = this->voice_port;
+  voiceassistant["accesstoken"] = this->voice_token;
+
   File configFile = this->fs->open(configurationfilename, FILE_WRITE, true);
   if (!configFile)
   {
@@ -110,9 +122,17 @@ void Settings::initializeWifiFromSettings()
 {
   if (this->wlan_enabled)
   {
-    INFO("Connecting to Wifi...");
     WiFi.disconnect();
-    WiFi.begin(this->wlan_sid, this->wlan_pwd, this->wlan_channel, this->wlan_bssid);
+    if (this->wlan_bssid[0] == 0 && this->wlan_bssid[1] == 0 && this->wlan_bssid[2] == 0 && this->wlan_bssid[3] == 0 && this->wlan_bssid[4] == 0 && this->wlan_bssid[5] == 0)
+    {
+      INFO("Connecting to Wifi with SID...");
+      WiFi.begin(this->wlan_sid, this->wlan_pwd);
+    }
+    else
+    {
+      INFO("Connecting to Wifi with last known AP...");
+      WiFi.begin(this->wlan_sid, this->wlan_pwd, this->wlan_channel, this->wlan_bssid);
+    }
   }
   else
   {
@@ -145,6 +165,26 @@ bool Settings::isMQTTEnabled()
   return this->mqtt_enabled;
 }
 
+bool Settings::isVoiceAssistantEnabled()
+{
+  return this->voice_enabled;
+}
+
+String Settings::getVoiceAssistantServer()
+{
+  return this->voice_server;
+}
+
+int Settings::getVoiceAssistantPort()
+{
+  return this->voice_port;
+}
+
+String Settings::getVoiceAssistantAccessToken()
+{
+  return this->voice_token;
+}
+
 String Settings::getSettingsAsJson()
 {
   JsonDocument doc;
@@ -169,10 +209,59 @@ String Settings::getSettingsAsJson()
   mqtt["user"] = this->mqtt_username;
   mqtt["password"] = this->mqtt_password;
 
+  JsonObject voiceassistant = doc["voiceassistant"].to<JsonObject>();
+  voiceassistant["enabled"] = this->voice_enabled;
+  voiceassistant["host"] = this->voice_server;
+  voiceassistant["port"] = this->voice_port;
+  voiceassistant["accesstoken"] = this->voice_token;
+
   String result;
   serializeJsonPretty(doc, result);
 
   return result;
+}
+
+void Settings::setSettingsFromJson(String json)
+{
+  JsonDocument document;
+  DeserializationError error = deserializeJson(document, json);
+  if (error)
+  {
+    WARN("Could not parse json data.");
+  }
+  else
+  {
+    INFO("Updating configuration from JSON.");
+
+    JsonObject network = document["network"].as<JsonObject>();
+    this->wlan_enabled = network["enabled"].as<bool>();
+    this->wlan_sid = String(network["sid"].as<String>());
+    this->wlan_pwd = String(network["pwd"].as<String>());
+    this->wlan_channel = network["channel"].as<int32_t>();
+
+    JsonArray bssid = network["bssid"].as<JsonArray>();
+    this->wlan_bssid[0] = bssid[0].as<uint8_t>();
+    this->wlan_bssid[1] = bssid[1].as<uint8_t>();
+    this->wlan_bssid[2] = bssid[2].as<uint8_t>();
+    this->wlan_bssid[3] = bssid[3].as<uint8_t>();
+    this->wlan_bssid[4] = bssid[4].as<uint8_t>();
+    this->wlan_bssid[5] = bssid[5].as<uint8_t>();
+
+    JsonObject mqtt = document["mqtt"].as<JsonObject>();
+    this->mqtt_enabled = mqtt["enabled"].as<bool>();
+    this->mqtt_server = String(mqtt["host"].as<String>());
+    this->mqtt_port = mqtt["port"].as<int>();
+    this->mqtt_username = String(mqtt["user"].as<String>());
+    this->mqtt_password = String(mqtt["password"].as<String>());
+
+    JsonObject assistant = document["voiceassistant"].as<JsonObject>();
+    this->voice_enabled = assistant["enabled"].as<bool>();
+    this->voice_server = String(assistant["host"].as<String>());
+    this->voice_port = mqtt["port"].as<int>();
+    this->voice_token = String(assistant["accesstoken"].as<String>());
+
+    this->writeToConfig();
+  }
 }
 
 void Settings::rescanForBetterNetworksAndReconfigure()
@@ -189,7 +278,6 @@ void Settings::rescanForBetterNetworksAndReconfigure()
   {
     vTaskDelay(100 / portTICK_PERIOD_MS);
     numNetworks = WiFi.scanComplete();
-    ;
   }
 
   if (numNetworks == WIFI_SCAN_FAILED)
@@ -198,6 +286,8 @@ void Settings::rescanForBetterNetworksAndReconfigure()
     WiFi.scanDelete();
     return;
   }
+
+  // int numNetworks = WiFi.scanNetworks();
 
   if (numNetworks == 0)
   {
@@ -218,26 +308,32 @@ void Settings::rescanForBetterNetworksAndReconfigure()
     }
   }
 
-  uint8_t *bssid = WiFi.BSSID(bestIndex);
-  uint8_t *currentbssid = WiFi.BSSID();
-
-  if (bestIndex != -1 && bssid[0] != currentbssid[0] && bssid[1] != currentbssid[1] && bssid[2] != currentbssid[2] && bssid[3] != currentbssid[3] && bssid[4] != currentbssid[4] && bssid[5] != currentbssid[5])
+  if (bestIndex >= 0)
   {
-    INFO("Better AP found. Reconnecting...");
-
     uint8_t *bssid = WiFi.BSSID(bestIndex);
-    this->wlan_channel = WiFi.channel(bestIndex);
-    this->wlan_bssid[0] = bssid[0];
-    this->wlan_bssid[1] = bssid[1];
-    this->wlan_bssid[2] = bssid[2];
-    this->wlan_bssid[3] = bssid[3];
-    this->wlan_bssid[4] = bssid[4];
-    this->wlan_bssid[5] = bssid[5];
 
-    WiFi.disconnect();
-    WiFi.begin(this->wlan_sid, this->wlan_pwd, this->wlan_channel, this->wlan_bssid);
+    if (bssid[0] != this->wlan_bssid[0] && bssid[1] != this->wlan_bssid[1] && bssid[2] != this->wlan_bssid[2] && bssid[3] != this->wlan_bssid[3] && bssid[4] != this->wlan_bssid[4] && bssid[5] != this->wlan_bssid[5])
+    {
+      INFO("Better AP found. Reconnecting...");
 
-    this->writeToConfig();
+      uint8_t *bssid = WiFi.BSSID(bestIndex);
+      this->wlan_channel = WiFi.channel(bestIndex);
+      this->wlan_bssid[0] = bssid[0];
+      this->wlan_bssid[1] = bssid[1];
+      this->wlan_bssid[2] = bssid[2];
+      this->wlan_bssid[3] = bssid[3];
+      this->wlan_bssid[4] = bssid[4];
+      this->wlan_bssid[5] = bssid[5];
+
+      WiFi.disconnect();
+      WiFi.begin(this->wlan_sid, this->wlan_pwd, this->wlan_channel, this->wlan_bssid);
+
+      this->writeToConfig();
+    }
+    else
+    {
+      INFO("Already configured to best AP!");
+    }
   }
   else
   {
