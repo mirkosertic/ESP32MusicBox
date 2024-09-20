@@ -256,10 +256,6 @@ void VoiceAssistant::begin(String host, int port, String token, StateNotifierCal
   this->token = token;
   this->stateNotifier = stateNotifier;
   this->webSocket->begin(host, port, "/api/websocket");
-  INFO("WebSocket initialized");
-
-  xTaskCreate(recorddispatcher, "Recorder", 2048, this, 10, NULL);
-
   INFO("Init finished");
 }
 
@@ -357,6 +353,7 @@ void VoiceAssistant::checkForAudioData()
     int read = this->source->readBytes(&(buffer[0]), maxsize);
     if (read > 0)
     {
+      INFO_VAR("Sending %d bytes to HA", read);
       // Write data to converter stream
       this->converterstream->write(buffer, read);
     }
@@ -367,5 +364,5 @@ void VoiceAssistant::loop()
 {
   this->webSocket->loop();
 
-  //this->checkForAudioData();
+  this->checkForAudioData();
 }
