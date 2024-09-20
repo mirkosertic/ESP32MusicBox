@@ -4,6 +4,15 @@
 
 #include "logging.h"
 
+void recorddispatcher(void *parameters)
+{
+  while (true)
+  {
+    VoiceAssistant *target = (VoiceAssistant *)parameters;
+    target->checkForAudioData();
+  }
+}
+
 class VoiceAssistantStream : public AudioStream
 {
 private:
@@ -149,7 +158,18 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
           int sampleRate = doc["event"]["data"]["metadata"]["sample_rate"];
           uint16_t channelCount = doc["event"]["data"]["metadata"]["channel"];
           uint8_t bitsPerSample = doc["event"]["data"]["metadata"]["bit_rate"];
-          // m_recorder->initialize(sampleRate, channelCount, bitsPerSample);
+
+          AudioInfo from = this->source->audioInfo();
+          from.channels = 1; // We are recording only from one channel / mic
+          AudioInfo to;
+          to.bits_per_sample = bitsPerSample;
+          to.channels = channelCount;
+          to.sample_rate = sampleRate;
+
+          INFO_VAR("Source is running with Samplerate=%d, Channels=%d and Bits per sample=%d", from.sample_rate, from.channels, from.bits_per_sample);
+          INFO_VAR("Needs to be resampled to Samplerate=%d, Channels=%d and Bits per sample=%d", to.sample_rate, to.channels, to.bits_per_sample);
+
+          this->converterstream->begin(from, to);
 
           INFO("stt-start received");
           this->stateIs(RECORDING);
@@ -182,14 +202,19 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
     // webSocket.sendBIN(payload, length);
     break;
   case WStype_ERROR:
+    INFO("WStype_ERROR");
     break;
   case WStype_FRAGMENT_TEXT_START:
+    INFO("WStype_FRAGMENT_TEXT_START");
     break;
   case WStype_FRAGMENT_BIN_START:
+    INFO("WStype_FRAGMENT_BIN_START");
     break;
   case WStype_FRAGMENT:
+    INFO("WStype_FRAGMENT");
     break;
   case WStype_FRAGMENT_FIN:
+    INFO("WStype_FRAGMENT_FIN");
     break;
   }
 }
@@ -227,9 +252,15 @@ VoiceAssistant::~VoiceAssistant()
 
 void VoiceAssistant::begin(String host, int port, String token, StateNotifierCallback stateNotifier)
 {
+  INFO_VAR("Connecting to WebSocket %s:%d", host.c_str(), port);
   this->token = token;
   this->stateNotifier = stateNotifier;
   this->webSocket->begin(host, port, "/api/websocket");
+  INFO("WebSocket initialized");
+
+  xTaskCreate(recorddispatcher, "Recorder", 2048, this, 10, NULL);
+
+  INFO("Init finished");
 }
 
 void VoiceAssistant::stateIs(HAState state)
@@ -315,11 +346,9 @@ void VoiceAssistant::finishAudioStream()
   this->webSocket->sendBIN(transferbuffer, 1);
 }
 
-void VoiceAssistant::loop()
+void VoiceAssistant::checkForAudioData()
 {
-  this->webSocket->loop();
-
-  const int maxsize = 2048;
+  const int maxsize = 1024;
 
   if (this->state == RECORDING && this->source->available() >= maxsize)
   {
@@ -332,4 +361,11 @@ void VoiceAssistant::loop()
       this->converterstream->write(buffer, read);
     }
   }
+}
+
+void VoiceAssistant::loop()
+{
+  this->webSocket->loop();
+
+  //this->checkForAudioData();
 }

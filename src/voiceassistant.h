@@ -57,6 +57,8 @@ public:
 
     void reset();
 
+    void checkForAudioData();
+
     void sendAudioData(const uint8_t *data, int length);
 
     HAState currentState();

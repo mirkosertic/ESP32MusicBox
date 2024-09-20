@@ -37,6 +37,7 @@ void App::setWifiConnected()
     this->wificonnected = true;
     if (this->settings->isVoiceAssistantEnabled())
     {
+        INFO("Starting voice assistant integration...");
         this->assistant->begin(this->voiceAssistantHost, this->voiceAssistantPort, this->voiceAssistantToken, [this](HAState state)
                                {
             if (state == AUTHENTICATED || state == FINISHED) {

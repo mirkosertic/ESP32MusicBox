@@ -68,10 +68,10 @@ Button prev(GPIO_PREVIOUS, 300, [](ButtonAction action)
   if (action == PRESSED_FOR_LONG_TIME)
   {
       float volume = app->getVolume();
-      if (volume >= 0.01) 
+      if (volume >= 0.02) 
       {
         INFO("Decrementing volume");
-        app->setVolume(volume - 0.01);
+        app->setVolume(volume - 0.02);
       } else{
         INFO("Minimum volume reached");
       }
@@ -86,10 +86,10 @@ Button next(GPIO_NEXT, 300, [](ButtonAction action)
   if (action == PRESSED_FOR_LONG_TIME)
   {
       float volume = app->getVolume();
-      if (volume <= 0.99) 
+      if (volume <= 0.98) 
       {
         INFO("Incrementing volume");
-        app->setVolume(volume + 0.01);
+        app->setVolume(volume + 0.02);
       } else {
         INFO("Maximum volume reached");
       }
