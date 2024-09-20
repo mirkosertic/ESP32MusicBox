@@ -353,7 +353,7 @@ void VoiceAssistant::checkForAudioData()
     int read = this->source->readBytes(&(buffer[0]), maxsize);
     if (read > 0)
     {
-      INFO_VAR("Sending %d bytes to HA", read);
+      //INFO_VAR("Sending %d bytes to HA", read);
       // Write data to converter stream
       this->converterstream->write(buffer, read);
     }
