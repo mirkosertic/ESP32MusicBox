@@ -46,7 +46,7 @@ Settings settings(&SD_MMC, CONFIGURATION_FILE);
 
 TagScanner *tagscanner = new TagScanner(&Wire1, PN532_IRQ, PN532_RST);
 VoiceAssistant *assistant = new VoiceAssistant(&kit);
-App *app = new App(tagscanner, &source, &player, assistant, &settings);
+App *app = new App(tagscanner, &source, &player, &settings);
 Frontend *frontend = new Frontend(&SD_MMC, app, HTTP_SERVER_PORT, MP3_FILE, &settings);
 
 std::vector<CommandData> commands;
@@ -94,6 +94,61 @@ Button next(GPIO_NEXT, 300, [](ButtonAction action)
         INFO("Maximum volume reached");
       }
   } });
+
+void buttonchecktask(void *arguments)
+{
+  INFO("Button check task started");
+  while (true)
+  {
+    esp_task_wdt_reset();
+
+    play.loop();
+    prev.loop();
+    next.loop();
+
+    delay(15);
+  }
+}
+
+void voiceassistanttask(void *arguments)
+{
+  INFO("Voice assist task started");
+
+  bool wificonnected = false;
+
+  while (true)
+  {
+    if (app->isWifiConnected())
+    {
+      if (!wificonnected)
+      {
+        wificonnected = true;
+        assistant->begin(settings.getVoiceAssistantServer(), settings.getVoiceAssistantPort(), settings.getVoiceAssistantAccessToken(), [](HAState state)
+                         {
+                            if (state == AUTHENTICATED || state == FINISHED) {
+                                INFO("Got state change from VoiceAssistant, starting a new pipeline");
+                                assistant->reset();
+                                assistant->startPipeline(true);
+                            } });
+      }
+      assistant->loop();
+      vTaskDelay(1);      
+    }
+    else {
+      delay(200);
+    }
+  }
+}
+
+void wifiscannertask(void *arguments)
+{
+  INFO("WiFi scanner task started");
+  while (true)
+  {
+    settings.rescanForBetterNetworksAndReconfigure();
+    delay(60000);
+  }
+}
 
 void dummyhandler(bool, int, void *)
 {
@@ -156,10 +211,6 @@ void setup()
   app->setMQTTBrokerUsername(settings.getMQTTUsername());
   app->setMQTTBrokerPassword(settings.getMQTTPassword());
   app->setMQTTBrokerPort(settings.getMQTTPort());
-
-  app->setVoiceAssistantHost(settings.getVoiceAssistantServer());
-  app->setVoiceAssistantPort(settings.getVoiceAssistantPort());
-  app->setVoiceAssistantToken(settings.getVoiceAssistantAccessToken());
 
   // Now we initialize the frontend with its webserver and routing
   frontend->initialize();
@@ -278,6 +329,13 @@ void setup()
   strcpy(app->getCurrentPath(), "");
 
   INFO("Init finish");
+
+  xTaskCreate(buttonchecktask, "Button checker", 2048, NULL, 10, NULL);
+  xTaskCreate(wifiscannertask, "WiFi scanner", 2048, NULL, 10, NULL);
+  if (settings.isVoiceAssistantEnabled())
+  {
+    //xTaskCreate(voiceassistanttask, "Voice assistant", 2048, NULL, 5, NULL);
+  }
 }
 
 void wifiConnected()
@@ -319,11 +377,6 @@ void wifiConnected()
   INFO("Init done");
 }
 
-long lastbuttoncheck = millis();
-
-long startup = millis();
-bool rescandone = false;
-
 void loop()
 {
   // dnsServer.processNextRequest();
@@ -335,27 +388,8 @@ void loop()
 
     settings.writeToConfig();
   }
-  else if (WiFi.status() != WL_CONNECTED && !app->isWifiConnected() && millis() - startup > 30000 && !rescandone)
-  {
-    // Took more than 30 seconds after startup the get a WiFi connection, we try to find a better AP.
-    rescandone = true;
-    settings.rescanForBetterNetworksAndReconfigure();
-  }
 
   app->loop();
-
-  // Check buttons only every 15ms
-  long currenttime = millis();
-  if (currenttime - lastbuttoncheck > 15)
-  {
-    play.loop();
-    prev.loop();
-    next.loop();
-
-    lastbuttoncheck = currenttime;
-  }
-
-  kit.processActions();
 
   std::lock_guard<std::mutex> lck(commandsmutex);
   if (commands.size() > 0)
@@ -389,6 +423,8 @@ void loop()
       WARN_VAR("Unknown version : %d", command.version);
     }
   }
+
+  kit.processActions();
 
   esp_task_wdt_reset();
 }

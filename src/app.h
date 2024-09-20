@@ -52,12 +52,8 @@ private:
     VoiceAssistant *assistant;
     Settings *settings;
 
-    String voiceAssistantHost;
-    String voiceAssistantToken;
-    int voiceAssistantPort;
-
 public:
-    App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, VoiceAssistant *assistant, Settings *settings);
+    App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings);
 
     ~App();
 
@@ -108,12 +104,6 @@ public:
     void setMQTTBrokerPassword(String mqttBrokerPassword);
 
     void setMQTTBrokerPort(int mqttBrokerPort);
-
-    void setVoiceAssistantHost(String host);
-
-    void setVoiceAssistantToken(String token);
-
-    void setVoiceAssistantPort(int port);
 
     void announceMDNS();
 

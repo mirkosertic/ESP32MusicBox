@@ -8,7 +8,7 @@
 
 #include "logging.h"
 
-App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, VoiceAssistant *assistant, Settings *settings)
+App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings)
 {
     this->tagscanner = tagscanner;
     this->espclient = new WiFiClient();
@@ -22,7 +22,6 @@ App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player,
 
     this->source = source;
     this->player = player;
-    this->assistant = assistant;
     this->settings = settings;
 }
 
@@ -38,13 +37,6 @@ void App::setWifiConnected()
     if (this->settings->isVoiceAssistantEnabled())
     {
         INFO("Starting voice assistant integration...");
-        this->assistant->begin(this->voiceAssistantHost, this->voiceAssistantPort, this->voiceAssistantToken, [this](HAState state)
-                               {
-            if (state == AUTHENTICATED || state == FINISHED) {
-                INFO("Got state change from VoiceAssistant, starting a new pipeline");
-                this->assistant->reset();
-                this->assistant->startPipeline(true);
-            } });
     }
 }
 
@@ -227,21 +219,6 @@ void App::setMQTTBrokerPassword(String mqttBrokerPassword)
 void App::setMQTTBrokerPort(int mqttBrokerPort)
 {
     this->mqttBrokerPort = mqttBrokerPort;
-}
-
-void App::setVoiceAssistantHost(String host)
-{
-    this->voiceAssistantHost = host;
-}
-
-void App::setVoiceAssistantToken(String token)
-{
-    this->voiceAssistantToken = token;
-}
-
-void App::setVoiceAssistantPort(int port)
-{
-    this->voiceAssistantPort = port;
 }
 
 void App::announceMDNS()
@@ -523,11 +500,6 @@ void App::loop()
         }
 
         this->pubsubclient->loop();
-
-        if (this->settings->isVoiceAssistantEnabled())
-        {
-            this->assistant->loop();
-        }
     }
 
     this->player->copy();
