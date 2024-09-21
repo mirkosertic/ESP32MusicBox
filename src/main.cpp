@@ -29,6 +29,8 @@ const int HTTP_SERVER_PORT = 80;
 // IPAddress apIP(192, 168, 4, 1);
 // DNSServer dnsServer;
 
+AudioInfo initialinfo(16000, 1, 16);
+
 MediaPlayerSource source(STARTFILEPATH, MP3_FILE, true);
 AudioBoardStream kit(AudioKitEs8388V1);
 MP3DecoderHelix decoder;
@@ -144,11 +146,11 @@ void setup()
 
   // setup output
   auto cfg = kit.defaultConfig(RXTX_MODE);
+   cfg.copyFrom(initialinfo);
   // sd_active is setting up SPI with the right SD pins by calling
   // SPI.begin(PIN_AUDIO_KIT_SD_CARD_CLK, PIN_AUDIO_KIT_SD_CARD_MISO, PIN_AUDIO_KIT_SD_CARD_MOSI, PIN_AUDIO_KIT_SD_CARD_CS);
   cfg.sd_active = false;              // We are running in SD 1bit mode, so no init needs to be done here!
   cfg.input_device = ADC_INPUT_LINE2; // input from microphone
-
   kit.begin(cfg);
 
   // AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
@@ -300,7 +302,7 @@ void setup()
 
   INFO("Init finish");
 
-  xTaskCreatePinnedToCore(wifiscannertask, "WiFi scanner", 2048, NULL, 10, NULL, 1);
+  //xTaskCreate(wifiscannertask, "WiFi scanner", 2048, NULL, 10, NULL);
 }
 
 void wifiConnected()
@@ -397,7 +399,6 @@ void loop()
         assistant->processAudioData(&buffer);
       }
     }
-    assistant->loop();
   }
 
   // The main app loop

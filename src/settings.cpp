@@ -63,7 +63,7 @@ bool Settings::readFromConfig()
       JsonObject assistant = document["voiceassistant"].as<JsonObject>();
       this->voice_enabled = assistant["enabled"].as<bool>();
       this->voice_server = String(assistant["host"].as<String>());
-      this->voice_port = mqtt["port"].as<int>();
+      this->voice_port = assistant["port"].as<int>();
       this->voice_token = String(assistant["accesstoken"].as<String>());
 
       return true;
@@ -257,7 +257,7 @@ void Settings::setSettingsFromJson(String json)
     JsonObject assistant = document["voiceassistant"].as<JsonObject>();
     this->voice_enabled = assistant["enabled"].as<bool>();
     this->voice_server = String(assistant["host"].as<String>());
-    this->voice_port = mqtt["port"].as<int>();
+    this->voice_port = assistant["port"].as<int>();
     this->voice_token = String(assistant["accesstoken"].as<String>());
 
     this->writeToConfig();

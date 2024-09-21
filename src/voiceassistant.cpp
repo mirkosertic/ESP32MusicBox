@@ -4,14 +4,15 @@
 
 #include "logging.h"
 
-void pollqueuedispatcher(void *parameters)
+void vadispatcher(void *parameters)
 {
   VoiceAssistant *target = (VoiceAssistant *)parameters;
-  INFO("Audio buffers polling thread started");
+  INFO("Voice assistant polling thread started");
   while (true)
   {
     target->pollQueue();
-    delay(5);
+    target->loop();
+    vTaskDelay(1);
   }
 }
 
@@ -245,7 +246,7 @@ void VoiceAssistant::sendAuthentication()
 
 VoiceAssistant::VoiceAssistant(AudioStream *source)
 {
-  this->audioBuffersHandle = xQueueCreate(5, sizeof(AudioBuffer));
+  this->audioBuffersHandle = xQueueCreate(16, AUDIO_BUFFER_SIZE);
   if (audioBuffersHandle == NULL)
   {
     WARN("Audio buffers queue could not be created. Halt.");
@@ -285,7 +286,7 @@ void VoiceAssistant::begin(String host, int port, String token, StateNotifierCal
 
   this->webSocket->begin(host, port, "/api/websocket");
 
-  xTaskCreatePinnedToCore(pollqueuedispatcher, "Audio Transformer", 4096, this, 10, NULL, 1);
+  xTaskCreate(vadispatcher, "Voice Assistant", 8192, this, 2, NULL);
 
   this->started = true;
 
@@ -353,7 +354,7 @@ bool VoiceAssistant::startPipeline(bool includeWakeWordDetection)
 
 void VoiceAssistant::sendAudioData(const uint8_t *data, size_t length)
 {
-/*  int transferlength = 1 + length;
+  int transferlength = 1 + length;
 
   uint8_t transferbuffer[transferlength];
   transferbuffer[0] = this->binaryHandler;
@@ -364,7 +365,7 @@ void VoiceAssistant::sendAudioData(const uint8_t *data, size_t length)
     transferbuffer[index++] = data[i];
   }
 
-  this->webSocket->sendBIN(transferbuffer, transferlength);*/
+  this->webSocket->sendBIN(transferbuffer, transferlength);
 }
 
 void VoiceAssistant::finishAudioStream()
@@ -379,16 +380,20 @@ void VoiceAssistant::pollQueue()
 {
   AudioBuffer buffer;
   int ret = xQueueReceive(this->audioBuffersHandle, &buffer, 0);
-  if (ret == pdPASS)
+  while (ret == pdPASS)
   {
     //  Write data to converter stream
-    this->converterstream->write(&buffer[0], AUDIO_BUFFER_SIZE);
+    if (this->state == RECORDING)
+    {
+      this->converterstream->write(&buffer[0], AUDIO_BUFFER_SIZE);
+//      this->sendAudioData(buffer, AUDIO_BUFFER_SIZE);
+    }
+    ret = xQueueReceive(this->audioBuffersHandle, &buffer, 0);
   }
 }
 
 void VoiceAssistant::processAudioData(const AudioBuffer *data)
 {
-//  if (this->state == RECORDING)
   if (this->started)
   {
     int ret = xQueueSend(this->audioBuffersHandle, (void *)&data, 0);
@@ -408,16 +413,10 @@ int VoiceAssistant::getRecordingBlockSize()
   return AUDIO_BUFFER_SIZE;
 }
 
-bool firstloop = true;
-
 void VoiceAssistant::loop()
 {
   if (this->started)
   {
-    if (firstloop) {
-      firstloop = false;
-      INFO("First loop!");
-    }
     this->webSocket->loop();
   }
 }
