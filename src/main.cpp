@@ -302,7 +302,7 @@ void setup()
 
   INFO("Init finish");
 
-  //xTaskCreate(wifiscannertask, "WiFi scanner", 2048, NULL, 10, NULL);
+  xTaskCreate(wifiscannertask, "WiFi scanner", 2048, NULL, 10, NULL);
 }
 
 void wifiConnected()
