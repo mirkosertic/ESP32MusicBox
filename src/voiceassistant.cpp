@@ -4,12 +4,14 @@
 
 #include "logging.h"
 
-void recorddispatcher(void *parameters)
+void pollqueuedispatcher(void *parameters)
 {
+  VoiceAssistant *target = (VoiceAssistant *)parameters;
+  INFO("Audio buffers polling thread started");
   while (true)
   {
-    VoiceAssistant *target = (VoiceAssistant *)parameters;
-    target->checkForAudioData();
+    target->pollQueue();
+    delay(5);
   }
 }
 
@@ -63,6 +65,16 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
 {
   switch (type)
   {
+  case WStype_PING:
+  {
+    INFO("Ping");
+    break;
+  }
+  case WStype_PONG:
+  {
+    INFO("Pong");
+    break;
+  }
   case WStype_DISCONNECTED:
   {
     INFO("Disconnected!");
@@ -233,13 +245,28 @@ void VoiceAssistant::sendAuthentication()
 
 VoiceAssistant::VoiceAssistant(AudioStream *source)
 {
+  this->audioBuffersHandle = xQueueCreate(5, sizeof(AudioBuffer));
+  if (audioBuffersHandle == NULL)
+  {
+    WARN("Audio buffers queue could not be created. Halt.");
+    while (1)
+    {
+      delay(1000);
+    }
+  }
+
   this->state = DISCONNECTED;
   this->source = source;
   this->commandid = 1;
   this->webSocket = new WebSocketsClient();
   this->outputdelegate = new VoiceAssistantStream(this);
   this->converterstream = new FormatConverterStream(*this->outputdelegate);
-  this->webSocket->onEvent(std::bind(&VoiceAssistant::webSocketEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+  this->started = false;
+
+  this->webSocket->setReconnectInterval(1000);
+  this->webSocket->onEvent([this] (WStype_t type, uint8_t *payload, size_t length) {
+    this->webSocketEvent(type, payload, length);
+  });
 }
 
 VoiceAssistant::~VoiceAssistant()
@@ -255,7 +282,13 @@ void VoiceAssistant::begin(String host, int port, String token, StateNotifierCal
   INFO_VAR("Connecting to WebSocket %s:%d", host.c_str(), port);
   this->token = token;
   this->stateNotifier = stateNotifier;
+
   this->webSocket->begin(host, port, "/api/websocket");
+
+  xTaskCreatePinnedToCore(pollqueuedispatcher, "Audio Transformer", 4096, this, 10, NULL, 1);
+
+  this->started = true;
+
   INFO("Init finished");
 }
 
@@ -318,9 +351,9 @@ bool VoiceAssistant::startPipeline(bool includeWakeWordDetection)
   }
 }
 
-void VoiceAssistant::sendAudioData(const uint8_t *data, int length)
+void VoiceAssistant::sendAudioData(const uint8_t *data, size_t length)
 {
-  int transferlength = 1 + length;
+/*  int transferlength = 1 + length;
 
   uint8_t transferbuffer[transferlength];
   transferbuffer[0] = this->binaryHandler;
@@ -331,7 +364,7 @@ void VoiceAssistant::sendAudioData(const uint8_t *data, int length)
     transferbuffer[index++] = data[i];
   }
 
-  this->webSocket->sendBIN(transferbuffer, transferlength);
+  this->webSocket->sendBIN(transferbuffer, transferlength);*/
 }
 
 void VoiceAssistant::finishAudioStream()
@@ -342,27 +375,49 @@ void VoiceAssistant::finishAudioStream()
   this->webSocket->sendBIN(transferbuffer, 1);
 }
 
-void VoiceAssistant::checkForAudioData()
+void VoiceAssistant::pollQueue()
 {
-  const int maxsize = 1024;
-
-  if (this->state == RECORDING && this->source->available() >= maxsize)
+  AudioBuffer buffer;
+  int ret = xQueueReceive(this->audioBuffersHandle, &buffer, 0);
+  if (ret == pdPASS)
   {
-    uint8_t buffer[maxsize];
+    //  Write data to converter stream
+    this->converterstream->write(&buffer[0], AUDIO_BUFFER_SIZE);
+  }
+}
 
-    int read = this->source->readBytes(&(buffer[0]), maxsize);
-    if (read > 0)
+void VoiceAssistant::processAudioData(const AudioBuffer *data)
+{
+//  if (this->state == RECORDING)
+  if (this->started)
+  {
+    int ret = xQueueSend(this->audioBuffersHandle, (void *)&data, 0);
+    if (ret == pdTRUE)
     {
-      //INFO_VAR("Sending %d bytes to HA", read);
-      // Write data to converter stream
-      this->converterstream->write(buffer, read);
+      // No problem here
+    }
+    else if (ret == errQUEUE_FULL)
+    {
+      WARN("No more place in audio buffers!");
     }
   }
 }
 
+int VoiceAssistant::getRecordingBlockSize()
+{
+  return AUDIO_BUFFER_SIZE;
+}
+
+bool firstloop = true;
+
 void VoiceAssistant::loop()
 {
-  this->webSocket->loop();
-
-  this->checkForAudioData();
+  if (this->started)
+  {
+    if (firstloop) {
+      firstloop = false;
+      INFO("First loop!");
+    }
+    this->webSocket->loop();
+  }
 }

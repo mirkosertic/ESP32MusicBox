@@ -25,7 +25,6 @@ private:
     String manufacturer;
     String devicetype;
     int serverPort;
-    WiFiClient *espclient;
     PubSubClient *pubsubclient;
     String mqttBrokerHost;
     String mqttBrokerUsername;
@@ -53,7 +52,7 @@ private:
     Settings *settings;
 
 public:
-    App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings);
+    App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings);
 
     ~App();
 

@@ -6,8 +6,6 @@
 #include <AudioTools.h>
 #include <AudioLibs/AudioBoardStream.h>
 #include <AudioCodecs/CodecMP3Helix.h>
-#include <vector>
-#include <mutex>
 #include <ArduinoJson.h>
 // #include <DNSServer.h>
 
@@ -42,15 +40,17 @@ String currentsongtopic;
 String playbackstatetopic;
 String volumestatetopic;
 
+WiFiClient wifiClient;
+
 Settings settings(&SD_MMC, CONFIGURATION_FILE);
 
 TagScanner *tagscanner = new TagScanner(&Wire1, PN532_IRQ, PN532_RST);
-VoiceAssistant *assistant = new VoiceAssistant(&kit);
-App *app = new App(tagscanner, &source, &player, &settings);
+App *app = new App(wifiClient, tagscanner, &source, &player, &settings);
 Frontend *frontend = new Frontend(&SD_MMC, app, HTTP_SERVER_PORT, MP3_FILE, &settings);
 
-std::vector<CommandData> commands;
-std::mutex commandsmutex;
+VoiceAssistant *assistant = new VoiceAssistant(&kit);
+
+QueueHandle_t commandsHandle;
 
 Button play(GPIO_STARTSTOP, 300, [](ButtonAction action)
             {
@@ -95,51 +95,6 @@ Button next(GPIO_NEXT, 300, [](ButtonAction action)
       }
   } });
 
-void buttonchecktask(void *arguments)
-{
-  INFO("Button check task started");
-  while (true)
-  {
-    esp_task_wdt_reset();
-
-    play.loop();
-    prev.loop();
-    next.loop();
-
-    delay(15);
-  }
-}
-
-void voiceassistanttask(void *arguments)
-{
-  INFO("Voice assist task started");
-
-  bool wificonnected = false;
-
-  while (true)
-  {
-    if (app->isWifiConnected())
-    {
-      if (!wificonnected)
-      {
-        wificonnected = true;
-        assistant->begin(settings.getVoiceAssistantServer(), settings.getVoiceAssistantPort(), settings.getVoiceAssistantAccessToken(), [](HAState state)
-                         {
-                            if (state == AUTHENTICATED || state == FINISHED) {
-                                INFO("Got state change from VoiceAssistant, starting a new pipeline");
-                                assistant->reset();
-                                assistant->startPipeline(true);
-                            } });
-      }
-      assistant->loop();
-      vTaskDelay(1);      
-    }
-    else {
-      delay(200);
-    }
-  }
-}
-
 void wifiscannertask(void *arguments)
 {
   INFO("WiFi scanner task started");
@@ -165,6 +120,16 @@ void setup()
   Serial.begin(115200);
 
   INFO("setup started!");
+
+  commandsHandle = xQueueCreate(10, sizeof(CommandData));
+  if (commandsHandle == NULL)
+  {
+    WARN("Command queue could not be created. Halt.");
+    while (1)
+    {
+      delay(1000);
+    }
+  }
 
   esp_task_wdt_init(30, true); // 30 Sekunden Timeout
   esp_task_wdt_add(NULL);
@@ -259,8 +224,13 @@ void setup()
         CommandData command;
         memcpy(&command, &tagdata.data[0], 44);
 
-        std::lock_guard<std::mutex> lck(commandsmutex);
-        commands.push_back(command);
+        // Pass the command to the command queue
+        int ret = xQueueSend(commandsHandle, (void *)&command, 0);
+        if (ret == pdTRUE) {
+          // No problem here  
+        } else if (ret == errQUEUE_FULL) {
+          WARN("Unable to send data into the command queue");
+        } 
 
         JsonDocument result;
         result["UID"] = uidStr;
@@ -330,12 +300,7 @@ void setup()
 
   INFO("Init finish");
 
-  xTaskCreate(buttonchecktask, "Button checker", 2048, NULL, 10, NULL);
-  xTaskCreate(wifiscannertask, "WiFi scanner", 2048, NULL, 10, NULL);
-  if (settings.isVoiceAssistantEnabled())
-  {
-    //xTaskCreate(voiceassistanttask, "Voice assistant", 2048, NULL, 5, NULL);
-  }
+  xTaskCreatePinnedToCore(wifiscannertask, "WiFi scanner", 2048, NULL, 10, NULL, 1);
 }
 
 void wifiConnected()
@@ -374,8 +339,21 @@ void wifiConnected()
   app->announceMDNS();
   app->announceSSDP();
 
+  if (settings.isVoiceAssistantEnabled())
+  {
+    INFO("Starting voice assistant integration");
+    assistant->begin(settings.getVoiceAssistantServer(), settings.getVoiceAssistantPort(), settings.getVoiceAssistantAccessToken(), [](HAState state)
+                     {
+                        if (state == AUTHENTICATED || state == FINISHED) {
+                            INFO("Got state change from VoiceAssistant, starting a new pipeline");
+                            assistant->reset();
+                            assistant->startPipeline(true);
+                        } });
+  }
   INFO("Init done");
 }
+
+long lastbuttonchecktime = millis();
 
 void loop()
 {
@@ -383,20 +361,55 @@ void loop()
 
   if (settings.isWiFiEnabled() && WiFi.status() == WL_CONNECTED && !app->isWifiConnected())
   {
-    wifiConnected();
-    app->setWifiConnected();
-
     settings.writeToConfig();
+
+    wifiConnected();
+
+    app->setWifiConnected();
   }
 
+  // The hole thing here is that the audiolib and the audioplayer are not
+  // thread safe !!! So we perform everything related to audio processing
+  // sequentially here
+
+  long currenttime = millis();
+  if (currenttime - lastbuttonchecktime > 15)
+  {
+    // Perform a button check every 15ms
+    play.loop();
+    prev.loop();
+    next.loop();
+    lastbuttonchecktime = currenttime;
+  }
+
+  // Record a time slice
+  if (settings.isVoiceAssistantEnabled())
+  {
+    int available = kit.available();
+    const int maxsize = assistant->getRecordingBlockSize();
+    if (available >= maxsize)
+    {
+      AudioBuffer buffer;
+      int read = kit.readBytes(&(buffer[0]), maxsize);
+      if (read > 0)
+      {
+        // Do something with the audio data, e.g. send it to voice assistant
+        assistant->processAudioData(&buffer);
+      }
+    }
+    assistant->loop();
+  }
+
+  // The main app loop
   app->loop();
 
-  std::lock_guard<std::mutex> lck(commandsmutex);
-  if (commands.size() > 0)
+  // Check if there is a command in the command queue
+  CommandData command;
+  // This call is non-blocking, last parameter is xTicksToWait = 0
+  int ret = xQueueReceive(commandsHandle, &command, 0);
+  if (ret == pdPASS)
   {
-    CommandData command = commands[0];
-    commands.clear();
-
+    // We got comething from the queue
     if (command.version == COMMAND_VERSION)
     {
       if (command.command == COMMAND_PLAY_DIRECTORY)

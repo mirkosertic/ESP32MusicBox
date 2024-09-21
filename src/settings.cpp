@@ -271,12 +271,12 @@ void Settings::rescanForBetterNetworksAndReconfigure()
   if (numNetworks == WIFI_SCAN_FAILED)
   {
     WiFi.scanNetworks(true);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    delay(100);
     numNetworks = WiFi.scanComplete();
   }
   while (numNetworks == WIFI_SCAN_RUNNING)
   {
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    delay(100);    
     numNetworks = WiFi.scanComplete();
   }
 

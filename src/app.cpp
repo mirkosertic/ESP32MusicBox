@@ -8,11 +8,10 @@
 
 #include "logging.h"
 
-App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings)
+App::App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings)
 {
     this->tagscanner = tagscanner;
-    this->espclient = new WiFiClient();
-    this->pubsubclient = new PubSubClient(*this->espclient);
+    this->pubsubclient = new PubSubClient(wifiClient);
     this->stateversion = 0;
     this->currentpath = new char[512];
     this->tagPresent = false;
@@ -28,16 +27,11 @@ App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player,
 App::~App()
 {
     delete this->pubsubclient;
-    delete this->espclient;
 }
 
 void App::setWifiConnected()
 {
     this->wificonnected = true;
-    if (this->settings->isVoiceAssistantEnabled())
-    {
-        INFO("Starting voice assistant integration...");
-    }
 }
 
 bool App::isWifiConnected()

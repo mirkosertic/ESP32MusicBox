@@ -20,6 +20,9 @@ enum HAState
 
 typedef std::function<void(HAState)> StateNotifierCallback;
 
+#define AUDIO_BUFFER_SIZE 1024
+typedef uint8_t AudioBuffer[AUDIO_BUFFER_SIZE];
+
 class VoiceAssistant
 {
 private:
@@ -31,11 +34,15 @@ private:
 
     String token;
 
+    bool started;
+
     StateNotifierCallback stateNotifier;
 
     AudioStream *source;
     AudioStream *outputdelegate;
     FormatConverterStream *converterstream;
+
+    QueueHandle_t audioBuffersHandle;
 
     void finishAudioStream();
 
@@ -57,9 +64,13 @@ public:
 
     void reset();
 
-    void checkForAudioData();
+    int getRecordingBlockSize();
 
-    void sendAudioData(const uint8_t *data, int length);
+    void pollQueue();
+
+    void sendAudioData(const uint8_t *data, size_t length);
+
+    void processAudioData(const AudioBuffer *data);
 
     HAState currentState();
 };

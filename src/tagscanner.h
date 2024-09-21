@@ -1,8 +1,6 @@
 #ifndef TAGSCANNER_H
 #define TAGSCANNER_H
 
-#include <vector>
-#include <mutex>
 #include <Adafruit_PN532.h>
 #include <Wire.h>
 
@@ -34,8 +32,8 @@ private:
 
     bool tagPresent;
     String currentTagName;
-    std::vector<TagData> datatowrite;
-    std::mutex rwmutex;
+
+    QueueHandle_t dataToWrite;
 
 public:
     TagScanner(TwoWire *wire, uint8_t irq, uint8_t reset);
