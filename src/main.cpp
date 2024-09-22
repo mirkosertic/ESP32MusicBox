@@ -133,8 +133,8 @@ void setup()
     }
   }
 
-  esp_task_wdt_init(30, true); // 30 Sekunden Timeout
-  esp_task_wdt_add(NULL);
+  // esp_task_wdt_init(30, true); // 30 Sekunden Timeout
+  // esp_task_wdt_add(NULL);
 
   AudioLogger::instance().begin(Serial, AudioLogger::Warning);
 
@@ -146,7 +146,7 @@ void setup()
 
   // setup output
   auto cfg = kit.defaultConfig(RXTX_MODE);
-   cfg.copyFrom(initialinfo);
+  cfg.copyFrom(initialinfo);
   // sd_active is setting up SPI with the right SD pins by calling
   // SPI.begin(PIN_AUDIO_KIT_SD_CARD_CLK, PIN_AUDIO_KIT_SD_CARD_MISO, PIN_AUDIO_KIT_SD_CARD_MOSI, PIN_AUDIO_KIT_SD_CARD_CS);
   cfg.sd_active = false;              // We are running in SD 1bit mode, so no init needs to be done here!
@@ -392,10 +392,11 @@ void loop()
     if (available >= maxsize)
     {
       AudioBuffer buffer;
-      int read = kit.readBytes(&(buffer[0]), maxsize);
+      size_t read = kit.readBytes(&(buffer.data[0]), maxsize);
       if (read > 0)
       {
         // Do something with the audio data, e.g. send it to voice assistant
+        buffer.size = read;
         assistant->processAudioData(&buffer);
       }
     }

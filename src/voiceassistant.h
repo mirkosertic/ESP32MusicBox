@@ -21,7 +21,11 @@ enum HAState
 typedef std::function<void(HAState)> StateNotifierCallback;
 
 #define AUDIO_BUFFER_SIZE 1024
-typedef uint8_t AudioBuffer[AUDIO_BUFFER_SIZE];
+typedef struct
+{
+    size_t size;
+    uint8_t data[AUDIO_BUFFER_SIZE];
+} AudioBuffer;
 
 class VoiceAssistant
 {
@@ -40,7 +44,7 @@ private:
 
     AudioStream *source;
     AudioStream *outputdelegate;
-    FormatConverterStream *converterstream;
+    // FormatConverterStream *converterstream;
 
     QueueHandle_t audioBuffersHandle;
 
