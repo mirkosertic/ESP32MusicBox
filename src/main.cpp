@@ -154,6 +154,10 @@ void setup()
   kit.begin(cfg);
   kit.setVolume(0.7);
 
+  // Set the microhone level a little bit louder...
+  // This will change the gain of the microphone
+  kit.board().getDriver()->setInputVolume(90);
+
   // AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
   source.begin();
 
