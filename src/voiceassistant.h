@@ -44,7 +44,7 @@ private:
 
     AudioStream *source;
     AudioStream *outputdelegate;
-    // FormatConverterStream *converterstream;
+    FormatConverterStream *converterstream;
 
     QueueHandle_t audioBuffersHandle;
 

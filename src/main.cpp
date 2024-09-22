@@ -152,6 +152,7 @@ void setup()
   cfg.sd_active = false;              // We are running in SD 1bit mode, so no init needs to be done here!
   cfg.input_device = ADC_INPUT_LINE2; // input from microphone
   kit.begin(cfg);
+  kit.setVolume(0.7);
 
   // AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
   source.begin();

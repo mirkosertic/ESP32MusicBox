@@ -162,7 +162,6 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
           uint8_t bitsPerSample = doc["event"]["data"]["metadata"]["bit_rate"];
 
           AudioInfo from = this->source->audioInfoOut();
-          from.channels = 1;
           AudioInfo to;
           to.copyFrom(from);
           to.bits_per_sample = bitsPerSample;
@@ -172,7 +171,8 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
           INFO_VAR("Source is running with Samplerate=%d, Channels=%d and Bits per sample=%d", from.sample_rate, from.channels, from.bits_per_sample);
           INFO_VAR("Needs to be resampled to Samplerate=%d, Channels=%d and Bits per sample=%d", to.sample_rate, to.channels, to.bits_per_sample);
 
-          // this->converterstream->begin(from, to);
+          // TODO
+          this->converterstream->begin(from, from);
 
           INFO("wake_word-start received");
           this->stateIs(RECORDING);
@@ -184,7 +184,6 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
           uint8_t bitsPerSample = doc["event"]["data"]["metadata"]["bit_rate"];
 
           AudioInfo from = this->source->audioInfoOut();
-          from.channels = 1;
           AudioInfo to;
           to.copyFrom(from);
           to.bits_per_sample = bitsPerSample;
@@ -194,7 +193,8 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
           INFO_VAR("Source is running with Samplerate=%d, Channels=%d and Bits per sample=%d", from.sample_rate, from.channels, from.bits_per_sample);
           INFO_VAR("Needs to be resampled to Samplerate=%d, Channels=%d and Bits per sample=%d", to.sample_rate, to.channels, to.bits_per_sample);
 
-          // this->converterstream->begin(from, to);
+          // TODO
+          this->converterstream->begin(from, from);
 
           INFO("stt-start received");
           this->stateIs(RECORDING);
@@ -273,7 +273,7 @@ VoiceAssistant::VoiceAssistant(AudioStream *source)
   this->commandid = 1;
   this->webSocket = new WebSocketsClient();
   this->outputdelegate = new VoiceAssistantStream(this);
-  // this->converterstream = new FormatConverterStream(*this->outputdelegate);
+  this->converterstream = new FormatConverterStream(*this->outputdelegate);
   this->started = false;
 
   this->webSocket->setReconnectInterval(1000);
@@ -286,7 +286,7 @@ VoiceAssistant::~VoiceAssistant()
   this->webSocket->disconnect();
   delete this->webSocket;
   delete this->outputdelegate;
-  // delete this->converterstream;
+  delete this->converterstream;
 }
 
 void VoiceAssistant::begin(String host, int port, String token, StateNotifierCallback stateNotifier)
@@ -383,7 +383,7 @@ void VoiceAssistant::finishAudioStream()
   uint8_t transferbuffer[1];
   transferbuffer[0] = this->binaryHandler;
 
-  this->webSocket->sendBIN(transferbuffer, 1);
+  this->webSocket->sendBIN(&transferbuffer[0], 1);
 }
 
 void VoiceAssistant::pollQueue()
@@ -396,8 +396,8 @@ void VoiceAssistant::pollQueue()
     if (this->state == RECORDING)
     {
       //INFO_VAR("Got one buffer with %d bytes audio data", buffer.size);
-      // this->converterstream->write(&(buffer.data[0]), buffer.size);
-      this->sendAudioData(&buffer.data[0], buffer.size);
+      this->converterstream->write(&buffer.data[0], buffer.size);
+      //this->sendAudioData(&buffer.data[0], buffer.size);
     }
 
     vTaskDelay(1);
