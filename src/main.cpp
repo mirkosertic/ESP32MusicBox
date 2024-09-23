@@ -29,7 +29,7 @@ const int HTTP_SERVER_PORT = 80;
 // IPAddress apIP(192, 168, 4, 1);
 // DNSServer dnsServer;
 
-AudioInfo initialinfo(16000, 1, 16);
+AudioInfo initialConfig(16000, 1, 16);
 
 MediaPlayerSource source(STARTFILEPATH, MP3_FILE, true);
 AudioBoardStream kit(AudioKitEs8388V1);
@@ -136,7 +136,7 @@ void setup()
   // esp_task_wdt_init(30, true); // 30 Sekunden Timeout
   // esp_task_wdt_add(NULL);
 
-  AudioLogger::instance().begin(Serial, AudioLogger::Warning);
+  AudioLogger::instance().begin(Serial, AudioLogger::Info);
 
   app->setDeviceType("ESP32 Musikbox");
   app->setName(DEVICENAME);
@@ -146,17 +146,28 @@ void setup()
 
   // setup output
   auto cfg = kit.defaultConfig(RXTX_MODE);
-  cfg.copyFrom(initialinfo);
+  cfg.copyFrom(initialConfig);
   // sd_active is setting up SPI with the right SD pins by calling
   // SPI.begin(PIN_AUDIO_KIT_SD_CARD_CLK, PIN_AUDIO_KIT_SD_CARD_MISO, PIN_AUDIO_KIT_SD_CARD_MOSI, PIN_AUDIO_KIT_SD_CARD_CS);
   cfg.sd_active = false;              // We are running in SD 1bit mode, so no init needs to be done here!
   cfg.input_device = ADC_INPUT_LINE2; // input from microphone
-  kit.begin(cfg);
+
+  if (!kit.begin(cfg))
+  {
+    WARN("Could not start audio kit!");
+    while (true)
+      ;
+  }
   kit.setVolume(0.7);
 
-  // Set the microhone level a little bit louder...
+  // Set the microphone level a little bit louder...
   // This will change the gain of the microphone
   kit.board().getDriver()->setInputVolume(90);
+
+  AudioInfo kitinfo = kit.audioInfo();
+  AudioInfo kitoutinfo = kit.audioInfoOut();
+  INFO_VAR("Kit Input is running with Samplerate=%d, Channels=%d and Bits per sample=%d", kitinfo.sample_rate, kitinfo.channels, kitinfo.bits_per_sample);
+  INFO_VAR("Kit Output is running with Samplerate=%d, Channels=%d and Bits per sample=%d", kitoutinfo.sample_rate, kitoutinfo.channels, kitoutinfo.bits_per_sample);
 
   // AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
   source.begin();

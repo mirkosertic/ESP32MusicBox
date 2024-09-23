@@ -7,7 +7,7 @@
 void vadispatcher(void *parameters)
 {
   VoiceAssistant *target = (VoiceAssistant *)parameters;
-  INFO("Voice assistant polling thread started");
+  INFO("Voice assistant polling task started");
   while (true)
   {
     target->pollQueue();
@@ -18,7 +18,7 @@ void vadispatcher(void *parameters)
 void wsdispatcher(void *parameters)
 {
   VoiceAssistant *target = (VoiceAssistant *)parameters;
-  INFO("WebSocket looper thread started");
+  INFO("WebSocket looper task started");
   while (true)
   {
     target->loop();
@@ -172,7 +172,7 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
           INFO_VAR("Needs to be resampled to Samplerate=%d, Channels=%d and Bits per sample=%d", to.sample_rate, to.channels, to.bits_per_sample);
 
           // TODO
-          this->converterstream->begin(from, from);
+          this->converterstream->begin(from, to);
 
           INFO("wake_word-start received");
           this->stateIs(RECORDING);
@@ -194,7 +194,7 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
           INFO_VAR("Needs to be resampled to Samplerate=%d, Channels=%d and Bits per sample=%d", to.sample_rate, to.channels, to.bits_per_sample);
 
           // TODO
-          this->converterstream->begin(from, from);
+          this->converterstream->begin(from, to);
 
           INFO("stt-start received");
           this->stateIs(RECORDING);
@@ -366,7 +366,7 @@ bool VoiceAssistant::startPipeline(bool includeWakeWordDetection)
 
 void VoiceAssistant::sendAudioData(const uint8_t *data, size_t length)
 {
-  //INFO_VAR("Sending %d bytes audio data", length);
+  // INFO_VAR("Sending %d bytes audio data", length);
 
   int transferlength = 1 + length;
 
@@ -395,9 +395,8 @@ void VoiceAssistant::pollQueue()
     //  Write data to converter stream
     if (this->state == RECORDING)
     {
-      //INFO_VAR("Got one buffer with %d bytes audio data", buffer.size);
+      // INFO_VAR("Got one buffer with %d bytes audio data", buffer.size);
       this->converterstream->write(&buffer.data[0], buffer.size);
-      //this->sendAudioData(&buffer.data[0], buffer.size);
     }
 
     vTaskDelay(1);
