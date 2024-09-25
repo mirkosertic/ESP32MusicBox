@@ -528,6 +528,7 @@ const char *App::currentTitle()
 
 void App::setVolume(float volume)
 {
+    INFO_VAR("Setting volume to %f", volume);
     this->player->setVolume(volume);
 }
 

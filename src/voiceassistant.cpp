@@ -11,7 +11,7 @@ void vadispatcher(void *parameters)
   while (true)
   {
     target->pollQueue();
-    delay(5);
+    vTaskDelay(1);
   }
 }
 
@@ -51,7 +51,7 @@ public:
     AudioStream::setAudioInfo(info);
   }
 
-  int availableForWrite() { return 4096; }
+  int availableForWrite() { return AUDIO_BUFFER_SIZE * 4; }
 
   /// amount of data available
   int available()
@@ -61,6 +61,7 @@ public:
 
   size_t write(const uint8_t *buffer, size_t size) override
   {
+    DEBUG_VAR("Writing %d bytes", size);
     this->assistant->sendAudioData(buffer, size);
     return size;
   }
@@ -161,18 +162,22 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
           uint16_t channelCount = doc["event"]["data"]["metadata"]["channel"];
           uint8_t bitsPerSample = doc["event"]["data"]["metadata"]["bit_rate"];
 
-          AudioInfo from = this->source->audioInfoOut();
-          AudioInfo to;
-          to.copyFrom(from);
-          to.bits_per_sample = bitsPerSample;
-          to.channels = channelCount;
-          to.sample_rate = sampleRate;
+          AudioInfo from = this->source->audioInfo();
 
           INFO_VAR("Source is running with Samplerate=%d, Channels=%d and Bits per sample=%d", from.sample_rate, from.channels, from.bits_per_sample);
-          INFO_VAR("Needs to be resampled to Samplerate=%d, Channels=%d and Bits per sample=%d", to.sample_rate, to.channels, to.bits_per_sample);
+          INFO_VAR("Metadata from HA is Samplerate=%d, Channels=%d and Bits per sample=%d", sampleRate, channelCount, bitsPerSample);
 
-          // TODO
-          this->converterstream->begin(from, to);
+          if (!this->resampler->begin(AudioInfo(from.sample_rate, 1, from.bits_per_sample), this->recordingQuality.sample_rate))
+          {
+            WARN("Could not begin converter stream!");
+            while (true)
+              ;
+          }
+
+          AudioInfo in = this->resampler->audioInfo();
+          INFO_VAR("Resampler in is Samplerate=%d, Channels=%d and Bits per sample=%d", in.sample_rate, in.channels, in.bits_per_sample);
+          AudioInfo out = this->resampler->audioInfoOut();
+          INFO_VAR("Resampler out is Samplerate=%d, Channels=%d and Bits per sample=%d", out.sample_rate, out.channels, out.bits_per_sample);
 
           INFO("wake_word-start received");
           this->stateIs(RECORDING);
@@ -183,18 +188,17 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
           uint16_t channelCount = doc["event"]["data"]["metadata"]["channel"];
           uint8_t bitsPerSample = doc["event"]["data"]["metadata"]["bit_rate"];
 
-          AudioInfo from = this->source->audioInfoOut();
-          AudioInfo to;
-          to.copyFrom(from);
-          to.bits_per_sample = bitsPerSample;
-          to.channels = channelCount;
-          to.sample_rate = sampleRate;
+          AudioInfo from = this->source->audioInfo();
 
           INFO_VAR("Source is running with Samplerate=%d, Channels=%d and Bits per sample=%d", from.sample_rate, from.channels, from.bits_per_sample);
-          INFO_VAR("Needs to be resampled to Samplerate=%d, Channels=%d and Bits per sample=%d", to.sample_rate, to.channels, to.bits_per_sample);
+          INFO_VAR("Metadata from HA is Samplerate=%d, Channels=%d and Bits per sample=%d", sampleRate, channelCount, bitsPerSample);
 
-          // TODO
-          this->converterstream->begin(from, to);
+          if (!this->resampler->begin(AudioInfo(from.sample_rate, 1, from.bits_per_sample), this->recordingQuality.sample_rate))
+          {
+            WARN("Could not begin converter stream!");
+            while (true)
+              ;
+          }
 
           INFO("stt-start received");
           this->stateIs(RECORDING);
@@ -258,7 +262,7 @@ void VoiceAssistant::sendAuthentication()
 
 VoiceAssistant::VoiceAssistant(AudioStream *source)
 {
-  this->audioBuffersHandle = xQueueCreate(16, sizeof(AudioBuffer));
+  this->audioBuffersHandle = xQueueCreate(4, sizeof(AudioBuffer));
   if (audioBuffersHandle == NULL)
   {
     WARN("Audio buffers queue could not be created. Halt.");
@@ -272,8 +276,21 @@ VoiceAssistant::VoiceAssistant(AudioStream *source)
   this->source = source;
   this->commandid = 1;
   this->webSocket = new WebSocketsClient();
+
+  this->recordingQuality = AudioInfo(16000, 1, 16);
+
   this->outputdelegate = new VoiceAssistantStream(this);
-  this->converterstream = new FormatConverterStream(*this->outputdelegate);
+  this->outputdelegate->setAudioInfo(recordingQuality);
+
+  this->buffer = new BufferedStream(8192, *this->outputdelegate);
+  this->buffer->setAudioInfo(recordingQuality);
+
+  this->resampler = new ResampleStream(*this->buffer);
+  this->resampler->setBuffered(false);
+
+  this->channelSelector = new ChannelsSelectOutput();
+  this->channelSelector->addOutput(*this->resampler, 0);
+
   this->started = false;
 
   this->webSocket->setReconnectInterval(1000);
@@ -286,19 +303,21 @@ VoiceAssistant::~VoiceAssistant()
   this->webSocket->disconnect();
   delete this->webSocket;
   delete this->outputdelegate;
-  delete this->converterstream;
+  delete this->resampler;
+  delete this->channelSelector;
 }
 
-void VoiceAssistant::begin(String host, int port, String token, StateNotifierCallback stateNotifier)
+void VoiceAssistant::begin(String host, int port, String token, String deviceId, StateNotifierCallback stateNotifier)
 {
   INFO_VAR("Connecting to WebSocket %s:%d", host.c_str(), port);
   this->token = token;
+  this->deviceId = deviceId;
   this->stateNotifier = stateNotifier;
 
   this->webSocket->begin(host, port, "/api/websocket");
 
-  xTaskCreate(vadispatcher, "Voice Assistant", 8192, this, 2, NULL);
-  xTaskCreate(wsdispatcher, "WebSocket", 8192, this, 2, NULL);
+  xTaskCreate(vadispatcher, "Voice Assistant", 32768, this, 40, NULL);
+  xTaskCreatePinnedToCore(wsdispatcher, "WebSocket", 8192, this, 30, NULL, 0);
 
   this->started = true;
 
@@ -341,12 +360,14 @@ bool VoiceAssistant::startPipeline(bool includeWakeWordDetection)
       runcmd["start_stage"] = "stt";
     }
 
-    AudioInfo info = this->source->audioInfoOut();
-    INFO_VAR("Got AudioInfo with Samplerate=%d, Channels=%d and Bits per sample=%d", info.sample_rate, info.channels, info.bits_per_sample);
+    INFO_VAR("Using AudioInfo with Samplerate=%d, Channels=%d and Bits per sample=%d", this->recordingQuality.sample_rate, this->recordingQuality.channels, this->recordingQuality.bits_per_sample);
 
     runcmd["end_stage"] = "tts";
-    runcmd["input"]["sample_rate"] = info.sample_rate;
-    runcmd["input"]["volume_multiplier"] = 1.5;
+    runcmd["input"]["sample_rate"] = this->recordingQuality.sample_rate;
+    runcmd["input"]["device_id"] = this->deviceId;
+    runcmd["input"]["volume_multiplier"].set<float>(3.9);
+
+    this->channelSelector->begin(this->source->audioInfoOut());
 
     String buffer;
     size_t buffersize = serializeJson(runcmd, buffer);
@@ -366,7 +387,7 @@ bool VoiceAssistant::startPipeline(bool includeWakeWordDetection)
 
 void VoiceAssistant::sendAudioData(const uint8_t *data, size_t length)
 {
-  // INFO_VAR("Sending %d bytes audio data", length);
+  DEBUG_VAR("Sending %d bytes audio data", length);
 
   int transferlength = 1 + length;
 
@@ -375,7 +396,12 @@ void VoiceAssistant::sendAudioData(const uint8_t *data, size_t length)
 
   memcpy(&transferbuffer[1], data, length);
 
+  long start = millis();
   this->webSocket->sendBIN(transferbuffer, transferlength);
+  vTaskDelay(1);
+  float duration = millis() - start;
+  float thruputpersec = ((float)length) / duration * 1000.0;
+  DEBUG_VAR("Thruput is %.02f bytes/second", thruputpersec);
 }
 
 void VoiceAssistant::finishAudioStream()
@@ -395,11 +421,13 @@ void VoiceAssistant::pollQueue()
     //  Write data to converter stream
     if (this->state == RECORDING)
     {
-      // INFO_VAR("Got one buffer with %d bytes audio data", buffer.size);
-      this->converterstream->write(&buffer.data[0], buffer.size);
+      DEBUG_VAR("Got one buffer with %d bytes audio data", buffer.size);
+      size_t written = this->channelSelector->write(&buffer.data[0], buffer.size);
+      if (written != buffer.size)
+      {
+        WARN_VAR("Could only write %d instead of %d bytes", written, buffer.size);
+      }
     }
-
-    vTaskDelay(1);
 
     ret = xQueueReceive(this->audioBuffersHandle, &buffer, 0);
   }

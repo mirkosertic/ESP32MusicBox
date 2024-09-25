@@ -7,6 +7,7 @@
 #include <AudioLibs/AudioBoardStream.h>
 #include <AudioCodecs/CodecMP3Helix.h>
 #include <ArduinoJson.h>
+#include <Driver.h>
 // #include <DNSServer.h>
 
 #include "settings.h"
@@ -28,8 +29,6 @@ const int HTTP_SERVER_PORT = 80;
 
 // IPAddress apIP(192, 168, 4, 1);
 // DNSServer dnsServer;
-
-AudioInfo initialConfig(16000, 1, 16);
 
 MediaPlayerSource source(STARTFILEPATH, MP3_FILE, true);
 AudioBoardStream kit(AudioKitEs8388V1);
@@ -74,6 +73,7 @@ Button prev(GPIO_PREVIOUS, 300, [](ButtonAction action)
       {
         INFO("Decrementing volume");
         app->setVolume(volume - 0.02);
+        kit.setVolume(volume - 0.02);        
       } else{
         INFO("Minimum volume reached");
       }
@@ -92,6 +92,7 @@ Button next(GPIO_NEXT, 300, [](ButtonAction action)
       {
         INFO("Incrementing volume");
         app->setVolume(volume + 0.02);
+        kit.setVolume(volume + 0.02);
       } else {
         INFO("Maximum volume reached");
       }
@@ -136,7 +137,7 @@ void setup()
   // esp_task_wdt_init(30, true); // 30 Sekunden Timeout
   // esp_task_wdt_add(NULL);
 
-  AudioLogger::instance().begin(Serial, AudioLogger::Info);
+  AudioLogger::instance().begin(Serial, AudioLogger::Warning);
 
   app->setDeviceType("ESP32 Musikbox");
   app->setName(DEVICENAME);
@@ -145,12 +146,11 @@ void setup()
   app->setServerPort(HTTP_SERVER_PORT);
 
   // setup output
+  AudioInfo info(44100, 2, 16);
   auto cfg = kit.defaultConfig(RXTX_MODE);
-  cfg.copyFrom(initialConfig);
-  // sd_active is setting up SPI with the right SD pins by calling
-  // SPI.begin(PIN_AUDIO_KIT_SD_CARD_CLK, PIN_AUDIO_KIT_SD_CARD_MISO, PIN_AUDIO_KIT_SD_CARD_MOSI, PIN_AUDIO_KIT_SD_CARD_CS);
+  cfg.copyFrom(info);
   cfg.sd_active = false;              // We are running in SD 1bit mode, so no init needs to be done here!
-  cfg.input_device = ADC_INPUT_LINE2; // input from microphone
+  cfg.input_device = ADC_INPUT_LINE2; // input from microphone, stereo in case of AiThinker AudioKit
 
   if (!kit.begin(cfg))
   {
@@ -158,11 +158,11 @@ void setup()
     while (true)
       ;
   }
-  kit.setVolume(0.7);
 
   // Set the microphone level a little bit louder...
   // This will change the gain of the microphone
-  kit.board().getDriver()->setInputVolume(90);
+  kit.board().getDriver()->setInputVolume(100);
+  kit.setVolume(0.3);
 
   AudioInfo kitinfo = kit.audioInfo();
   AudioInfo kitoutinfo = kit.audioInfoOut();
@@ -211,6 +211,8 @@ void setup()
   kit.addAction(kit.getKey(6), dummyhandler);
 
   player.setMetadataCallback(callbackPrintMetaData);
+  decoder.driver()->setInfoCallback([](MP3FrameInfo &info, void *ref)
+                                    { INFO_VAR("Got libHelix Info %d bitrate %d bits per sample %d channels", info.bitrate, info.bitsPerSample, info.nChans); }, nullptr);
 
   Wire1.begin(WIRE_SDA, WIRE_SCL, 100000); // Scan ok
 
@@ -311,14 +313,14 @@ void setup()
   player.setActive(false);
 
   // setup player
-  player.setVolume(0.5);
+  player.setVolume(kit.getVolume());
 
   // Init file browser
   strcpy(app->getCurrentPath(), "");
 
   INFO("Init finish");
 
-  xTaskCreate(wifiscannertask, "WiFi scanner", 2048, NULL, 10, NULL);
+  // xTaskCreate(wifiscannertask, "WiFi scanner", 2048, NULL, 10, NULL);
 }
 
 void wifiConnected()
@@ -360,7 +362,7 @@ void wifiConnected()
   if (settings.isVoiceAssistantEnabled())
   {
     INFO("Starting voice assistant integration");
-    assistant->begin(settings.getVoiceAssistantServer(), settings.getVoiceAssistantPort(), settings.getVoiceAssistantAccessToken(), [](HAState state)
+    assistant->begin(settings.getVoiceAssistantServer(), settings.getVoiceAssistantPort(), settings.getVoiceAssistantAccessToken(), app->computeUUID(), [](HAState state)
                      {
                         if (state == AUTHENTICATED || state == FINISHED) {
                             INFO("Got state change from VoiceAssistant, starting a new pipeline");
@@ -420,6 +422,9 @@ void loop()
 
   // The main app loop
   app->loop();
+
+  AudioInfo from = player.audioInfo();
+  DEBUG_VAR("Player is running with Samplerate=%d, Channels=%d and Bits per sample=%d", from.sample_rate, from.channels, from.bits_per_sample);
 
   // Check if there is a command in the command queue
   CommandData command;

@@ -20,7 +20,7 @@ enum HAState
 
 typedef std::function<void(HAState)> StateNotifierCallback;
 
-#define AUDIO_BUFFER_SIZE 1024
+#define AUDIO_BUFFER_SIZE 2048
 typedef struct
 {
     size_t size;
@@ -37,14 +37,19 @@ private:
     int commandid;
 
     String token;
+    String deviceId;
 
     bool started;
 
     StateNotifierCallback stateNotifier;
 
+    AudioInfo recordingQuality;
+
     AudioStream *source;
     AudioStream *outputdelegate;
-    FormatConverterStream *converterstream;
+    BufferedStream *buffer;
+    ResampleStream *resampler;
+    ChannelsSelectOutput *channelSelector;
 
     QueueHandle_t audioBuffersHandle;
 
@@ -58,7 +63,7 @@ public:
 
     void webSocketEvent(WStype_t type, uint8_t *payload, size_t length);
 
-    void begin(String host, int port, String token, StateNotifierCallback stateNotifier);
+    void begin(String host, int port, String token, String deviceId, StateNotifierCallback stateNotifier);
 
     void sendAuthentication();
 
