@@ -148,10 +148,7 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
           {
             INFO_VAR("Playing URL %s", this->urlToSpeak.c_str());
 
-            /*            if (!m_speaker->playAudioFromURL(m_urlToSpeak.c_str()))
-                        {
-                          WARN("Failed to start playback.");
-                        }*/
+            this->playAudioFeedbackCallback(this->urlToSpeak);
           }
 
           this->stateIs(FINISHED);
@@ -167,17 +164,17 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
           INFO_VAR("Source is running with Samplerate=%d, Channels=%d and Bits per sample=%d", from.sample_rate, from.channels, from.bits_per_sample);
           INFO_VAR("Metadata from HA is Samplerate=%d, Channels=%d and Bits per sample=%d", sampleRate, channelCount, bitsPerSample);
 
-          if (!this->resampler->begin(AudioInfo(from.sample_rate, 1, from.bits_per_sample), this->recordingQuality.sample_rate))
+          if (!this->converterStream->begin(from, this->recordingQuality))
           {
             WARN("Could not begin converter stream!");
             while (true)
               ;
           }
 
-          AudioInfo in = this->resampler->audioInfo();
-          INFO_VAR("Resampler in is Samplerate=%d, Channels=%d and Bits per sample=%d", in.sample_rate, in.channels, in.bits_per_sample);
-          AudioInfo out = this->resampler->audioInfoOut();
-          INFO_VAR("Resampler out is Samplerate=%d, Channels=%d and Bits per sample=%d", out.sample_rate, out.channels, out.bits_per_sample);
+          AudioInfo in = this->converterStream->audioInfo();
+          INFO_VAR("Converter in is Samplerate=%d, Channels=%d and Bits per sample=%d", in.sample_rate, in.channels, in.bits_per_sample);
+          AudioInfo out = this->converterStream->audioInfoOut();
+          INFO_VAR("Converter out is Samplerate=%d, Channels=%d and Bits per sample=%d", out.sample_rate, out.channels, out.bits_per_sample);
 
           INFO("wake_word-start received");
           this->stateIs(RECORDING);
@@ -193,12 +190,17 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
           INFO_VAR("Source is running with Samplerate=%d, Channels=%d and Bits per sample=%d", from.sample_rate, from.channels, from.bits_per_sample);
           INFO_VAR("Metadata from HA is Samplerate=%d, Channels=%d and Bits per sample=%d", sampleRate, channelCount, bitsPerSample);
 
-          if (!this->resampler->begin(AudioInfo(from.sample_rate, 1, from.bits_per_sample), this->recordingQuality.sample_rate))
+          if (!this->converterStream->begin(from, this->recordingQuality))
           {
             WARN("Could not begin converter stream!");
             while (true)
               ;
           }
+
+          AudioInfo in = this->converterStream->audioInfo();
+          INFO_VAR("Converter in is Samplerate=%d, Channels=%d and Bits per sample=%d", in.sample_rate, in.channels, in.bits_per_sample);
+          AudioInfo out = this->converterStream->audioInfoOut();
+          INFO_VAR("Converter out is Samplerate=%d, Channels=%d and Bits per sample=%d", out.sample_rate, out.channels, out.bits_per_sample);
 
           INFO("stt-start received");
           this->stateIs(RECORDING);
@@ -207,15 +209,15 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
         if (strcmp(doc["event"]["type"], "stt-vad-end") == 0)
         {
           INFO("wstt-vad-end received");
-          this->stateIs(STTFINISHED);
+          // this->stateIs(STTFINISHED);
 
-          finishAudioStream();
+          // finishAudioStream();
         }
         if (strcmp(doc["event"]["type"], "tts-end") == 0)
         {
           const char *ressource = doc["event"]["data"]["tts_output"]["url"];
-          this->urlToSpeak = String("http://192.168.0.159:8080");
-          this->urlToSpeak += &(ressource[4]);
+
+          this->urlToSpeak = this->baseUrl + ressource;
 
           INFO_VAR("tts-end received. Playing URL %s", this->urlToSpeak.c_str());
         }
@@ -285,11 +287,8 @@ VoiceAssistant::VoiceAssistant(AudioStream *source)
   this->buffer = new BufferedStream(8192, *this->outputdelegate);
   this->buffer->setAudioInfo(recordingQuality);
 
-  this->resampler = new ResampleStream(*this->buffer);
-  this->resampler->setBuffered(false);
-
-  this->channelSelector = new ChannelsSelectOutput();
-  this->channelSelector->addOutput(*this->resampler, 0);
+  this->converterStream = new FormatConverterStream(*this->buffer);
+  this->converterStream->setBuffered(false);
 
   this->started = false;
 
@@ -303,21 +302,23 @@ VoiceAssistant::~VoiceAssistant()
   this->webSocket->disconnect();
   delete this->webSocket;
   delete this->outputdelegate;
-  delete this->resampler;
-  delete this->channelSelector;
+  delete this->converterStream;
 }
 
-void VoiceAssistant::begin(String host, int port, String token, String deviceId, StateNotifierCallback stateNotifier)
+void VoiceAssistant::begin(String host, int port, String token, String deviceId, StateNotifierCallback stateNotifier, PlayAudioFeedbackCallback playFeedbackCallback)
 {
   INFO_VAR("Connecting to WebSocket %s:%d", host.c_str(), port);
   this->token = token;
   this->deviceId = deviceId;
   this->stateNotifier = stateNotifier;
+  this->playAudioFeedbackCallback = playFeedbackCallback;
+
+  this->baseUrl = String("http://") + host + ":" + port;
 
   this->webSocket->begin(host, port, "/api/websocket");
 
   xTaskCreate(vadispatcher, "Voice Assistant", 32768, this, 40, NULL);
-  xTaskCreatePinnedToCore(wsdispatcher, "WebSocket", 8192, this, 30, NULL, 0);
+  xTaskCreate(wsdispatcher, "WebSocket", 8192, this, 30, NULL);
 
   this->started = true;
 
@@ -366,8 +367,6 @@ bool VoiceAssistant::startPipeline(bool includeWakeWordDetection)
     runcmd["input"]["sample_rate"] = this->recordingQuality.sample_rate;
     runcmd["input"]["device_id"] = this->deviceId;
     runcmd["input"]["volume_multiplier"].set<float>(3.9);
-
-    this->channelSelector->begin(this->source->audioInfoOut());
 
     String buffer;
     size_t buffersize = serializeJson(runcmd, buffer);
@@ -422,7 +421,7 @@ void VoiceAssistant::pollQueue()
     if (this->state == RECORDING)
     {
       DEBUG_VAR("Got one buffer with %d bytes audio data", buffer.size);
-      size_t written = this->channelSelector->write(&buffer.data[0], buffer.size);
+      size_t written = this->converterStream->write(&buffer.data[0], buffer.size);
       if (written != buffer.size)
       {
         WARN_VAR("Could only write %d instead of %d bytes", written, buffer.size);

@@ -282,6 +282,8 @@ void App::MQTT_init()
     this->mqttinit = true;
 
     this->MQTT_reconnect();
+
+    // TODO: Start MQTT connection check loop as separate task here...
 }
 
 void App::MQTT_reconnect()

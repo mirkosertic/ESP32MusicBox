@@ -161,8 +161,11 @@ void setup()
 
   // Set the microphone level a little bit louder...
   // This will change the gain of the microphone
-  kit.board().getDriver()->setInputVolume(100);
-  kit.setVolume(0.3);
+  // kit.board().getDriver()->setInputVolume(90);
+
+  // Set the overall loudness of the Kit, this is
+  // not related with the volume of the media player!!!
+  kit.setVolume(0.7);
 
   AudioInfo kitinfo = kit.audioInfo();
   AudioInfo kitoutinfo = kit.audioInfoOut();
@@ -368,7 +371,10 @@ void wifiConnected()
                             INFO("Got state change from VoiceAssistant, starting a new pipeline");
                             assistant->reset();
                             assistant->startPipeline(true);
-                        } });
+                        } }, [](String urlToPlay)
+                     { 
+                          INFO_VAR("Playing feedback url %s", urlToPlay.c_str()); 
+                          player.playURL(urlToPlay); });
   }
   INFO("Init done");
 }
