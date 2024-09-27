@@ -185,6 +185,28 @@ String Settings::getVoiceAssistantAccessToken()
   return this->voice_token;
 }
 
+float Settings::getVoiceAssistantVolumeMultiplier()
+{
+  return 3.9;
+}
+
+int Settings::getVoiceAssistantWakeWordTimeout()
+{
+  return 3;
+}
+
+int Settings::getVoiceAssistantAutomaticGain()
+{
+  // Recommended for a quiet microphone
+  return 31;
+}
+
+int Settings::getVoiceAssistantNoiseSuppressionLevel()
+{
+  // Recommended for a quiet microphone
+  return 2;
+}
+
 String Settings::getSettingsAsJson()
 {
   JsonDocument doc;
@@ -276,7 +298,7 @@ void Settings::rescanForBetterNetworksAndReconfigure()
   }
   while (numNetworks == WIFI_SCAN_RUNNING)
   {
-    delay(100);    
+    delay(100);
     numNetworks = WiFi.scanComplete();
   }
 

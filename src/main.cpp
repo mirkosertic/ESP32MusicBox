@@ -49,7 +49,7 @@ TagScanner *tagscanner = new TagScanner(&Wire1, PN532_IRQ, PN532_RST);
 App *app = new App(wifiClient, tagscanner, &source, &player, &settings);
 Frontend *frontend = new Frontend(&SD_MMC, app, HTTP_SERVER_PORT, MP3_FILE, &settings);
 
-VoiceAssistant *assistant = new VoiceAssistant(&kit);
+VoiceAssistant *assistant = new VoiceAssistant(&kit, &settings);
 
 QueueHandle_t commandsHandle;
 
@@ -111,6 +111,7 @@ void wifiscannertask(void *arguments)
 void dummyhandler(bool, int, void *)
 {
   INFO("Button pressed!");
+  player.playURL("http://192.168.0.159:8123/api/tts_proxy/a5b81f9cf47b4f7b244c110c37305dab85944c2b_de-de_9d38d7a658_tts.piper.mp3");
 }
 
 void callbackPrintMetaData(MetaDataType type, const char *str, int len)
@@ -161,7 +162,7 @@ void setup()
 
   // Set the microphone level a little bit louder...
   // This will change the gain of the microphone
-  // kit.board().getDriver()->setInputVolume(90);
+  kit.board().getDriver()->setInputVolume(90);
 
   // Set the overall loudness of the Kit, this is
   // not related with the volume of the media player!!!

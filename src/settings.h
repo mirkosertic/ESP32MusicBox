@@ -44,6 +44,10 @@ public:
     String getVoiceAssistantServer();
     int getVoiceAssistantPort();
     String getVoiceAssistantAccessToken();
+    float getVoiceAssistantVolumeMultiplier();
+    int getVoiceAssistantWakeWordTimeout();
+    int getVoiceAssistantAutomaticGain();
+    int getVoiceAssistantNoiseSuppressionLevel();
 
     void initializeWifiFromSettings();
 

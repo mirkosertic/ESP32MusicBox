@@ -262,7 +262,7 @@ void VoiceAssistant::sendAuthentication()
   this->webSocket->sendTXT(buffer);
 }
 
-VoiceAssistant::VoiceAssistant(AudioStream *source)
+VoiceAssistant::VoiceAssistant(AudioStream *source, Settings *settings)
 {
   this->audioBuffersHandle = xQueueCreate(4, sizeof(AudioBuffer));
   if (audioBuffersHandle == NULL)
@@ -276,6 +276,7 @@ VoiceAssistant::VoiceAssistant(AudioStream *source)
 
   this->state = DISCONNECTED;
   this->source = source;
+  this->settings = settings;
   this->commandid = 1;
   this->webSocket = new WebSocketsClient();
 
@@ -366,7 +367,12 @@ bool VoiceAssistant::startPipeline(bool includeWakeWordDetection)
     runcmd["end_stage"] = "tts";
     runcmd["input"]["sample_rate"] = this->recordingQuality.sample_rate;
     runcmd["input"]["device_id"] = this->deviceId;
-    runcmd["input"]["volume_multiplier"].set<float>(3.9);
+
+    // Details here: https://developers.home-assistant.io/docs/voice/pipelines/
+    runcmd["input"]["volume_multiplier"] = this->settings->getVoiceAssistantVolumeMultiplier();
+    runcmd["input"]["timeout"] = this->settings->getVoiceAssistantWakeWordTimeout();
+    runcmd["input"]["auto_gain_dbfs"] = this->settings->getVoiceAssistantAutomaticGain();
+    runcmd["input"]["noise_suppression_level "] = this->settings->getVoiceAssistantNoiseSuppressionLevel();
 
     String buffer;
     size_t buffersize = serializeJson(runcmd, buffer);

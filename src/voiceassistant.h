@@ -5,6 +5,8 @@
 #include <AudioTools.h>
 #include <WebSocketsClient.h>
 
+#include "settings.h"
+
 enum HAState
 {
     DISCONNECTED,
@@ -49,6 +51,7 @@ private:
 
     AudioInfo recordingQuality;
 
+    Settings *settings;
     AudioStream *source;
     AudioStream *outputdelegate;
     BufferedStream *buffer;
@@ -61,7 +64,7 @@ private:
     void stateIs(HAState state);
 
 public:
-    VoiceAssistant(AudioStream *source);
+    VoiceAssistant(AudioStream *source, Settings *settings);
     ~VoiceAssistant();
 
     void webSocketEvent(WStype_t type, uint8_t *payload, size_t length);

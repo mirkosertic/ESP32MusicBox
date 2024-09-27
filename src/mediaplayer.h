@@ -16,9 +16,11 @@ private:
     ChangeNotifierCallback changecallback;
 
     MP3DecoderHelix *overrideHelix;
+    FormatConverterStream *overrideFormatConverter;
     EncodedAudioStream *overrideDecoder;
     URLStream *overrideStream;
     StreamCopy overrideCopy;
+
     long lastoverridecopytime;
     int indexBeforeOverride;
 
