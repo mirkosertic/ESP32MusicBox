@@ -11,13 +11,11 @@
 App::App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings)
 {
     this->tagscanner = tagscanner;
-    this->pubsubclient = new PubSubClient(wifiClient);
     this->stateversion = 0;
     this->currentpath = new char[512];
     this->tagPresent = false;
     this->tagName = "";
     this->wificonnected = false;
-    this->mqttinit = false;
 
     this->source = source;
     this->player = player;
@@ -26,7 +24,6 @@ App::App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *sour
 
 App::~App()
 {
-    delete this->pubsubclient;
 }
 
 void App::setWifiConnected()
@@ -172,6 +169,11 @@ void App::setDeviceType(String devicetype)
     this->devicetype = devicetype;
 }
 
+String App::getDeviceType()
+{
+    return this->devicetype;
+}
+
 String App::computeTechnicalName()
 {
     String tn = "" + this->name;
@@ -185,9 +187,19 @@ void App::setVersion(String version)
     this->version = version;
 }
 
+String App::getVersion()
+{
+    return version;
+}
+
 void App::setManufacturer(String manufacturer)
 {
     this->manufacturer = manufacturer;
+}
+
+String App::getManufacturer()
+{
+    return this->manufacturer;
 }
 
 void App::setServerPort(int serverPort)
@@ -195,24 +207,9 @@ void App::setServerPort(int serverPort)
     this->serverPort = serverPort;
 }
 
-void App::setMQTTBrokerHost(String mqttBrokerHost)
+String App::getConfigurationURL()
 {
-    this->mqttBrokerHost = mqttBrokerHost;
-}
-
-void App::setMQTTBrokerUsername(String mqttBrokerUsername)
-{
-    this->mqttBrokerUsername = mqttBrokerUsername;
-}
-
-void App::setMQTTBrokerPassword(String mqttBrokerPassword)
-{
-    this->mqttBrokerPassword = mqttBrokerPassword;
-}
-
-void App::setMQTTBrokerPort(int mqttBrokerPort)
-{
-    this->mqttBrokerPort = mqttBrokerPort;
+    return "http://" + this->computeTechnicalName() + ".local:" + this->serverPort + "/";
 }
 
 void App::announceMDNS()
@@ -262,242 +259,8 @@ const char *App::getSSDPSchema()
     return SSDP.getSchema();
 }
 
-void App::MQTT_init()
-{
-    INFO_VAR("MQTT_init() - Initializing MQTT client to %s:%d", this->settings->getMQTTServer().c_str(), this->settings->getMQTTPort());
-    this->pubsubclient->setBufferSize(1024);
-    this->pubsubclient->setServer(this->mqttBrokerHost.c_str(), this->mqttBrokerPort);
-
-    String technicalName = this->computeTechnicalName();
-
-    this->pubsubclient->setCallback([this](char *topic, byte *payload, unsigned int length)
-                                    {
-            String to(topic);
-            String messagePayload = String(payload, length);
-
-            for (const auto& func : this->mqttCallbacks) {
-                func(to, messagePayload);
-             } });
-
-    this->mqttinit = true;
-
-    this->MQTT_reconnect();
-
-    // TODO: Start MQTT connection check loop as separate task here...
-}
-
-void App::MQTT_reconnect()
-{
-    int waitcount = 0;
-    while (!this->pubsubclient->connected())
-    {
-        INFO_VAR("Attempting MQTT connection with user %s ...", this->settings->getMQTTUsername().c_str());
-        // Attempt to connect
-        if (!this->pubsubclient->connect(this->computeTechnicalName().c_str(), this->mqttBrokerUsername.c_str(), this->mqttBrokerPassword.c_str()))
-        {
-            WARN_VAR("failed, rc=%d, try again...", this->pubsubclient->state());
-
-            waitcount++;
-            if (waitcount > 20)
-            {
-                WARN("Giving up, restarting.");
-                ESP.restart();
-            }
-
-            delay(100);
-        }
-        else
-        {
-            INFO("ok");
-        }
-    }
-    String subscribeWildCard = this->computeTechnicalName() + "/+/set";
-    this->pubsubclient->subscribe(subscribeWildCard.c_str());
-}
-
-String App::MQTT_announce_button(String buttonId, String title, String icon, const std::function<void()> &clickHandler)
-{
-    String technicalName = this->computeTechnicalName();
-    String objectId = technicalName + "_" + buttonId + "_btn";
-    String discoveryTopic = "homeassistant/button/" + objectId + "/config";
-
-    String topicPrefix = technicalName + "/" + buttonId;
-    String commandTopic = topicPrefix + "/set";
-    String stateTopic = topicPrefix + "/state";
-
-    JsonDocument discoverypayload;
-    discoverypayload["object_id"] = objectId;
-    discoverypayload["unique_id"] = objectId;
-    discoverypayload["state_topic"] = stateTopic;
-    discoverypayload["command_topic"] = commandTopic;
-    discoverypayload["name"] = title;
-    discoverypayload["icon"] = icon;
-
-    JsonObject device = discoverypayload["device"].to<JsonObject>();
-    device["name"] = this->name;
-    device["model"] = this->devicetype;
-    device["manufacturer"] = this->manufacturer;
-    device["model_id"] = this->version;
-    device["serial_number"] = this->computeSerialNumber();
-    device["configuration_url"] = "http://" + technicalName + ".local:" + this->serverPort + "/";
-
-    JsonArray identifiers = device["identifiers"].to<JsonArray>();
-    identifiers.add(computeUUID());
-
-    String json;
-    serializeJson(discoverypayload, json);
-
-    this->mqttCallbacks.push_back([commandTopic, clickHandler](String topic, String payload)
-                                  {
-            if (topic == commandTopic) {
-                INFO_VAR("button() - Got Message on %s", commandTopic.c_str());
-                if (payload == "PRESS") {
-                    INFO("Pressed!");
-                    clickHandler();
-                }
-            } });
-
-    this->pubsubclient->publish(discoveryTopic.c_str(), json.c_str());
-
-    return stateTopic;
-}
-
-String App::MQTT_announce_number(String numberId, String title, String icon, String mode, float min, float max, const std::function<void(String)> &changeHandler)
-{
-    String technicalName = this->computeTechnicalName();
-    String objectId = technicalName + "_" + numberId + "_nbr";
-    String discoveryTopic = "homeassistant/number/" + objectId + "/config";
-
-    String topicPrefix = technicalName + "/" + numberId;
-    String commandTopic = topicPrefix + "/set";
-    String stateTopic = topicPrefix + "/state";
-
-    JsonDocument discoverypayload;
-    discoverypayload["object_id"] = objectId;
-    discoverypayload["unique_id"] = objectId;
-    discoverypayload["state_topic"] = stateTopic;
-    discoverypayload["command_topic"] = commandTopic;
-    discoverypayload["name"] = title;
-    discoverypayload["icon"] = icon;
-    discoverypayload["mode"] = mode;
-    discoverypayload["min"] = min;
-    discoverypayload["max"] = max;
-
-    JsonObject device = discoverypayload["device"].to<JsonObject>();
-    device["name"] = this->name;
-    device["model"] = this->devicetype;
-    device["manufacturer"] = this->manufacturer;
-    device["model_id"] = this->version;
-    device["serial_number"] = this->computeSerialNumber();
-    device["configuration_url"] = "http://" + technicalName + ".local:" + this->serverPort + "/";
-
-    JsonArray identifiers = device["identifiers"].to<JsonArray>();
-    identifiers.add(this->computeUUID());
-
-    String json;
-    serializeJson(discoverypayload, json);
-
-    this->mqttCallbacks.push_back([commandTopic, changeHandler](String topic, String payload)
-                                  {
-            if (topic == commandTopic) {
-                INFO("Changed");
-                changeHandler(payload);
-            } });
-
-    this->pubsubclient->publish(discoveryTopic.c_str(), json.c_str());
-
-    return stateTopic;
-}
-
-String App::MQTT_announce_sensor(String notifyId, String title, String icon)
-{
-    String technicalName = this->computeTechnicalName();
-    String objectId = technicalName + "_" + notifyId + "_sens";
-    String discoveryTopic = "homeassistant/sensor/" + objectId + "/config";
-
-    String topicPrefix = technicalName + "/" + notifyId;
-    String stateTopic = topicPrefix + "/state";
-
-    JsonDocument discoverypayload;
-    discoverypayload["object_id"] = objectId;
-    discoverypayload["unique_id"] = objectId;
-    discoverypayload["state_topic"] = stateTopic;
-    discoverypayload["name"] = title;
-    discoverypayload["icon"] = icon;
-
-    JsonObject device = discoverypayload["device"].to<JsonObject>();
-    device["name"] = this->name;
-    device["model"] = this->devicetype;
-    device["manufacturer"] = this->manufacturer;
-    device["model_id"] = this->version;
-    device["serial_number"] = this->computeSerialNumber();
-    device["configuration_url"] = "http://" + technicalName + ".local:" + this->serverPort + "/";
-
-    JsonArray identifiers = device["identifiers"].to<JsonArray>();
-    identifiers.add(this->computeUUID());
-
-    String json;
-    serializeJson(discoverypayload, json);
-
-    this->pubsubclient->publish(discoveryTopic.c_str(), json.c_str());
-
-    return stateTopic;
-}
-
-String App::MQTT_announce_tagscanner(String notifyId)
-{
-    String technicalName = this->computeTechnicalName();
-    String objectId = technicalName + "_" + notifyId + "_tagscan";
-    String discoveryTopic = "homeassistant/tag/" + objectId + "/config";
-
-    String topicPrefix = technicalName + "/" + notifyId;
-    String topic = topicPrefix + "/state";
-
-    JsonDocument discoverypayload;
-    discoverypayload["object_id"] = objectId;
-    discoverypayload["unique_id"] = objectId;
-    discoverypayload["topic"] = topic;
-    discoverypayload["value_template"] = "{{value_json.UID}}";
-
-    JsonObject device = discoverypayload["device"].to<JsonObject>();
-    device["name"] = this->name;
-    device["model"] = this->devicetype;
-    device["manufacturer"] = this->manufacturer;
-    device["model_id"] = this->version;
-    device["serial_number"] = this->computeSerialNumber();
-    device["configuration_url"] = "http://" + technicalName + ".local:" + this->serverPort + "/";
-
-    JsonArray identifiers = device["identifiers"].to<JsonArray>();
-    identifiers.add(this->computeUUID());
-
-    String json;
-    serializeJson(discoverypayload, json);
-
-    this->pubsubclient->publish(discoveryTopic.c_str(), json.c_str());
-
-    return topic;
-}
-
-void App::MQTT_publish(String topic, String payload)
-{
-    if (this->wificonnected && this->mqttinit)
-    {
-        this->pubsubclient->publish(topic.c_str(), payload.c_str());
-    }
-}
-
 void App::loop()
 {
-    if (this->wificonnected && this->mqttinit)
-    {
-        if (!this->pubsubclient->connected())
-        {
-            this->MQTT_reconnect();
-        }
-
-        this->pubsubclient->loop();
-    }
-
     this->player->copy();
 }
 

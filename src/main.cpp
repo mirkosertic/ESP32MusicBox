@@ -13,6 +13,7 @@
 #include "settings.h"
 #include "tagscanner.h"
 #include "app.h"
+#include "mqtt.h"
 #include "frontend.h"
 #include "mediaplayer.h"
 #include "mediaplayersource.h"
@@ -35,12 +36,6 @@ AudioBoardStream kit(AudioKitEs8388V1);
 MP3DecoderHelix decoder;
 MediaPlayer player(source, kit, decoder);
 
-String tagtopic;
-String tagscannertopic;
-String currentsongtopic;
-String playbackstatetopic;
-String volumestatetopic;
-
 WiFiClient wifiClient;
 
 Settings settings(&SD_MMC, CONFIGURATION_FILE);
@@ -50,6 +45,7 @@ App *app = new App(wifiClient, tagscanner, &source, &player, &settings);
 Frontend *frontend = new Frontend(&SD_MMC, app, HTTP_SERVER_PORT, MP3_FILE, &settings);
 
 VoiceAssistant *assistant = new VoiceAssistant(&kit, &settings);
+MQTT *mqtt = new MQTT(wifiClient, app);
 
 QueueHandle_t commandsHandle;
 
@@ -111,7 +107,7 @@ void wifiscannertask(void *arguments)
 void dummyhandler(bool, int, void *)
 {
   INFO("Button pressed!");
-  player.playURL("http://192.168.0.159:8123/api/tts_proxy/a5b81f9cf47b4f7b244c110c37305dab85944c2b_de-de_9d38d7a658_tts.piper.mp3");
+  player.playURL("http://192.168.0.159:8123/api/tts_proxy/a5b81f9cf47b4f7b244c110c37305dab85944c2b_de-de_9d38d7a658_tts.piper.mp3", true);
 }
 
 void callbackPrintMetaData(MetaDataType type, const char *str, int len)
@@ -194,13 +190,7 @@ void setup()
 
   // dnsServer.start(53, "*", apIP);
 
-  app->setMQTTBrokerHost(settings.getMQTTServer());
-  app->setMQTTBrokerUsername(settings.getMQTTUsername());
-  app->setMQTTBrokerPassword(settings.getMQTTPassword());
-  app->setMQTTBrokerPort(settings.getMQTTPort());
-
   // Now we initialize the frontend with its webserver and routing
-  frontend->initialize();
   frontend->begin();
 
   // https://github.com/Ai-Thinker-Open/ESP32-A1S-AudioKit/issues/3
@@ -226,7 +216,7 @@ void setup()
     if (authenticated) 
     {
       // A tag was detected
-      app->MQTT_publish(tagscannertopic, tagName);
+      mqtt->publishTagScannerInfo(tagName);
 
       app->setTagData(knownTag, tagName, uid, uidlength, tagdata);
 
@@ -262,18 +252,18 @@ void setup()
         String target;
         serializeJson(result, target);
 
-        app->MQTT_publish(tagtopic, target);
+        mqtt->publishScannedTag(target);
       }
     }
     else {
       // Authentication error
-      app->MQTT_publish(tagscannertopic, "Authentication error");
+      mqtt->publishTagScannerInfo("Authentication error");
 
       app->noTagPresent();
     } }, []()
                     {
     // No tag currently detected
-    app->MQTT_publish(tagscannertopic, "");
+    mqtt->publishTagScannerInfo("");
 
     app->noTagPresent(); });
 
@@ -286,7 +276,7 @@ void setup()
                                     const char *songinfo = source.toStr();
                                     if (songinfo)
                                     {
-                                      app->MQTT_publish(currentsongtopic, String(songinfo));
+                                      mqtt->publishCurrentSong(String(songinfo));
                                     }
 
                                     app->incrementStateVersion(); 
@@ -296,19 +286,19 @@ void setup()
                           {
                             if (player.isActive())
                             {
-                              app->MQTT_publish(playbackstatetopic, String("Playing"));
+                              mqtt->publishPlaybackState(String("Playing"));
                             }
                             else
                             {
-                              app->MQTT_publish(playbackstatetopic, String("Stopped"));
+                              mqtt->publishPlaybackState(String("Stopped"));
                             }
 
-                            app->MQTT_publish(volumestatetopic, String((int)(player.volume() * 100)));
+                            mqtt->publishVolume(((int)(player.volume() * 100)));
 
                             const char *songinfo = source.toStr();
                             if (songinfo)
                             {
-                              app->MQTT_publish(currentsongtopic, String(songinfo));
+                              mqtt->publishCurrentSong(String(songinfo));
                             }
                             
                             app->incrementStateVersion(); });
@@ -335,29 +325,7 @@ void wifiConnected()
 
   if (settings.isMQTTEnabled())
   {
-    app->MQTT_init();
-
-    playbackstatetopic = app->MQTT_announce_sensor("playbackstate", "Playback", "mdi:information-outline");
-
-    volumestatetopic = app->MQTT_announce_number("volume", "Volume", "mdi:volume-source", "slider", 0, 100, [](String newvalue)
-                                                 {
-      float volume = newvalue.toFloat();
-      app->setVolume(volume / 100.0); });
-
-    app->MQTT_announce_button("startstop", "Start/Stop", "mdi:restart", []()
-                              { app->toggleActiveState(); });
-
-    app->MQTT_announce_button("next", "Next Title", "mdi:skip-next", []()
-                              { app->next(); });
-
-    app->MQTT_announce_button("previous", "Previous Title", "mdi:skip-previous", []()
-                              { app->previous(); });
-
-    tagtopic = app->MQTT_announce_tagscanner("tags");
-
-    tagscannertopic = app->MQTT_announce_sensor("tagscanner", "Detected Card", "mdi:tag-outline");
-
-    currentsongtopic = app->MQTT_announce_sensor("currentsongstate", "Current Song", "mdi:information-outline");
+    mqtt->begin(settings.getMQTTServer(), settings.getMQTTPort(), settings.getMQTTUsername(), settings.getMQTTPassword());
   }
 
   app->announceMDNS();
@@ -375,12 +343,10 @@ void wifiConnected()
                         } }, [](String urlToPlay)
                      { 
                           INFO_VAR("Playing feedback url %s", urlToPlay.c_str()); 
-                          player.playURL(urlToPlay); });
+                          player.playURL(urlToPlay, true); });
   }
   INFO("Init done");
 }
-
-long lastbuttonchecktime = millis();
 
 void loop()
 {
@@ -395,10 +361,13 @@ void loop()
     app->setWifiConnected();
   }
 
+  // TODO: Check if WLAN BSSID schould be resetted if it is set but no connection is possible...
+
   // The hole thing here is that the audiolib and the audioplayer are not
   // thread safe !!! So we perform everything related to audio processing
   // sequentially here
 
+  static long lastbuttonchecktime = millis();
   long currenttime = millis();
   if (currenttime - lastbuttonchecktime > 15)
   {

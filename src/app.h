@@ -2,7 +2,6 @@
 #define APP_H
 
 #include <Arduino.h>
-#include <vector>
 #include <functional>
 #include <WiFi.h>
 #include <ESP32SSDP.h>
@@ -15,8 +14,6 @@
 #include "voiceassistant.h"
 #include "settings.h"
 
-typedef std::function<void(String, String)> MQTTCallback;
-
 class App
 {
 private:
@@ -25,12 +22,6 @@ private:
     String manufacturer;
     String devicetype;
     int serverPort;
-    PubSubClient *pubsubclient;
-    String mqttBrokerHost;
-    String mqttBrokerUsername;
-    String mqttBrokerPassword;
-    int mqttBrokerPort;
-    std::vector<MQTTCallback> mqttCallbacks;
     long stateversion;
     char *currentpath;
 
@@ -44,7 +35,6 @@ private:
     TagScanner *tagscanner;
 
     bool wificonnected;
-    bool mqttinit;
 
     MediaPlayerSource *source;
     MediaPlayer *player;
@@ -88,41 +78,27 @@ public:
 
     void setDeviceType(String devicetype);
 
+    String getDeviceType();
+
     String computeTechnicalName();
 
     void setVersion(String version);
 
+    String getVersion();
+
     void setManufacturer(String manufacturer);
+
+    String getManufacturer();
 
     void setServerPort(int serverPort);
 
-    void setMQTTBrokerHost(String mqttBrokerHost);
-
-    void setMQTTBrokerUsername(String mqttBrokerUsername);
-
-    void setMQTTBrokerPassword(String mqttBrokerPassword);
-
-    void setMQTTBrokerPort(int mqttBrokerPort);
+    String getConfigurationURL();
 
     void announceMDNS();
 
     void announceSSDP();
 
     const char *getSSDPSchema();
-
-    void MQTT_init();
-
-    void MQTT_reconnect();
-
-    String MQTT_announce_button(String buttonId, String title, String icon, const std::function<void()> &clickHandler);
-
-    String MQTT_announce_number(String numberId, String title, String icon, String mode, float min, float max, const std::function<void(String)> &changeHandler);
-
-    String MQTT_announce_sensor(String notifyId, String title, String icon);
-
-    String MQTT_announce_tagscanner(String notifyId);
-
-    void MQTT_publish(String topic, String payload);
 
     void writeCommandToTag(CommandData command);
 

@@ -15,8 +15,8 @@ String LoggingFormatString(const char *format, ...);
 #endif
 
 #ifdef DEBUG_LOGGING_ENABLED
-#define DEBUG(msg) Serial.printf("[WARN] %d %d %s:%s():%d - %s\n", millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__, msg)
-#define DEBUG_VAR(msg, ...) Serial.printf("[WARN] %d %d %s:%s():%d - %s\n", millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__, LoggingFormatString(msg, __VA_ARGS__).c_str())
+#define DEBUG(msg) Serial.printf("[DEBUG] %d %d %s:%s():%d - %s\n", millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__, msg)
+#define DEBUG_VAR(msg, ...) Serial.printf("[DEBUG] %d %d %s:%s():%d - %s\n", millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__, LoggingFormatString(msg, __VA_ARGS__).c_str())
 #endif
 
 #ifndef LOGGING_ENABLED

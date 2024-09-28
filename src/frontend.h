@@ -15,12 +15,13 @@ private:
   AsyncWebServer *server;
   const char *ext;
   Settings *settings;
+
+  void initialize();
+
 public:
   Frontend(FS *fs, App *app, uint16_t wsportnumber, const char *ext, Settings *settings);
 
   ~Frontend();
-
-  void initialize();
 
   void begin();
 };

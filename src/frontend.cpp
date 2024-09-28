@@ -977,5 +977,6 @@ void Frontend::initialize()
 
 void Frontend::begin()
 {
+  this->initialize();
   this->server->begin();
 }

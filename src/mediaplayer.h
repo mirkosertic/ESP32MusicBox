@@ -31,11 +31,15 @@ public:
 
     void setChangCallback(ChangeNotifierCallback callback);
 
+    virtual bool next(int offset = 1) override;
+
+    virtual bool previous(int offset = 1) override;
+
     virtual void setActive(bool isActive) override;
 
     virtual bool setVolume(float volume) override;
 
-    void playURL(String url);
+    void playURL(String url, bool forceMono);
 
     virtual size_t copy() override;
 };

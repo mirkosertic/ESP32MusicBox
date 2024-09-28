@@ -44,7 +44,19 @@ bool MediaPlayer::setVolume(float volume)
     return result;
 }
 
-void MediaPlayer::playURL(String url)
+bool MediaPlayer::next(int offset)
+{
+    std::lock_guard<std::mutex> lck(this->loopmutex);
+    return AudioPlayer::next(offset);
+}
+
+bool MediaPlayer::previous(int offset)
+{
+    std::lock_guard<std::mutex> lck(this->loopmutex);
+    return AudioPlayer::previous(offset);
+}
+
+void MediaPlayer::playURL(String url, bool forceMono)
 {
     INFO_VAR("Playing URL %s", url.c_str());
     std::lock_guard<std::mutex> lck(this->loopmutex);
@@ -67,7 +79,14 @@ void MediaPlayer::playURL(String url)
     DEBUG("Begin of decoder");
     this->overrideDecoder->begin();
     DEBUG("Begin of converter");
-    this->overrideFormatConverter->begin(AudioInfo(1, 1, 16), outputInfo);
+    if (forceMono)
+    {
+        this->overrideFormatConverter->begin(AudioInfo(1, 1, 16), outputInfo);
+    }
+    else
+    {
+        this->overrideFormatConverter->begin(outputInfo, outputInfo);
+    }
     DEBUG("Start of copy");
     this->overrideCopy.begin(*this->overrideDecoder, *this->overrideStream);
     this->lastoverridecopytime = -1;
