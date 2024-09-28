@@ -438,25 +438,31 @@ void VoiceAssistant::pollQueue()
   }
 }
 
-void VoiceAssistant::processAudioData(const AudioBuffer *data)
+void VoiceAssistant::processAudioData()
 {
   if (this->started)
   {
-    int ret = xQueueSend(this->audioBuffersHandle, (void *)data, 0);
-    if (ret == pdTRUE)
+    int available = this->source->available();
+    if (available >= AUDIO_BUFFER_SIZE)
     {
-      // No problem here
-    }
-    else if (ret == errQUEUE_FULL)
-    {
-      WARN("No more place in audio buffers!");
+      AudioBuffer buffer;
+      size_t read = this->source->readBytes(&(buffer.data[0]), AUDIO_BUFFER_SIZE);
+      if (read > 0)
+      {
+        // Do something with the audio data, e.g. send it to voice assistant
+        buffer.size = read;
+        int ret = xQueueSend(this->audioBuffersHandle, (void *)&buffer, 0);
+        if (ret == pdTRUE)
+        {
+          // No problem here
+        }
+        else if (ret == errQUEUE_FULL)
+        {
+          WARN("No more place in audio buffers!");
+        }
+      }
     }
   }
-}
-
-int VoiceAssistant::getRecordingBlockSize()
-{
-  return AUDIO_BUFFER_SIZE;
 }
 
 void VoiceAssistant::loop()

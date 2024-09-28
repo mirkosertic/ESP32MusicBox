@@ -25,6 +25,7 @@ typedef std::function<void(HAState)> StateNotifierCallback;
 typedef std::function<void(String)> PlayAudioFeedbackCallback;
 
 #define AUDIO_BUFFER_SIZE 2048
+
 typedef struct
 {
     size_t size;
@@ -79,13 +80,11 @@ public:
 
     void reset();
 
-    int getRecordingBlockSize();
-
     void pollQueue();
 
     void sendAudioData(const uint8_t *data, size_t length);
 
-    void processAudioData(const AudioBuffer *data);
+    void processAudioData();
 
     HAState currentState();
 };

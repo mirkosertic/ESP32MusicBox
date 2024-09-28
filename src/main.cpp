@@ -18,7 +18,7 @@
 #include "mediaplayer.h"
 #include "mediaplayersource.h"
 #include "commands.h"
-#include "button.h"
+#include "buttons.h"
 #include "logging.h"
 #include "voiceassistant.h"
 #include "pins.h"
@@ -43,56 +43,11 @@ Settings settings(&SD_MMC, CONFIGURATION_FILE);
 TagScanner *tagscanner = new TagScanner(&Wire1, PN532_IRQ, PN532_RST);
 App *app = new App(wifiClient, tagscanner, &source, &player, &settings);
 Frontend *frontend = new Frontend(&SD_MMC, app, HTTP_SERVER_PORT, MP3_FILE, &settings);
-
+Buttons *buttons = new Buttons(app);
 VoiceAssistant *assistant = new VoiceAssistant(&kit, &settings);
 MQTT *mqtt = new MQTT(wifiClient, app);
 
 QueueHandle_t commandsHandle;
-
-Button play(GPIO_STARTSTOP, 300, [](ButtonAction action)
-            {
-  if (action == PRESSED)
-  {
-    app->toggleActiveState();
-  } });
-
-Button prev(GPIO_PREVIOUS, 300, [](ButtonAction action)
-            {
-  if (action == RELEASED) 
-  {
-    app->previous();
-  }
-  if (action == PRESSED_FOR_LONG_TIME)
-  {
-      float volume = app->getVolume();
-      if (volume >= 0.02) 
-      {
-        INFO("Decrementing volume");
-        app->setVolume(volume - 0.02);
-        kit.setVolume(volume - 0.02);        
-      } else{
-        INFO("Minimum volume reached");
-      }
-  } });
-
-Button next(GPIO_NEXT, 300, [](ButtonAction action)
-            {
-  if (action == RELEASED)
-  {
-    app->next();
-  }
-  if (action == PRESSED_FOR_LONG_TIME)
-  {
-      float volume = app->getVolume();
-      if (volume <= 0.98) 
-      {
-        INFO("Incrementing volume");
-        app->setVolume(volume + 0.02);
-        kit.setVolume(volume + 0.02);
-      } else {
-        INFO("Maximum volume reached");
-      }
-  } });
 
 void wifiscannertask(void *arguments)
 {
@@ -312,6 +267,9 @@ void setup()
   // Init file browser
   strcpy(app->getCurrentPath(), "");
 
+  // Start the physical button controller logic
+  buttons->begin();
+
   INFO("Init finish");
 
   // xTaskCreate(wifiscannertask, "WiFi scanner", 2048, NULL, 10, NULL);
@@ -367,33 +325,10 @@ void loop()
   // thread safe !!! So we perform everything related to audio processing
   // sequentially here
 
-  static long lastbuttonchecktime = millis();
-  long currenttime = millis();
-  if (currenttime - lastbuttonchecktime > 15)
-  {
-    // Perform a button check every 15ms
-    play.loop();
-    prev.loop();
-    next.loop();
-    lastbuttonchecktime = currenttime;
-  }
-
   // Record a time slice
   if (settings.isVoiceAssistantEnabled())
   {
-    int available = kit.available();
-    const int maxsize = assistant->getRecordingBlockSize();
-    if (available >= maxsize)
-    {
-      AudioBuffer buffer;
-      size_t read = kit.readBytes(&(buffer.data[0]), maxsize);
-      if (read > 0)
-      {
-        // Do something with the audio data, e.g. send it to voice assistant
-        buffer.size = read;
-        assistant->processAudioData(&buffer);
-      }
-    }
+    assistant->processAudioData();
   }
 
   // The main app loop
@@ -405,6 +340,7 @@ void loop()
   // Check if there is a command in the command queue
   CommandData command;
   // This call is non-blocking, last parameter is xTicksToWait = 0
+  // TODO: Put this into the main app loop
   int ret = xQueueReceive(commandsHandle, &command, 0);
   if (ret == pdPASS)
   {
