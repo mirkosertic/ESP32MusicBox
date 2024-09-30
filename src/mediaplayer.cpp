@@ -2,10 +2,11 @@
 
 #include "logging.h"
 
-MediaPlayer::MediaPlayer(AudioSource &source, AudioStream &output, AudioDecoder &decoder)
+MediaPlayer::MediaPlayer(MediaPlayerSource &source, AudioStream &output, AudioDecoder &decoder)
     : AudioPlayer(source, output, decoder)
 {
     this->output = &output;
+    this->source = &source;
 
     this->overrideHelix = new MP3DecoderHelix();
     this->overrideHelix->driver()->setInfoCallback([](MP3FrameInfo &info, void *ref)
@@ -30,7 +31,7 @@ void MediaPlayer::setActive(bool isActive)
         std::lock_guard<std::mutex> lck(this->loopmutex);
         AudioPlayer::setActive(isActive);
     }
-    this->changecallback();
+    this->changecallback(isActive, volume(), this->source->toStr());
 }
 
 bool MediaPlayer::setVolume(float volume)
@@ -40,7 +41,7 @@ bool MediaPlayer::setVolume(float volume)
         std::lock_guard<std::mutex> lck(this->loopmutex);
         result = AudioPlayer::setVolume(volume);
     }
-    this->changecallback();
+    this->changecallback(isActive(), volume, this->source->toStr());
     return result;
 }
 

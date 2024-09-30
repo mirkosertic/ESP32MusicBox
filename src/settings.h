@@ -51,6 +51,7 @@ public:
 
     void initializeWifiFromSettings();
 
+    void resetStoredBSSIDAndReconfigureWiFi();
     void rescanForBetterNetworksAndReconfigure();
 
     String getSettingsAsJson();

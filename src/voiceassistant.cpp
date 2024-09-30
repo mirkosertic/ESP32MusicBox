@@ -6,10 +6,17 @@
 
 void vadispatcher(void *parameters)
 {
+  static long notifycounter = 0;
   VoiceAssistant *target = (VoiceAssistant *)parameters;
   INFO("Voice assistant polling task started");
   while (true)
   {
+    notifycounter++;
+    if (notifycounter > 1000)
+    {
+      INFO("I am still alive!");
+      notifycounter = 0;
+    }
     target->pollQueue();
     vTaskDelay(1);
   }
@@ -306,20 +313,31 @@ VoiceAssistant::~VoiceAssistant()
   delete this->converterStream;
 }
 
+void VoiceAssistant::connectOrReconnect()
+{
+  INFO_VAR("Connecting to WebSocket %s:%d", this->host.c_str(), this->port);
+  if (this->webSocket->isConnected())
+  {
+    this->webSocket->disconnect();
+  }
+  this->webSocket->begin(this->host, this->port, "/api/websocket");
+}
+
 void VoiceAssistant::begin(String host, int port, String token, String deviceId, StateNotifierCallback stateNotifier, PlayAudioFeedbackCallback playFeedbackCallback)
 {
-  INFO_VAR("Connecting to WebSocket %s:%d", host.c_str(), port);
   this->token = token;
+  this->host = host;
+  this->port = port;
   this->deviceId = deviceId;
   this->stateNotifier = stateNotifier;
   this->playAudioFeedbackCallback = playFeedbackCallback;
 
   this->baseUrl = String("http://") + host + ":" + port;
 
-  this->webSocket->begin(host, port, "/api/websocket");
+  this->connectOrReconnect();
 
-  xTaskCreate(vadispatcher, "Voice Assistant", 32768, this, 40, NULL);
-  xTaskCreate(wsdispatcher, "WebSocket", 8192, this, 30, NULL);
+  xTaskCreate(vadispatcher, "Voice Assistant", 32768, this, 30, NULL);
+  xTaskCreate(wsdispatcher, "WebSocket", 16384, this, 40, NULL);
 
   this->started = true;
 
@@ -392,7 +410,7 @@ bool VoiceAssistant::startPipeline(bool includeWakeWordDetection)
 
 void VoiceAssistant::sendAudioData(const uint8_t *data, size_t length)
 {
-  DEBUG_VAR("Sending %d bytes audio data", length);
+  INFO_VAR("Sending %d bytes audio data", length);
 
   int transferlength = 1 + length;
 
@@ -406,7 +424,7 @@ void VoiceAssistant::sendAudioData(const uint8_t *data, size_t length)
   vTaskDelay(1);
   float duration = millis() - start;
   float thruputpersec = ((float)length) / duration * 1000.0;
-  DEBUG_VAR("Thruput is %.02f bytes/second", thruputpersec);
+  INFO_VAR("Thruput is %.02f bytes/second", thruputpersec);
 }
 
 void VoiceAssistant::finishAudioStream()
@@ -455,10 +473,20 @@ void VoiceAssistant::processAudioData()
         if (ret == pdTRUE)
         {
           // No problem here
+          if (this->recordingerror)
+          {
+            INFO("Recovered from recording error!");
+          }
+          this->recordingerror = false;
         }
         else if (ret == errQUEUE_FULL)
         {
-          WARN("No more place in audio buffers!");
+          if (this->recordingerror == false)
+          {
+            this->recordingerror = true;
+            WARN("No more place in audio buffers! Check is there is a network problem. I will restart the connection.");
+            //this->connectOrReconnect(); TODO: How to restart everything properly??
+          }
         }
       }
     }

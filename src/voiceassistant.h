@@ -41,6 +41,8 @@ private:
     String urlToSpeak;
     int commandid;
 
+    String host;
+    int port;
     String token;
     String deviceId;
     String baseUrl;
@@ -58,7 +60,11 @@ private:
     BufferedStream *buffer;
     FormatConverterStream *converterStream;
 
+    bool recordingerror;
+
     QueueHandle_t audioBuffersHandle;
+
+    void connectOrReconnect();
 
     void finishAudioStream();
 

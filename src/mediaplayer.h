@@ -6,11 +6,14 @@
 
 #include <mutex>
 
-typedef std::function<void()> ChangeNotifierCallback;
+#include "MediaPlayerSource.h"
+
+typedef std::function<void(bool active, float volume, const char *currentsong)> ChangeNotifierCallback;
 
 class MediaPlayer : public AudioPlayer
 {
 private:
+    MediaPlayerSource *source;
     AudioStream *output;
 
     ChangeNotifierCallback changecallback;
@@ -27,7 +30,7 @@ private:
     std::mutex loopmutex;
 
 public:
-    MediaPlayer(AudioSource &source, AudioStream &output, AudioDecoder &decoder);
+    MediaPlayer(MediaPlayerSource &source, AudioStream &output, AudioDecoder &decoder);
 
     void setChangCallback(ChangeNotifierCallback callback);
 

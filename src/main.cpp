@@ -49,6 +49,8 @@ MQTT *mqtt = new MQTT(wifiClient, app);
 
 QueueHandle_t commandsHandle;
 
+long startupTime = millis();
+
 void wifiscannertask(void *arguments)
 {
   INFO("WiFi scanner task started");
@@ -234,12 +236,12 @@ void setup()
                                       mqtt->publishCurrentSong(String(songinfo));
                                     }
 
-                                    app->incrementStateVersion(); 
+                                    app->incrementStateVersion();
                                   } });
 
-  player.setChangCallback([]()
+  player.setChangCallback([](bool active, float volume, const char *currentsong)
                           {
-                            if (player.isActive())
+                            if (active)
                             {
                               mqtt->publishPlaybackState(String("Playing"));
                             }
@@ -248,12 +250,10 @@ void setup()
                               mqtt->publishPlaybackState(String("Stopped"));
                             }
 
-                            mqtt->publishVolume(((int)(player.volume() * 100)));
-
-                            const char *songinfo = source.toStr();
-                            if (songinfo)
+                            mqtt->publishVolume(((int)(volume * 100)));
+                            if (currentsong)
                             {
-                              mqtt->publishCurrentSong(String(songinfo));
+                              mqtt->publishCurrentSong(String(currentsong));
                             }
                             
                             app->incrementStateVersion(); });
@@ -309,14 +309,25 @@ void wifiConnected()
 void loop()
 {
   // dnsServer.processNextRequest();
-
-  if (settings.isWiFiEnabled() && WiFi.status() == WL_CONNECTED && !app->isWifiConnected())
+  if (settings.isWiFiEnabled())
   {
-    settings.writeToConfig();
+    if (WiFi.status() == WL_CONNECTED && !app->isWifiConnected())
+    {
+      settings.writeToConfig();
 
-    wifiConnected();
+      wifiConnected();
 
-    app->setWifiConnected();
+      app->setWifiConnected();
+    }
+
+    if (!app->isWifiConnected() && millis() - startupTime > 30000)
+    {
+      // More than 30 seconds no WiFi connect, we reset the stored bssid
+      settings.resetStoredBSSIDAndReconfigureWiFi();
+
+      // Start timeout again
+      startupTime = millis();
+    }
   }
 
   // TODO: Check if WLAN BSSID schould be resetted if it is set but no connection is possible...

@@ -613,6 +613,7 @@ Frontend::Frontend(FS *fs, App *app, uint16_t wsportnumber, const char *ext, Set
 
 Frontend::~Frontend()
 {
+  this->server->end();
   delete this->server;
 }
 

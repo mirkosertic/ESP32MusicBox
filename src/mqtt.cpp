@@ -6,10 +6,17 @@
 
 void mqttTaskDelegate(void *argument)
 {
+    static long notifycounter = 0;
     INFO("MQTT task started");
     MQTT *mqtt = (MQTT *)argument;
     while (true)
     {
+        notifycounter++;
+        if (notifycounter > 1000)
+        {
+            INFO("I am still alive!");
+            notifycounter = 0;
+        }
         mqtt->loop();
         vTaskDelay(1);
     }
@@ -50,7 +57,7 @@ void MQTT::begin(String host, int port, String username, String password)
                                         } });
 
     // Start the loop as a separate task running in the background
-    xTaskCreate(mqttTaskDelegate, "MQTT", 4096, this, 5, NULL);
+    xTaskCreate(mqttTaskDelegate, "MQTT", 8192, this, 5, NULL);
 }
 
 void MQTT::loop()
@@ -90,8 +97,17 @@ void MQTT::performAutoDiscovery()
 
     this->volumestatetopic = this->announceNumber("volume", "Volume", "mdi:volume-source", "slider", 0, 100, [this](String newvalue)
                                                   {
-      float volume = newvalue.toFloat();
-      this->app->setVolume(volume / 100.0); });
+                                                    INFO_VAR("Got new volume as String %s", newvalue.c_str());
+                                                    long volume = newvalue.toInt();
+                                                    INFO_VAR("New volume as number is %d", volume);
+                                                    if (volume != 0)
+                                                    {
+                                                        this->app->setVolume(volume / 100.0); 
+                                                    }
+                                                    else
+                                                    {
+                                                        this->app->setVolume(0.0); 
+                                                    } });
 
     this->announceButton("startstop", "Start/Stop", "mdi:restart", [this]()
                          { this->app->toggleActiveState(); });
@@ -131,6 +147,7 @@ String MQTT::announceButton(String buttonId, String title, String icon, const st
     device["model"] = this->app->getDeviceType();
     device["manufacturer"] = this->app->getManufacturer();
     device["model_id"] = this->app->getVersion();
+    device["sw_version"] = this->app->getSoftwareVersion();
     device["serial_number"] = this->app->computeSerialNumber();
     device["configuration_url"] = this->app->getConfigurationURL();
 
@@ -143,7 +160,7 @@ String MQTT::announceButton(String buttonId, String title, String icon, const st
     this->mqttCallbacks.push_back([commandTopic, clickHandler](String topic, String payload)
                                   {
             if (topic == commandTopic) {
-                INFO_VAR("Got Message on %s", commandTopic.c_str());
+                INFO_VAR("Got Message on %s -> %s", commandTopic.c_str(), payload.c_str());
                 if (payload == "PRESS") {
                     INFO("Pressed!");
                     clickHandler();
@@ -180,6 +197,7 @@ String MQTT::announceNumber(String numberId, String title, String icon, String m
     device["model"] = this->app->getDeviceType();
     device["manufacturer"] = this->app->getManufacturer();
     device["model_id"] = this->app->getVersion();
+    device["sw_version"] = this->app->getSoftwareVersion();
     device["serial_number"] = this->app->computeSerialNumber();
     device["configuration_url"] = this->app->getConfigurationURL();
 
@@ -192,7 +210,7 @@ String MQTT::announceNumber(String numberId, String title, String icon, String m
     this->mqttCallbacks.push_back([commandTopic, changeHandler](String topic, String payload)
                                   {
             if (topic == commandTopic) {
-                INFO("Changed");
+                INFO_VAR("Changed topic %s with payload %s", topic.c_str(), payload.c_str());
                 changeHandler(payload);
             } });
 
@@ -221,6 +239,7 @@ String MQTT::announceSensor(String notifyId, String title, String icon)
     device["model"] = this->app->getDeviceType();
     device["manufacturer"] = this->app->getManufacturer();
     device["model_id"] = this->app->getVersion();
+    device["sw_version"] = this->app->getSoftwareVersion();
     device["serial_number"] = this->app->computeSerialNumber();
     device["configuration_url"] = this->app->getConfigurationURL();
 
@@ -254,6 +273,7 @@ String MQTT::announceTagscanner(String notifyId)
     device["model"] = this->app->getDeviceType();
     device["manufacturer"] = this->app->getManufacturer();
     device["model_id"] = this->app->getVersion();
+    device["sw_version"] = this->app->getSoftwareVersion();
     device["serial_number"] = this->app->computeSerialNumber();
     device["configuration_url"] = this->app->getConfigurationURL();
 

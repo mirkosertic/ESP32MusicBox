@@ -86,6 +86,8 @@ public:
 
     String getVersion();
 
+    String getSoftwareVersion();
+
     void setManufacturer(String manufacturer);
 
     String getManufacturer();

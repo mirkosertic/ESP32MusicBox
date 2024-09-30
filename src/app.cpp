@@ -7,6 +7,7 @@
 #include <esp_system.h>
 
 #include "logging.h"
+#include "gitrevision.h"
 
 App::App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings)
 {
@@ -192,6 +193,11 @@ String App::getVersion()
     return version;
 }
 
+String App::getSoftwareVersion()
+{
+    return String(gitRevShort);
+}
+
 void App::setManufacturer(String manufacturer)
 {
     this->manufacturer = manufacturer;
@@ -318,15 +324,23 @@ void App::previous()
 
 void App::next()
 {
-    this->player->next();
+    if (!this->player->next())
+    {
+        WARN("No more next titles!");
+    }
 }
 
 void App::play(String path, int index)
 {
+    INFO_VAR("Playing song in path %s with index %d", path.c_str(), index);
     strcpy(this->currentpath, path.c_str());
 
+    INFO("Player active=false");
     this->player->setActive(false);
+    INFO("Setting path");
     this->source->setPath(currentpath);
+    INFO_VAR("Playing index %d", index);
     this->player->begin(index, true);
+    INFO("Player active=true");
     this->player->setActive(true);
 }
