@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{appname}} - Settings</title>
+  <style>
+    /* Minimalistic but beautiful styles */
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .status-card, .file-browser, .rfid-status, .system-status, .player-controls {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    
+    .status-card h2, .file-browser h2, .rfid-status h2, .system-status h2, .player-controls h2 {
+      font-size: 1.3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .system-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .system-status .status-item {
+      display: flex;
+      align-items: center;
+    }
+    
+    .system-status .status-item span {
+      margin-left: 0.3rem;
+    }
+    
+    .system-status .status-icon {
+      font-size: 1.2rem;
+    }
+    
+    textarea {
+      width: 100%;
+      height: 22rem;
+    }
+    
+    a {
+      color: black;
+      text-decoration: none;		
+    }
+
+    a:visited {
+      color: black;
+      text-decoration: none;
+    }
+
+    #submit-button {
+        background-color: red;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    #error-message {
+        color: red;
+        margin-top: 10px;
+    }	
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>{{appname}} - Settings</h1>
+    
+    <div class="status-card">
+      <h2>Settings as JSON</h2>
+      <form action="/updateconfig" id="json-form" onsubmit="return validateAndSubmit();">
+        <textarea id="editor" name="configdata">{{settingsjson}}</textarea>
+        <div id="error-message"></div>
+        <button type="submit" id="submit-button">!! Save !!</button>
+      </form>	        
+    </div>
+    
+    <script>
+      function validateAndSubmit() {
+          var jsonString = document.getElementById('editor').value;
+          try {
+              JSON.parse(jsonString);
+              document.getElementById('error-message').textContent = '';
+              console.log('Form submitted with valid JSON:', jsonString);
+              return true;
+          } catch (e) {
+              console.log('Form submitted with valid JSON:', jsonString);
+              document.getElementById('error-message').textContent = 'Invalid JSON: ' + e.message;
+              return false;
+          }
+      }	
+    </script>
+
+    <div class="system-status">
+      <div class="status-item">
+        <span class="status-icon">&#x1F4F6;</span>
+        <a href="/networks.html"><span>WIFI: {{wifistatus}}</span></a>
+      </div>
+      <div class="status-item">
+        <span class="status-icon">&#9881;</span>      
+        <a href="/settings.html"><span>Device Configuration</span></a>      
+      <div>
+    </div>
+  </div>
+</body>
+</html>

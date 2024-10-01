@@ -19,6 +19,8 @@ public:
     void begin();
 
     void loop();
+
+    bool isStartStopPressed();
 };
 
 #endif

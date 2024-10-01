@@ -64,7 +64,7 @@ void wifiscannertask(void *arguments)
 void dummyhandler(bool, int, void *)
 {
   INFO("Button pressed!");
-  player.playURL("http://192.168.0.159:8123/api/tts_proxy/a5b81f9cf47b4f7b244c110c37305dab85944c2b_de-de_9d38d7a658_tts.piper.mp3", true);
+  // player.playURL("http://192.168.0.159:8123/api/tts_proxy/a5b81f9cf47b4f7b244c110c37305dab85944c2b_de-de_9d38d7a658_tts.piper.mp3", true);
 }
 
 void callbackPrintMetaData(MetaDataType type, const char *str, int len)
@@ -136,6 +136,10 @@ void setup()
   }
   else
   {
+    if (buttons->isStartStopPressed())
+    {
+      settings.resetStoredBSSID();
+    }
     settings.initializeWifiFromSettings();
   }
 
@@ -311,7 +315,7 @@ void loop()
   // dnsServer.processNextRequest();
   if (settings.isWiFiEnabled())
   {
-    if (WiFi.status() == WL_CONNECTED && !app->isWifiConnected())
+    if (WiFi.isConnected() && !app->isWifiConnected())
     {
       settings.writeToConfig();
 
@@ -320,13 +324,16 @@ void loop()
       app->setWifiConnected();
     }
 
-    if (!app->isWifiConnected() && millis() - startupTime > 30000)
+    long now = millis();
+
+    if (!WiFi.isConnected() && now - startupTime > 30000)
     {
+      INFO("WiFi is not connected, so reinit the connection");
       // More than 30 seconds no WiFi connect, we reset the stored bssid
       settings.resetStoredBSSIDAndReconfigureWiFi();
 
       // Start timeout again
-      startupTime = millis();
+      startupTime = now;
     }
   }
 

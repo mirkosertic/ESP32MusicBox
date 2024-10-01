@@ -51,6 +51,7 @@ public:
 
     void initializeWifiFromSettings();
 
+    void resetStoredBSSID();
     void resetStoredBSSIDAndReconfigureWiFi();
     void rescanForBetterNetworksAndReconfigure();
 

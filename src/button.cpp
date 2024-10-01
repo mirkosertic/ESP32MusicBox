@@ -12,11 +12,16 @@ Button::Button(int pin, long sensitivity, ButtonHandler handler)
     pinMode(pin, INPUT_PULLUP);
 }
 
+bool Button::isPressed()
+{
+    int input = digitalRead(pin);
+    return input == LOW;
+}
+
 void Button::loop()
 {
     long currenttime = millis();
-    int input = digitalRead(pin);
-    if (input == HIGH)
+    if (!this->isPressed())
     {
         // Open
         if (this->pressed)
@@ -34,8 +39,7 @@ void Button::loop()
             this->statetime = currenttime;
         }
     }
-
-    if (input == LOW)
+    else
     {
         // Close
         if (!this->pressed)

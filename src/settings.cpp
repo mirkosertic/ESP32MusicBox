@@ -365,7 +365,7 @@ void Settings::rescanForBetterNetworksAndReconfigure()
   WiFi.scanDelete();
 }
 
-void Settings::resetStoredBSSIDAndReconfigureWiFi()
+void Settings::resetStoredBSSID()
 {
   INFO("Reset of stored BSSID");
   this->wlan_bssid[0] = 0;
@@ -374,6 +374,11 @@ void Settings::resetStoredBSSIDAndReconfigureWiFi()
   this->wlan_bssid[3] = 0;
   this->wlan_bssid[4] = 0;
   this->wlan_bssid[5] = 0;
+}
+
+void Settings::resetStoredBSSIDAndReconfigureWiFi()
+{
+  this->resetStoredBSSID();
 
   this->writeToConfig();
   this->initializeWifiFromSettings();

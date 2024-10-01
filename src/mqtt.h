@@ -22,17 +22,21 @@ private:
     String password;
     std::vector<MQTTCallback> mqttCallbacks;
 
+    long lastreconnectfailure;
+
     String tagtopic;
     String tagscannertopic;
     String currentsongtopic;
     String playbackstatetopic;
     String volumestatetopic;
 
+    String wifiqualitytopic;
+
     String announceButton(String buttonId, String title, String icon, const std::function<void()> &clickHandler);
 
     String announceNumber(String numberId, String title, String icon, String mode, float min, float max, const std::function<void(String)> &changeHandler);
 
-    String announceSensor(String notifyId, String title, String icon);
+    String announceSensor(String notifyId, String title, String icon, String deviceclass = "", String displayUnit = "");
 
     String announceTagscanner(String notifyId);
 
@@ -57,6 +61,8 @@ public:
     void publishScannedTag(String value);
 
     void publishTagScannerInfo(String value);
+
+    void publishWiFiQuality(int rssi);
 };
 
 #endif

@@ -82,3 +82,8 @@ void Buttons::loop()
     this->next->loop();
     this->startstop->loop();
 }
+
+bool Buttons::isStartStopPressed()
+{
+    return this->startstop->isPressed();
+}

@@ -26,6 +26,8 @@ public:
     Button(int pin, long sensitivity, ButtonHandler handler);
 
     void loop();
+
+    bool isPressed();
 };
 
 #endif

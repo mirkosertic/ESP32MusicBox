@@ -7,17 +7,26 @@
 void mqttTaskDelegate(void *argument)
 {
     static long notifycounter = 0;
+    static long lastwificheck = millis();
     INFO("MQTT task started");
     MQTT *mqtt = (MQTT *)argument;
     while (true)
     {
         notifycounter++;
-        if (notifycounter > 1000)
+        if (notifycounter > 30000)
         {
             INFO("I am still alive!");
             notifycounter = 0;
         }
         mqtt->loop();
+
+        long now = millis();
+        if (now - lastwificheck > 30000)
+        {
+            mqtt->publishWiFiQuality(WiFi.RSSI());
+            lastwificheck = now;
+        }
+
         vTaskDelay(1);
     }
 }
@@ -56,19 +65,26 @@ void MQTT::begin(String host, int port, String username, String password)
                                             func(to, messagePayload);
                                         } });
 
+    this->lastreconnectfailure = -1;
+
     // Start the loop as a separate task running in the background
     xTaskCreate(mqttTaskDelegate, "MQTT", 8192, this, 5, NULL);
 }
 
 void MQTT::loop()
 {
-    if (!this->pubsubclient->connected())
+    long now = millis();
+
+    // Only try to reconnect every second
+    if (!this->pubsubclient->connected() && now - lastreconnectfailure > 1000)
     {
         INFO("Needs to reconnect, trying to reconnect");
         bool result = this->pubsubclient->connect(this->clientid.c_str(), this->username.c_str(), this->password.c_str());
         if (!result)
         {
             WARN_VAR("Connection failed, rc=%d, try again...", this->pubsubclient->state());
+
+            this->lastreconnectfailure = now;
         }
         else
         {
@@ -79,6 +95,8 @@ void MQTT::loop()
             String subscribeWildCard = this->clientid + "/+/set";
             INFO_VAR("Subscribing to topics %s", subscribeWildCard.c_str());
             this->pubsubclient->subscribe(subscribeWildCard.c_str());
+
+            this->lastreconnectfailure = -1;
         }
     }
     else
@@ -123,6 +141,8 @@ void MQTT::performAutoDiscovery()
     this->tagscannertopic = this->announceSensor("tagscanner", "Detected Card", "mdi:tag-outline");
 
     this->currentsongtopic = this->announceSensor("currentsongstate", "Current Song", "mdi:information-outline");
+
+    this->wifiqualitytopic = this->announceSensor("wifiquality", "WiFi Quality", "mdi:wifi", "SIGNAL_STRENGTH", "dBm");
 }
 
 String MQTT::announceButton(String buttonId, String title, String icon, const std::function<void()> &clickHandler)
@@ -219,7 +239,7 @@ String MQTT::announceNumber(String numberId, String title, String icon, String m
     return stateTopic;
 }
 
-String MQTT::announceSensor(String notifyId, String title, String icon)
+String MQTT::announceSensor(String notifyId, String title, String icon, String deviceclass, String displayUnit)
 {
     String objectId = this->clientid + "_" + notifyId + "_sens";
     String discoveryTopic = "homeassistant/sensor/" + objectId + "/config";
@@ -233,6 +253,16 @@ String MQTT::announceSensor(String notifyId, String title, String icon)
     discoverypayload["state_topic"] = stateTopic;
     discoverypayload["name"] = title;
     discoverypayload["icon"] = icon;
+
+    if (deviceclass.length() > 0)
+    {
+        discoverypayload["device_class"] = deviceclass;
+    }
+
+    if (displayUnit.length() > 0)
+    {
+        discoverypayload["unit_of_measurement"] = displayUnit;
+    }
 
     JsonObject device = discoverypayload["device"].to<JsonObject>();
     device["name"] = this->app->getName();
@@ -323,4 +353,9 @@ void MQTT::publishScannedTag(String value)
 void MQTT::publishTagScannerInfo(String value)
 {
     this->publish(this->tagscannertopic, value);
+}
+
+void MQTT::publishWiFiQuality(int rssi)
+{
+    this->publish(this->wifiqualitytopic, String(rssi));
 }
