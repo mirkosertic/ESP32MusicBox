@@ -26,8 +26,15 @@ void wsdispatcher(void *parameters)
 {
   VoiceAssistant *target = (VoiceAssistant *)parameters;
   INFO("WebSocket looper task started");
+  long notifycounter = 0;
   while (true)
   {
+    notifycounter++;
+    if (notifycounter > 1000)
+    {
+      INFO("I am still here");
+      notifycounter = 0;
+    }
     target->loop();
     vTaskDelay(1);
   }
@@ -98,6 +105,10 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
   {
     INFO("Disconnected!");
     this->stateIs(DISCONNECTED);
+
+    delay(100000);
+
+    // this->connectOrReconnect();
     break;
   }
   case WStype_CONNECTED:
@@ -150,6 +161,7 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
         if (strcmp(doc["event"]["type"], "run-end") == 0)
         {
           INFO("run-end received");
+          this->stateIs(FINISHED);
 
           if (this->urlToSpeak.length() > 0)
           {
@@ -157,8 +169,6 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
 
             this->playAudioFeedbackCallback(this->urlToSpeak);
           }
-
-          this->stateIs(FINISHED);
         }
         if (strcmp(doc["event"]["type"], "wake_word-start") == 0)
         {
@@ -185,6 +195,11 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
 
           INFO("wake_word-start received");
           this->stateIs(RECORDING);
+        }
+        if (strcmp(doc["event"]["type"], "wake_word-end") == 0)
+        {
+          INFO("wake_word-end received");
+          this->stateIs(WAKEWORDFINISHED);
         }
         if (strcmp(doc["event"]["type"], "stt-start") == 0)
         {
@@ -220,8 +235,17 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
 
           // finishAudioStream();
         }
+        if (strcmp(doc["event"]["type"], "stt-end") == 0)
+        {
+          INFO("stt-end received");
+          this->stateIs(STTFINISHED);
+
+          // finishAudioStream();
+        }
         if (strcmp(doc["event"]["type"], "tts-end") == 0)
         {
+          this->stateIs(FINISHED);
+
           const char *ressource = doc["event"]["data"]["tts_output"]["url"];
 
           this->urlToSpeak = this->baseUrl + ressource;
@@ -281,6 +305,8 @@ VoiceAssistant::VoiceAssistant(AudioStream *source, Settings *settings)
     }
   }
 
+  this->wsloop = NULL;
+
   this->state = DISCONNECTED;
   this->source = source;
   this->settings = settings;
@@ -301,6 +327,7 @@ VoiceAssistant::VoiceAssistant(AudioStream *source, Settings *settings)
   this->started = false;
 
   this->webSocket->setReconnectInterval(1000);
+  this->webSocket->enableHeartbeat(200, 200, 1);
   this->webSocket->onEvent([this](WStype_t type, uint8_t *payload, size_t length)
                            { this->webSocketEvent(type, payload, length); });
 }
@@ -320,7 +347,18 @@ void VoiceAssistant::connectOrReconnect()
   {
     this->webSocket->disconnect();
   }
+
+  if (this->wsloop != NULL)
+  {
+    INFO("Deleting WS Task");
+    vTaskDelete(this->wsloop);
+    delay(1000);
+  }
+
+  INFO("Begin new WS Connection");
   this->webSocket->begin(this->host, this->port, "/api/websocket");
+  INFO("Starting new WS Task");
+  xTaskCreate(wsdispatcher, "WebSocket", 16384, this, 10, &this->wsloop);
 }
 
 void VoiceAssistant::begin(String host, int port, String token, String deviceId, StateNotifierCallback stateNotifier, PlayAudioFeedbackCallback playFeedbackCallback)
@@ -336,8 +374,7 @@ void VoiceAssistant::begin(String host, int port, String token, String deviceId,
 
   this->connectOrReconnect();
 
-  xTaskCreate(vadispatcher, "Voice Assistant", 32768, this, 30, NULL);
-  xTaskCreate(wsdispatcher, "WebSocket", 16384, this, 40, NULL);
+  xTaskCreate(vadispatcher, "Voice Assistant", 32768, this, 10, NULL);
 
   this->started = true;
 
@@ -410,29 +447,54 @@ bool VoiceAssistant::startPipeline(bool includeWakeWordDetection)
 
 void VoiceAssistant::sendAudioData(const uint8_t *data, size_t length)
 {
-  INFO_VAR("Sending %d bytes audio data", length);
+  std::unique_lock<std::mutex> lck(this->loopmutex, std::defer_lock);
+  if (this->state == RECORDING)
+  {
+    INFO_VAR("Sending %d bytes audio data", length);
 
-  int transferlength = 1 + length;
+    if (length > 0)
+    {
+      int transferlength = 1 + length;
 
-  uint8_t transferbuffer[transferlength];
-  transferbuffer[0] = this->binaryHandler;
+      uint8_t transferbuffer[transferlength];
+      transferbuffer[0] = this->binaryHandler;
 
-  memcpy(&transferbuffer[1], data, length);
+      memcpy(&transferbuffer[1], data, length);
 
-  long start = millis();
-  this->webSocket->sendBIN(transferbuffer, transferlength);
-  vTaskDelay(1);
-  float duration = millis() - start;
-  float thruputpersec = ((float)length) / duration * 1000.0;
-  INFO_VAR("Thruput is %.02f bytes/second", thruputpersec);
+      long start = millis();
+      this->webSocket->sendBIN(transferbuffer, transferlength);
+      vTaskDelay(1);
+      float duration = millis() - start;
+      float thruputpersec = ((float)length) / duration * 1000.0;
+      INFO_VAR("Thruput is %.02f bytes/second", thruputpersec);
+    }
+    else
+    {
+      WARN("Ingnoring data packet with size 0");
+    }
+  }
+  else
+  {
+    INFO_VAR("Ignoring %d bytes of audio data, as we are not recording", length);
+  }
 }
 
 void VoiceAssistant::finishAudioStream()
 {
-  uint8_t transferbuffer[1];
-  transferbuffer[0] = this->binaryHandler;
+  std::lock_guard<std::mutex> lck(this->loopmutex);
+  if (this->state == RECORDING)
+  {
+    INFO("Finishing stream!");
+    uint8_t transferbuffer[1];
+    transferbuffer[0] = this->binaryHandler;
 
-  this->webSocket->sendBIN(&transferbuffer[0], 1);
+    this->webSocket->sendBIN(&transferbuffer[0], 1);
+    this->state == TTSFINISHED;
+  }
+  else
+  {
+    INFO("Nothing to do on finish!");
+  }
 }
 
 void VoiceAssistant::pollQueue()
@@ -485,7 +547,7 @@ void VoiceAssistant::processAudioData()
           {
             this->recordingerror = true;
             WARN("No more place in audio buffers! Check is there is a network problem. I will restart the connection.");
-            //this->connectOrReconnect(); TODO: How to restart everything properly??
+            // this->connectOrReconnect(); TODO: How to restart everything properly??
           }
         }
       }
@@ -497,6 +559,9 @@ void VoiceAssistant::loop()
 {
   if (this->started)
   {
+    INFO("Waiting for mutex");
+    std::lock_guard<std::mutex> lck(this->loopmutex);
+    INFO("Done");
     this->webSocket->loop();
   }
 }

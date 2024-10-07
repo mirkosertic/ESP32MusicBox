@@ -16,9 +16,7 @@ void MediaPlayerSource::setChangeIndexCallback(ChangeIndexCallback callback)
 Stream *MediaPlayerSource::selectStream(int index)
 {
     INFO_VAR("Selecting next stream #%d", index);
-    Stream *result = AudioSourceSDMMC::selectStream(index);
-
-    this->changeindexcallback(result);
-
-    return result;
+    this->currentStream = AudioSourceSDMMC::selectStream(index);
+    this->changeindexcallback(this->currentStream);
+    return this->currentStream;
 }

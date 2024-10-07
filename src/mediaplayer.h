@@ -2,11 +2,11 @@
 #define MEDIAPLAYER_H
 
 #include <AudioTools.h>
-#include "AudioCodecs/CodecMP3Helix.h"
+#include <AudioTools/AudioCodecs/CodecMP3Helix.h>
 
 #include <mutex>
 
-#include "MediaPlayerSource.h"
+#include "mediaplayersource.h"
 
 typedef std::function<void(bool active, float volume, const char *currentsong)> ChangeNotifierCallback;
 
@@ -26,8 +26,6 @@ private:
 
     long lastoverridecopytime;
     int indexBeforeOverride;
-
-    std::mutex loopmutex;
 
 public:
     MediaPlayer(MediaPlayerSource &source, AudioStream &output, AudioDecoder &decoder);

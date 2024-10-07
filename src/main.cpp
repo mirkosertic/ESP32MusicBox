@@ -4,10 +4,13 @@
 #include <esp_task_wdt.h>
 
 #include <AudioTools.h>
-#include <AudioLibs/AudioBoardStream.h>
-#include <AudioCodecs/CodecMP3Helix.h>
+#include <AudioTools/AudioLibs/AudioBoardStream.h>
+#include <AudioTools/AudioCodecs/CodecMP3Helix.h>
 #include <ArduinoJson.h>
 #include <Driver.h>
+#include <esp_idf_version.h>
+#include <esp_arduino_version.h>
+
 // #include <DNSServer.h>
 
 #include "settings.h"
@@ -41,7 +44,7 @@ WiFiClient wifiClient;
 Settings settings(&SD_MMC, CONFIGURATION_FILE);
 
 TagScanner *tagscanner = new TagScanner(&Wire1, PN532_IRQ, PN532_RST);
-App *app = new App(wifiClient, tagscanner, &source, &player, &settings);
+App *app = new App(wifiClient, tagscanner, &source, &player, &settings, &kit);
 Frontend *frontend = new Frontend(&SD_MMC, app, HTTP_SERVER_PORT, MP3_FILE, &settings);
 Buttons *buttons = new Buttons(app);
 VoiceAssistant *assistant = new VoiceAssistant(&kit, &settings);
@@ -78,6 +81,9 @@ void setup()
 
   INFO("setup started!");
 
+  INFO_VAR("Running on Arduino : %d.%d.%d", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
+  INFO_VAR("Running on ESP IDF : %s", esp_get_idf_version());
+
   commandsHandle = xQueueCreate(10, sizeof(CommandData));
   if (commandsHandle == NULL)
   {
@@ -102,6 +108,7 @@ void setup()
   // setup output
   AudioInfo info(44100, 2, 16);
   auto cfg = kit.defaultConfig(RXTX_MODE);
+  //auto cfg = kit.defaultConfig(TX_MODE);
   cfg.copyFrom(info);
   cfg.sd_active = false;              // We are running in SD 1bit mode, so no init needs to be done here!
   cfg.input_device = ADC_INPUT_LINE2; // input from microphone, stereo in case of AiThinker AudioKit
@@ -116,10 +123,10 @@ void setup()
   // Set the microphone level a little bit louder...
   // This will change the gain of the microphone
   kit.board().getDriver()->setInputVolume(90);
+  kit.board().getDriver()->setVolume(90);
 
-  // Set the overall loudness of the Kit, this is
-  // not related with the volume of the media player!!!
-  kit.setVolume(0.7);
+  // Set the overall loudness of the Kit.
+  kit.setVolume(0.8);
 
   AudioInfo kitinfo = kit.audioInfo();
   AudioInfo kitoutinfo = kit.audioInfoOut();
@@ -232,6 +239,7 @@ void setup()
 
   source.setChangeIndexCallback([](Stream *next)
                                 { 
+                                  INFO("In info callback");
                                   if (next != nullptr)
                                   {
                                     const char *songinfo = source.toStr();
@@ -241,10 +249,12 @@ void setup()
                                     }
 
                                     app->incrementStateVersion();
-                                  } });
+                                  }
+                                  INFO("Done"); });
 
   player.setChangCallback([](bool active, float volume, const char *currentsong)
                           {
+                            INFO("In change callback");
                             if (active)
                             {
                               mqtt->publishPlaybackState(String("Playing"));
@@ -260,13 +270,14 @@ void setup()
                               mqtt->publishCurrentSong(String(currentsong));
                             }
                             
-                            app->incrementStateVersion(); });
+                            app->incrementStateVersion();
+                            INFO("Done"); });
 
-  // player.begin();
-  player.setActive(false);
+  player.begin(-1, false);
 
   // setup player
   player.setVolume(kit.getVolume());
+  player.getVolumeStream().setVolume(1.0);
 
   // Init file browser
   strcpy(app->getCurrentPath(), "");
@@ -337,8 +348,6 @@ void loop()
     }
   }
 
-  // TODO: Check if WLAN BSSID schould be resetted if it is set but no connection is possible...
-
   // The hole thing here is that the audiolib and the audioplayer are not
   // thread safe !!! So we perform everything related to audio processing
   // sequentially here
@@ -370,14 +379,9 @@ void loop()
         String path(String((char *)&command.path[0]));
         INFO_VAR("Playing %s from index %d with volume %d", path.c_str(), (int)command.index, (int)command.volume);
 
-        player.setVolume(command.volume / 100.0);
-        player.setActive(false);
-
-        strcpy(app->getCurrentPath(), path.c_str());
-
-        source.setPath(app->getCurrentPath());
-        player.begin(command.index, true);
-        player.setActive(true);
+        app->setVolume(command.volume / 100.0);
+      
+        app->play(path, command.index);
       }
       else
       {

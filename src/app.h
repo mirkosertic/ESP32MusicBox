@@ -6,6 +6,7 @@
 #include <WiFi.h>
 #include <ESP32SSDP.h>
 #include <PubSubClient.h>
+#include <mutex>
 
 #include "tagscanner.h"
 #include "commands.h"
@@ -41,8 +42,12 @@ private:
     VoiceAssistant *assistant;
     Settings *settings;
 
+    VolumeSupport *boardvolume;
+
+    std::mutex loopmutex;
+
 public:
-    App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings);
+    App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *boardVolume);
 
     ~App();
 

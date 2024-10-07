@@ -73,7 +73,7 @@ Buttons::~Buttons()
 void Buttons::begin()
 {
     // Start the loop as a separate task running in the background
-    xTaskCreate(buttonsdelegate, "Buttons", 4096, this, 5, NULL);
+    xTaskCreate(buttonsdelegate, "Buttons", 8192, this, 2, NULL);
 }
 
 void Buttons::loop()

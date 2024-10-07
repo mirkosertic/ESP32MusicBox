@@ -9,8 +9,9 @@
 #include "logging.h"
 #include "gitrevision.h"
 
-App::App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings)
+App::App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *boardvolume)
 {
+    this->boardvolume = boardvolume;
     this->tagscanner = tagscanner;
     this->stateversion = 0;
     this->currentpath = new char[512];
@@ -267,6 +268,7 @@ const char *App::getSSDPSchema()
 
 void App::loop()
 {
+    const std::lock_guard<std::mutex> lock(this->loopmutex);
     this->player->copy();
 }
 
@@ -299,18 +301,22 @@ const char *App::currentTitle()
 
 void App::setVolume(float volume)
 {
+    const std::lock_guard<std::mutex> lock(this->loopmutex);
     INFO_VAR("Setting volume to %f", volume);
     this->player->setVolume(volume);
+    // this->boardvolume->setVolume(volume);
 }
 
 void App::toggleActiveState()
 {
+    const std::lock_guard<std::mutex> lock(this->loopmutex);
     INFO("Toggling player state");
     this->player->setActive(!this->player->isActive());
 }
 
 void App::previous()
 {
+    const std::lock_guard<std::mutex> lock(this->loopmutex);
     if (this->source->index() > 0)
     {
         INFO("Previous title");
@@ -324,6 +330,7 @@ void App::previous()
 
 void App::next()
 {
+    const std::lock_guard<std::mutex> lock(this->loopmutex);
     if (!this->player->next())
     {
         WARN("No more next titles!");
@@ -332,6 +339,8 @@ void App::next()
 
 void App::play(String path, int index)
 {
+    const std::lock_guard<std::mutex> lock(this->loopmutex);
+
     INFO_VAR("Playing song in path %s with index %d", path.c_str(), index);
     strcpy(this->currentpath, path.c_str());
 
@@ -341,6 +350,4 @@ void App::play(String path, int index)
     this->source->setPath(currentpath);
     INFO_VAR("Playing index %d", index);
     this->player->begin(index, true);
-    INFO("Player active=true");
-    this->player->setActive(true);
 }

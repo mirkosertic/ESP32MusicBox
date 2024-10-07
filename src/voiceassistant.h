@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <AudioTools.h>
 #include <WebSocketsClient.h>
+#include <mutex>
 
 #include "settings.h"
 
@@ -17,7 +18,9 @@ enum HAState
     STARTED,
     FINISHED,
     RECORDING,
-    STTFINISHED
+    WAKEWORDFINISHED,
+    STTFINISHED,
+    TTSFINISHED
 };
 
 typedef std::function<void(HAState)> StateNotifierCallback;
@@ -49,6 +52,8 @@ private:
 
     bool started;
 
+    TaskHandle_t wsloop;
+
     StateNotifierCallback stateNotifier;
     PlayAudioFeedbackCallback playAudioFeedbackCallback;
 
@@ -69,6 +74,8 @@ private:
     void finishAudioStream();
 
     void stateIs(HAState state);
+
+    std::mutex loopmutex;
 
 public:
     VoiceAssistant(AudioStream *source, Settings *settings);

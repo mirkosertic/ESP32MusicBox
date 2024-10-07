@@ -27,40 +27,30 @@ void MediaPlayer::setChangCallback(ChangeNotifierCallback callback)
 
 void MediaPlayer::setActive(bool isActive)
 {
-    {
-        std::lock_guard<std::mutex> lck(this->loopmutex);
-        AudioPlayer::setActive(isActive);
-    }
+    AudioPlayer::setActive(isActive);
     this->changecallback(isActive, volume(), this->source->toStr());
 }
 
 bool MediaPlayer::setVolume(float volume)
 {
-    bool result;
-    {
-        std::lock_guard<std::mutex> lck(this->loopmutex);
-        result = AudioPlayer::setVolume(volume);
-    }
+    bool result = AudioPlayer::setVolume(volume);
     this->changecallback(isActive(), volume, this->source->toStr());
     return result;
 }
 
 bool MediaPlayer::next(int offset)
 {
-    std::lock_guard<std::mutex> lck(this->loopmutex);
     return AudioPlayer::next(offset);
 }
 
 bool MediaPlayer::previous(int offset)
 {
-    std::lock_guard<std::mutex> lck(this->loopmutex);
     return AudioPlayer::previous(offset);
 }
 
 void MediaPlayer::playURL(String url, bool forceMono)
 {
     INFO_VAR("Playing URL %s", url.c_str());
-    std::lock_guard<std::mutex> lck(this->loopmutex);
 
     if (this->overrideStream != nullptr)
     {
@@ -95,8 +85,6 @@ void MediaPlayer::playURL(String url, bool forceMono)
 
 size_t MediaPlayer::copy()
 {
-    std::lock_guard<std::mutex> lck(this->loopmutex);
-
     if (this->overrideStream == nullptr)
     {
         return AudioPlayer::copy();
