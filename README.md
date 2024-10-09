@@ -1,5 +1,7 @@
 # ESP32 MusicBox
 
+[![PlatformIO CI](https://github.com/mirkosertic/ESP32MusicBox/actions/workflows/build.yml/badge.svg)](https://github.com/mirkosertic/ESP32MusicBox/actions/workflows/build.yml)
+
 This project provides an ESP32 based music box with the following features:
 
 * Simple 3-button control
