@@ -17,6 +17,6 @@ jobs:
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
       - name: Build PlatformIO Project
-        run:
-          - cp ./config/secrets.ini.template ./config/secrets.ini 
-          - pio run
+        run: |
+          cp ./config/secrets.ini.template ./config/secrets.ini
+          pio run
