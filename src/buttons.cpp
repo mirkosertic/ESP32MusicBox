@@ -37,7 +37,6 @@ Buttons::Buttons(App *app)
             {
                 INFO("Decrementing volume");
                 this->app->setVolume(volume - 0.02);
-                //kit.setVolume(volume - 0.02);        
             } else{
                 INFO("Minimum volume reached");
             }
@@ -56,7 +55,6 @@ Buttons::Buttons(App *app)
             {
                 INFO("Incrementing volume");
                 this->app->setVolume(volume + 0.02);
-                //kit.setVolume(volume + 0.02);
             } else {
                 INFO("Maximum volume reached");
             }

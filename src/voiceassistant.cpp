@@ -326,8 +326,8 @@ VoiceAssistant::VoiceAssistant(AudioStream *source, Settings *settings)
 
   this->started = false;
 
-  //this->webSocket->setReconnectInterval(1000);
-  //this->webSocket->enableHeartbeat(200, 200, 1);
+  // this->webSocket->setReconnectInterval(1000);
+  // this->webSocket->enableHeartbeat(200, 200, 1);
   this->webSocket->onEvent([this](WStype_t type, uint8_t *payload, size_t length)
                            { this->webSocketEvent(type, payload, length); });
 }

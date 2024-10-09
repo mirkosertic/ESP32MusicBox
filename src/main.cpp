@@ -25,6 +25,7 @@
 #include "logging.h"
 #include "voiceassistant.h"
 #include "pins.h"
+#include "leds.h"
 
 const char *CONFIGURATION_FILE = "/configuration.json";
 const char *STARTFILEPATH = "/";
@@ -42,6 +43,8 @@ MediaPlayer player(source, kit, decoder);
 WiFiClient wifiClient;
 
 Settings settings(&SD_MMC, CONFIGURATION_FILE);
+
+Leds *leds = new Leds();
 
 TagScanner *tagscanner = new TagScanner(&Wire1, PN532_IRQ, PN532_RST);
 App *app = new App(wifiClient, tagscanner, &source, &player, &settings, &kit);
@@ -108,7 +111,7 @@ void setup()
   // setup output
   AudioInfo info(44100, 2, 16);
   auto cfg = kit.defaultConfig(RXTX_MODE);
-  //auto cfg = kit.defaultConfig(TX_MODE);
+  // auto cfg = kit.defaultConfig(TX_MODE);
   cfg.copyFrom(info);
   cfg.sd_active = false;              // We are running in SD 1bit mode, so no init needs to be done here!
   cfg.input_device = ADC_INPUT_LINE2; // input from microphone, stereo in case of AiThinker AudioKit
@@ -125,8 +128,8 @@ void setup()
   kit.board().getDriver()->setInputVolume(90);
   kit.board().getDriver()->setVolume(90);
 
-  // Set the overall loudness of the Kit.
-  kit.setVolume(0.8);
+  // Set the overall volume of the Kit.
+  kit.setVolume(0.7);
 
   AudioInfo kitinfo = kit.audioInfo();
   AudioInfo kitoutinfo = kit.audioInfoOut();
@@ -252,8 +255,11 @@ void setup()
                                   }
                                   INFO("Done"); });
 
-  player.setChangCallback([](bool active, float volume, const char *currentsong)
-                          {
+  // Init file browser
+  strcpy(app->getCurrentPath(), "");
+
+  app->begin([](bool active, float volume, const char *currentsong, int playProgressInPercent)
+             {
                             INFO("In change callback");
                             if (active)
                             {
@@ -269,18 +275,17 @@ void setup()
                             {
                               mqtt->publishCurrentSong(String(currentsong));
                             }
+
+                            mqtt->publishPlayProgress(playProgressInPercent);
                             
                             app->incrementStateVersion();
                             INFO("Done"); });
 
   player.begin(-1, false);
 
-  // setup player
-  player.setVolume(kit.getVolume());
-  player.getVolumeStream().setVolume(1.0);
-
-  // Init file browser
-  strcpy(app->getCurrentPath(), "");
+  // setup player, the player always runs on full volume
+  // playback volume is controlled by the audiokit PA, not by the player software volume control
+  player.setVolume(1.0);
 
   // Start the physical button controller logic
   buttons->begin();
@@ -380,7 +385,7 @@ void loop()
         INFO_VAR("Playing %s from index %d with volume %d", path.c_str(), (int)command.index, (int)command.volume);
 
         app->setVolume(command.volume / 100.0);
-      
+
         app->play(path, command.index);
       }
       else

@@ -29,6 +29,7 @@ private:
     String currentsongtopic;
     String playbackstatetopic;
     String volumestatetopic;
+    String playprogressstatetopic;
 
     String wifiqualitytopic;
 
@@ -63,6 +64,8 @@ public:
     void publishTagScannerInfo(String value);
 
     void publishWiFiQuality(int rssi);
+
+    void publishPlayProgress(int progressInPercent);
 };
 
 #endif

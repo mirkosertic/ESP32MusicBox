@@ -143,6 +143,8 @@ void MQTT::performAutoDiscovery()
     this->currentsongtopic = this->announceSensor("currentsongstate", "Current Song", "mdi:information-outline");
 
     this->wifiqualitytopic = this->announceSensor("wifiquality", "WiFi Quality", "mdi:wifi", "SIGNAL_STRENGTH", "dBm");
+
+    this->playprogressstatetopic = this->announceSensor("playprogress", "Play progress", "mdi:progress-clock", "", "%");
 }
 
 String MQTT::announceButton(String buttonId, String title, String icon, const std::function<void()> &clickHandler)
@@ -358,4 +360,9 @@ void MQTT::publishTagScannerInfo(String value)
 void MQTT::publishWiFiQuality(int rssi)
 {
     this->publish(this->wifiqualitytopic, String(rssi));
+}
+
+void MQTT::publishPlayProgress(int progressInPercent)
+{
+    this->publish(this->playprogressstatetopic, String(progressInPercent));
 }

@@ -20,22 +20,14 @@ MediaPlayer::MediaPlayer(MediaPlayerSource &source, AudioStream &output, AudioDe
     this->lastoverridecopytime = -1;
 }
 
-void MediaPlayer::setChangCallback(ChangeNotifierCallback callback)
-{
-    this->changecallback = callback;
-}
-
 void MediaPlayer::setActive(bool isActive)
 {
     AudioPlayer::setActive(isActive);
-    this->changecallback(isActive, volume(), this->source->toStr());
 }
 
 bool MediaPlayer::setVolume(float volume)
 {
-    bool result = AudioPlayer::setVolume(volume);
-    this->changecallback(isActive(), volume, this->source->toStr());
-    return result;
+    return AudioPlayer::setVolume(volume);
 }
 
 bool MediaPlayer::next(int offset)
@@ -131,4 +123,14 @@ size_t MediaPlayer::copy()
         }
     }
     return result;
+}
+
+const char *MediaPlayer::currentSong()
+{
+    return this->source->toStr();
+}
+
+int MediaPlayer::playProgressInPercent()
+{
+    return this->playProgressInPercent();
 }

@@ -18,6 +18,8 @@ public:
     void setChangeIndexCallback(ChangeIndexCallback callback);
 
     virtual Stream *selectStream(int index) override;
+
+    int playProgressInPercent();
 };
 
 #endif

@@ -9,9 +9,9 @@
 #include "logging.h"
 #include "gitrevision.h"
 
-App::App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *boardvolume)
+App::App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport)
 {
-    this->boardvolume = boardvolume;
+    this->volumeSupport = volumeSupport;
     this->tagscanner = tagscanner;
     this->stateversion = 0;
     this->currentpath = new char[512];
@@ -22,10 +22,17 @@ App::App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *sour
     this->source = source;
     this->player = player;
     this->settings = settings;
+
+    this->lastStateReport = millis();
 }
 
 App::~App()
 {
+}
+
+void App::begin(ChangeNotifierCallback callback)
+{
+    this->changecallback = callback;
 }
 
 void App::setWifiConnected()
@@ -270,6 +277,14 @@ void App::loop()
 {
     const std::lock_guard<std::mutex> lock(this->loopmutex);
     this->player->copy();
+
+    long now = millis();
+    if (now - this->lastStateReport > 1000)
+    {
+        DEBUG("Publishing app state");
+        publishState();
+        this->lastStateReport = now;
+    }
 }
 
 void App::writeCommandToTag(CommandData command)
@@ -299,12 +314,18 @@ const char *App::currentTitle()
     return this->source->toStr();
 }
 
+void App::publishState()
+{
+    this->changecallback(this->player->isActive(), this->volumeSupport->volume(), this->player->currentSong(), this->player->playProgressInPercent());
+}
+
 void App::setVolume(float volume)
 {
     const std::lock_guard<std::mutex> lock(this->loopmutex);
     INFO_VAR("Setting volume to %f", volume);
-    this->player->setVolume(volume);
-    // this->boardvolume->setVolume(volume);
+    this->volumeSupport->setVolume(volume);
+
+    this->publishState();
 }
 
 void App::toggleActiveState()
@@ -312,6 +333,8 @@ void App::toggleActiveState()
     const std::lock_guard<std::mutex> lock(this->loopmutex);
     INFO("Toggling player state");
     this->player->setActive(!this->player->isActive());
+
+    this->publishState();
 }
 
 void App::previous()
@@ -321,6 +344,8 @@ void App::previous()
     {
         INFO("Previous title");
         this->player->previous();
+
+        this->publishState();
     }
     else
     {
@@ -334,6 +359,10 @@ void App::next()
     if (!this->player->next())
     {
         WARN("No more next titles!");
+    }
+    else
+    {
+        this->publishState();
     }
 }
 
@@ -350,4 +379,11 @@ void App::play(String path, int index)
     this->source->setPath(currentpath);
     INFO_VAR("Playing index %d", index);
     this->player->begin(index, true);
+
+    this->publishState();
+}
+
+int App::playProgressInPercent()
+{
+    return this->source->playProgressInPercent();
 }

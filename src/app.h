@@ -15,6 +15,8 @@
 #include "voiceassistant.h"
 #include "settings.h"
 
+typedef std::function<void(bool active, float volume, const char *currentsong, int playprogressinpercent)> ChangeNotifierCallback;
+
 class App
 {
 private:
@@ -42,14 +44,20 @@ private:
     VoiceAssistant *assistant;
     Settings *settings;
 
-    VolumeSupport *boardvolume;
+    VolumeSupport *volumeSupport;
+
+    long lastStateReport;
 
     std::mutex loopmutex;
 
+    ChangeNotifierCallback changecallback;
+
 public:
-    App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *boardVolume);
+    App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport);
 
     ~App();
+
+    void begin(ChangeNotifierCallback callback);
 
     void setWifiConnected();
 
@@ -115,9 +123,13 @@ public:
 
     float getVolume();
 
+    void publishState();
+
     bool isActive();
 
     const char *currentTitle();
+
+    int playProgressInPercent();
 
     void setVolume(float volume);
 

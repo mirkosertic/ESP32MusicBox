@@ -8,15 +8,11 @@
 
 #include "mediaplayersource.h"
 
-typedef std::function<void(bool active, float volume, const char *currentsong)> ChangeNotifierCallback;
-
 class MediaPlayer : public AudioPlayer
 {
 private:
     MediaPlayerSource *source;
     AudioStream *output;
-
-    ChangeNotifierCallback changecallback;
 
     MP3DecoderHelix *overrideHelix;
     FormatConverterStream *overrideFormatConverter;
@@ -30,8 +26,6 @@ private:
 public:
     MediaPlayer(MediaPlayerSource &source, AudioStream &output, AudioDecoder &decoder);
 
-    void setChangCallback(ChangeNotifierCallback callback);
-
     virtual bool next(int offset = 1) override;
 
     virtual bool previous(int offset = 1) override;
@@ -39,6 +33,10 @@ public:
     virtual void setActive(bool isActive) override;
 
     virtual bool setVolume(float volume) override;
+
+    const char *currentSong();
+
+    int playProgressInPercent();
 
     void playURL(String url, bool forceMono);
 

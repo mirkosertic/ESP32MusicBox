@@ -64,7 +64,7 @@ void scandispatcher(void *parameters)
 {
     TagScanner *target = (TagScanner *)parameters;
     INFO("Tag scanner started");
-    while(true)
+    while (true)
     {
         target->scan();
         delay(500);

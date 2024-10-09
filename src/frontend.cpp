@@ -81,6 +81,7 @@ void Frontend::initialize()
     result["stateversion"] = this->app->getStateVersion();
     result["playingstatus"] = this->app->isActive() ? "Playing" : "Stopped";
     result["volume"] = (int) (this->app->getVolume() * 100);
+    result["playbackprogress"] = this->app->playProgressInPercent();
 
     File root;
     if (request->hasParam("path")) {
