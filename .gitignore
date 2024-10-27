@@ -1,3 +1,6 @@
 .pio
 .vscode
 config/secrets.ini
+kicad/musicbox/musicbox-backups/*
+kicad/musicbox/*.lck
+kicad/musicbox/*.bak

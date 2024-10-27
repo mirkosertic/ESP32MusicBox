@@ -82,6 +82,9 @@ void setup()
 {
   Serial.begin(115200);
 
+  INFO("LED Status display init");
+  leds->begin();
+
   INFO("setup started!");
 
   INFO_VAR("Running on Arduino : %d.%d.%d", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
@@ -107,6 +110,8 @@ void setup()
   app->setManufacturer("Mirko Sertic");
   app->setVersion("v1.0");
   app->setServerPort(HTTP_SERVER_PORT);
+
+  leds->setInitState(1);
 
   // setup output
   AudioInfo info(44100, 2, 16);
@@ -139,6 +144,8 @@ void setup()
   // AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
   source.begin();
 
+  leds->setInitState(2);
+
   if (!settings.readFromConfig())
   {
     // No configuration available.
@@ -153,6 +160,8 @@ void setup()
     settings.initializeWifiFromSettings();
   }
 
+  leds->setInitState(3);
+
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
   WiFi.setHostname(app->computeTechnicalName().c_str());
@@ -163,6 +172,8 @@ void setup()
 
   // Now we initialize the frontend with its webserver and routing
   frontend->begin();
+
+  leds->setInitState(4);
 
   // https://github.com/Ai-Thinker-Open/ESP32-A1S-AudioKit/issues/3
 
@@ -238,6 +249,7 @@ void setup()
 
     app->noTagPresent(); });
 
+  leds->setInitState(5);
   INFO("NFC reader init finished");
 
   source.setChangeIndexCallback([](Stream *next)
@@ -260,7 +272,6 @@ void setup()
 
   app->begin([](bool active, float volume, const char *currentsong, int playProgressInPercent)
              {
-                            INFO("In change callback");
                             if (active)
                             {
                               mqtt->publishPlaybackState(String("Playing"));
@@ -278,8 +289,7 @@ void setup()
 
                             mqtt->publishPlayProgress(playProgressInPercent);
                             
-                            app->incrementStateVersion();
-                            INFO("Done"); });
+                            app->incrementStateVersion(); });
 
   player.begin(-1, false);
 
@@ -290,6 +300,8 @@ void setup()
   // Start the physical button controller logic
   buttons->begin();
 
+  leds->setInitState(6);
+
   INFO("Init finish");
 
   // xTaskCreate(wifiscannertask, "WiFi scanner", 2048, NULL, 10, NULL);
@@ -299,6 +311,7 @@ void wifiConnected()
 {
   IPAddress ip = WiFi.localIP();
 
+  leds->setInitState(7);
   INFO_VAR("Connected to WiFi network. Local IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 
   if (settings.isMQTTEnabled())
@@ -323,6 +336,8 @@ void wifiConnected()
                           INFO_VAR("Playing feedback url %s", urlToPlay.c_str()); 
                           player.playURL(urlToPlay, true); });
   }
+
+  leds->setInitState(8);
   INFO("Init done");
 }
 
@@ -342,14 +357,17 @@ void loop()
 
     long now = millis();
 
-    if (!WiFi.isConnected() && now - startupTime > 30000)
+    if (!WiFi.isConnected())
     {
-      INFO("WiFi is not connected, so reinit the connection");
-      // More than 30 seconds no WiFi connect, we reset the stored bssid
-      settings.resetStoredBSSIDAndReconfigureWiFi();
+      if (now - startupTime > 30000)
+      {
+        INFO("WiFi is not connected, so reinit the connection");
+        // More than 30 seconds no WiFi connect, we reset the stored bssid
+        settings.resetStoredBSSIDAndReconfigureWiFi();
 
-      // Start timeout again
-      startupTime = now;
+        // Start timeout again
+        startupTime = now;
+      }
     }
   }
 

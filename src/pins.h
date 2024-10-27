@@ -11,3 +11,5 @@
 
 #define PN532_IRQ 23
 #define PN532_RST 19
+
+#define NEOPIXEL_DATA 12

@@ -6,10 +6,14 @@
 class Leds
 {
 private:
-    CRGB leds[5];
+    CRGB leds[8];
 
 public:
     Leds();
+
+    void begin();
+
+    void setInitState(int level);
 };
 
 #endif

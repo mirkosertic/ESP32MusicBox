@@ -132,5 +132,5 @@ const char *MediaPlayer::currentSong()
 
 int MediaPlayer::playProgressInPercent()
 {
-    return this->playProgressInPercent();
+    return this->source->playProgressInPercent();
 }
