@@ -44,12 +44,11 @@ WiFiClient wifiClient;
 
 Settings settings(&SD_MMC, CONFIGURATION_FILE);
 
-Leds *leds = new Leds();
-
 TagScanner *tagscanner = new TagScanner(&Wire1, PN532_IRQ, PN532_RST);
 App *app = new App(wifiClient, tagscanner, &source, &player, &settings, &kit);
 Frontend *frontend = new Frontend(&SD_MMC, app, HTTP_SERVER_PORT, MP3_FILE, &settings);
-Buttons *buttons = new Buttons(app);
+Leds *leds = new Leds(app);
+Buttons *buttons = new Buttons(app, leds);
 VoiceAssistant *assistant = new VoiceAssistant(&kit, &settings);
 MQTT *mqtt = new MQTT(wifiClient, app);
 
@@ -111,7 +110,8 @@ void setup()
   app->setVersion("v1.0");
   app->setServerPort(HTTP_SERVER_PORT);
 
-  leds->setInitState(1);
+  leds->setState(BOOT);
+  leds->setBootProgress(17);
 
   // setup output
   AudioInfo info(44100, 2, 16);
@@ -144,7 +144,7 @@ void setup()
   // AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
   source.begin();
 
-  leds->setInitState(2);
+  leds->setBootProgress(17 * 2);
 
   if (!settings.readFromConfig())
   {
@@ -160,7 +160,7 @@ void setup()
     settings.initializeWifiFromSettings();
   }
 
-  leds->setInitState(3);
+  leds->setBootProgress(17 * 3);
 
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
@@ -173,7 +173,7 @@ void setup()
   // Now we initialize the frontend with its webserver and routing
   frontend->begin();
 
-  leds->setInitState(4);
+  leds->setBootProgress(17 * 4);
 
   // https://github.com/Ai-Thinker-Open/ESP32-A1S-AudioKit/issues/3
 
@@ -235,6 +235,12 @@ void setup()
         serializeJson(result, target);
 
         mqtt->publishScannedTag(target);
+
+        leds->setState(CARD_DETECTED);
+      }
+      else
+      {
+        leds->setState(CARD_ERROR);
       }
     }
     else {
@@ -242,6 +248,8 @@ void setup()
       mqtt->publishTagScannerInfo("Authentication error");
 
       app->noTagPresent();
+
+      leds->setState(CARD_ERROR);
     } }, []()
                     {
     // No tag currently detected
@@ -249,7 +257,7 @@ void setup()
 
     app->noTagPresent(); });
 
-  leds->setInitState(5);
+  leds->setBootProgress(17 * 5);
   INFO("NFC reader init finished");
 
   source.setChangeIndexCallback([](Stream *next)
@@ -300,9 +308,12 @@ void setup()
   // Start the physical button controller logic
   buttons->begin();
 
-  leds->setInitState(6);
+  // Boot complete
+  leds->setBootProgress(100);
 
   INFO("Init finish");
+
+  leds->setState(PLAYER_STATUS);
 
   // xTaskCreate(wifiscannertask, "WiFi scanner", 2048, NULL, 10, NULL);
 }
@@ -311,7 +322,6 @@ void wifiConnected()
 {
   IPAddress ip = WiFi.localIP();
 
-  leds->setInitState(7);
   INFO_VAR("Connected to WiFi network. Local IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 
   if (settings.isMQTTEnabled())
@@ -337,7 +347,7 @@ void wifiConnected()
                           player.playURL(urlToPlay, true); });
   }
 
-  leds->setInitState(8);
+  leds->setState(PLAYER_STATUS);
   INFO("Init done");
 }
 
@@ -370,6 +380,8 @@ void loop()
       }
     }
   }
+
+  leds->loop();
 
   // The hole thing here is that the audiolib and the audioplayer are not
   // thread safe !!! So we perform everything related to audio processing

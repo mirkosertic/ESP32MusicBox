@@ -14,9 +14,10 @@ void buttonsdelegate(void *arguments)
     }
 }
 
-Buttons::Buttons(App *app)
+Buttons::Buttons(App *app, Leds *leds)
 {
     this->app = app;
+    this->leds = leds;
     this->startstop = new Button(GPIO_STARTSTOP, 300, [this](ButtonAction action)
                                  {
         if (action == PRESSED)
@@ -36,6 +37,7 @@ Buttons::Buttons(App *app)
             if (volume >= 0.02) 
             {
                 INFO("Decrementing volume");
+                this->leds->setState(VOLUME_CHANGE);
                 this->app->setVolume(volume - 0.02);
             } else{
                 INFO("Minimum volume reached");
@@ -54,6 +56,7 @@ Buttons::Buttons(App *app)
             if (volume <= 0.98) 
             {
                 INFO("Incrementing volume");
+                this->leds->setState(VOLUME_CHANGE);
                 this->app->setVolume(volume + 0.02);
             } else {
                 INFO("Maximum volume reached");

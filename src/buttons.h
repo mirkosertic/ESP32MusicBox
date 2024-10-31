@@ -3,17 +3,19 @@
 
 #include "app.h"
 #include "button.h"
+#include "leds.h"
 
 class Buttons
 {
 private:
     App *app;
+    Leds *leds;
     Button *prev;
     Button *next;
     Button *startstop;
 
 public:
-    Buttons(App *app);
+    Buttons(App *app, Leds *leds);
     ~Buttons();
 
     void begin();

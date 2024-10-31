@@ -24,6 +24,7 @@ App::App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *sour
     this->settings = settings;
 
     this->lastStateReport = millis();
+    this->volume = 1.0f;
 }
 
 App::~App()
@@ -38,6 +39,11 @@ void App::begin(ChangeNotifierCallback callback)
 void App::setWifiConnected()
 {
     this->wificonnected = true;
+}
+
+bool App::isWifiEnabled()
+{
+    return this->settings->isWiFiEnabled();
 }
 
 bool App::isWifiConnected()
@@ -301,7 +307,7 @@ void App::clearTag()
 
 float App::getVolume()
 {
-    return this->player->volume();
+    return volume;
 }
 
 bool App::isActive()
@@ -324,6 +330,7 @@ void App::setVolume(float volume)
     const std::lock_guard<std::mutex> lock(this->loopmutex);
     INFO_VAR("Setting volume to %f", volume);
     this->volumeSupport->setVolume(volume);
+    this->volume = volume;
 
     this->publishState();
 }

@@ -3,17 +3,45 @@
 
 #include <FastLED.h>
 
+#include "app.h"
+
+#define NUM_LEDS 8
+
+enum LEDState
+{
+    BOOT,
+    PLAYER_STATUS,
+    CARD_ERROR,
+    CARD_DETECTED,
+    VOLUME_CHANGE
+};
+
 class Leds
 {
 private:
-    CRGB leds[8];
+    App *app;
+    LEDState state;
+    CRGB leds[NUM_LEDS];
+    long lastStateTime;
+    long lastLoopTime;
+    int framecounter;
+
+    void renderPlayerStatusIdle();
+    void renderPlayerStatusPlaying();
+    void renderCardError();
+    void renderCardDetected();
+    void renderVolumeChange();
 
 public:
-    Leds();
+    Leds(App *app);
 
     void begin();
 
-    void setInitState(int level);
+    void setState(LEDState state);
+
+    void setBootProgress(int percent);
+
+    void loop();
 };
 
 #endif

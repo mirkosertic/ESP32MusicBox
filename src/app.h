@@ -35,6 +35,8 @@ private:
     uint8_t tagUid[8];
     uint8_t tagUidlength;
 
+    float volume;
+
     TagScanner *tagscanner;
 
     bool wificonnected;
@@ -60,6 +62,8 @@ public:
     void begin(ChangeNotifierCallback callback);
 
     void setWifiConnected();
+
+    bool isWifiEnabled();
 
     bool isWifiConnected();
 
