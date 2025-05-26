@@ -4,7 +4,6 @@
 #include <esp_task_wdt.h>
 
 #include <AudioTools.h>
-#include <AudioTools/AudioLibs/AudioBoardStream.h>
 #include <AudioTools/AudioCodecs/CodecMP3Helix.h>
 #include <ArduinoJson.h>
 #include <Driver.h>
@@ -36,20 +35,21 @@ const int HTTP_SERVER_PORT = 80;
 // DNSServer dnsServer;
 
 MediaPlayerSource source(STARTFILEPATH, MP3_FILE, true);
-AudioBoardStream kit(AudioKitEs8388V1);
+
+I2SStream i2s;
 MP3DecoderHelix decoder;
-MediaPlayer player(source, kit, decoder);
+MediaPlayer player(source, i2s, decoder);
 
 WiFiClient wifiClient;
 
 Settings settings(&SD_MMC, CONFIGURATION_FILE);
 
-TagScanner *tagscanner = new TagScanner(&Wire1, PN532_IRQ, PN532_RST);
-App *app = new App(wifiClient, tagscanner, &source, &player, &settings, &kit);
+TagScanner *tagscanner = new TagScanner(&Wire1, GPIO_PN532_IRQ, GPIO_PN532_RST);
+App *app = new App(wifiClient, tagscanner, &source, &player, &settings, &player);
 Frontend *frontend = new Frontend(&SD_MMC, app, HTTP_SERVER_PORT, MP3_FILE, &settings);
 Leds *leds = new Leds(app);
 Buttons *buttons = new Buttons(app, leds);
-VoiceAssistant *assistant = new VoiceAssistant(&kit, &settings);
+VoiceAssistant *assistant = new VoiceAssistant(&i2s, &settings);
 MQTT *mqtt = new MQTT(wifiClient, app);
 
 QueueHandle_t commandsHandle;
@@ -115,31 +115,21 @@ void setup()
 
   // setup output
   AudioInfo info(44100, 2, 16);
-  auto cfg = kit.defaultConfig(RXTX_MODE);
-  // auto cfg = kit.defaultConfig(TX_MODE);
+  auto cfg = i2s.defaultConfig(TX_MODE);
+  cfg.pin_bck = GPIO_I2S_BCK;
+  cfg.pin_ws = GPIO_I2S_WS;
+  cfg.pin_data = GPIO_I2S_DATA;
+  cfg.i2s_format = I2S_STD_FORMAT; // default format
   cfg.copyFrom(info);
-  cfg.sd_active = false;              // We are running in SD 1bit mode, so no init needs to be done here!
-  cfg.input_device = ADC_INPUT_LINE2; // input from microphone, stereo in case of AiThinker AudioKit
 
-  if (!kit.begin(cfg))
+  if (!i2s.begin(cfg))
   {
-    WARN("Could not start audio kit!");
+    WARN("Could not start i2s sound system!");
     while (true)
       ;
   }
 
-  // Set the microphone level a little bit louder...
-  // This will change the gain of the microphone
-  kit.board().getDriver()->setInputVolume(90);
-  kit.board().getDriver()->setVolume(90);
-
-  // Set the overall volume of the Kit.
-  kit.setVolume(0.7);
-
-  AudioInfo kitinfo = kit.audioInfo();
-  AudioInfo kitoutinfo = kit.audioInfoOut();
-  INFO_VAR("Kit Input is running with Samplerate=%d, Channels=%d and Bits per sample=%d", kitinfo.sample_rate, kitinfo.channels, kitinfo.bits_per_sample);
-  INFO_VAR("Kit Output is running with Samplerate=%d, Channels=%d and Bits per sample=%d", kitoutinfo.sample_rate, kitoutinfo.channels, kitoutinfo.bits_per_sample);
+  // TODO: Init SD Card
 
   // AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
   source.begin();
@@ -177,20 +167,11 @@ void setup()
 
   // https://github.com/Ai-Thinker-Open/ESP32-A1S-AudioKit/issues/3
 
-  // setup additional buttons
-  kit.addDefaultActions();
-  kit.addAction(kit.getKey(1), dummyhandler);
-  kit.addAction(kit.getKey(2), dummyhandler);
-  kit.addAction(kit.getKey(3), dummyhandler);
-  kit.addAction(kit.getKey(4), dummyhandler);
-  kit.addAction(kit.getKey(5), dummyhandler);
-  kit.addAction(kit.getKey(6), dummyhandler);
-
   player.setMetadataCallback(callbackPrintMetaData);
   decoder.driver()->setInfoCallback([](MP3FrameInfo &info, void *ref)
                                     { INFO_VAR("Got libHelix Info %d bitrate %d bits per sample %d channels", info.bitrate, info.bitsPerSample, info.nChans); }, nullptr);
 
-  Wire1.begin(WIRE_SDA, WIRE_SCL, 100000); // Scan ok
+  Wire1.begin(GPIO_WIRE_SDA, GPIO_WIRE_SCL, 100000); // Scan ok
 
   INFO("NFC reader init");
   tagscanner->begin([](bool authenticated, bool knownTag, uint8_t *uid, String uidStr, uint8_t uidlength, String tagName, TagData tagdata)
@@ -429,7 +410,7 @@ void loop()
     }
   }
 
-  kit.processActions();
+  // TODO: Handle Input / Output Buttons
 
   esp_task_wdt_reset();
 }

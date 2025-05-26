@@ -4,3 +4,4 @@ config/secrets.ini
 kicad/musicbox/musicbox-backups/*
 kicad/musicbox/*.lck
 kicad/musicbox/*.bak
+kicad/musicbox/fp-info-cache

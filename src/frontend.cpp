@@ -171,7 +171,14 @@ void Frontend::initialize()
 
     esp_task_wdt_delete(NULL);
     int n = WiFi.scanNetworks();
-    esp_task_wdt_init(30, true); // 30 Sekunden Timeout
+
+    esp_task_wdt_config_t wdt_config = {
+        .timeout_ms = 30000,
+        .idle_core_mask = (1 << CONFIG_FREERTOS_NUMBER_OF_CORES) - 1,    // Bitmask of all cores
+        .trigger_panic = false,
+    };
+
+    esp_task_wdt_init(&wdt_config); // 30 Sekunden Timeout
     esp_task_wdt_add(NULL);
 
     if (n > 0) {
@@ -393,7 +400,7 @@ void Frontend::initialize()
                    {
                      INFO("/description.xml received");
 
-                     request->send(200, "text/xml", app->getSSDPSchema());
+                     request->send(200, "text/xml", app->getSSDPDescription());
                    });
 
   this->server->onNotFound([&](AsyncWebServerRequest *request)

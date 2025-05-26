@@ -26,12 +26,6 @@ private:
 public:
     MediaPlayer(MediaPlayerSource &source, AudioStream &output, AudioDecoder &decoder);
 
-    virtual bool next(int offset = 1) override;
-
-    virtual bool previous(int offset = 1) override;
-
-    virtual void setActive(bool isActive) override;
-
     virtual bool setVolume(float volume) override;
 
     const char *currentSong();
@@ -40,7 +34,7 @@ public:
 
     void playURL(String url, bool forceMono);
 
-    virtual size_t copy() override;
+    virtual size_t copy();
 };
 
 #endif

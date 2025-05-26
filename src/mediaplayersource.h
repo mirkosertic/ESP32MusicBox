@@ -2,7 +2,7 @@
 #define MEDIAPLAYERSOURCE_H
 
 #include <AudioTools.h>
-#include <AudioTools/AudioLibs/AudioSourceSDMMC.h>
+#include <AudioTools/Disk/AudioSourceSDMMC.h>
 
 typedef std::function<void(Stream *)> ChangeIndexCallback;
 

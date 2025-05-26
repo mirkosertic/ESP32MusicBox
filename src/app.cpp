@@ -1,10 +1,10 @@
 #include "app.h"
 
 #include <ESPmDNS.h>
-#include <ESP32SSDP.h>
 #include <ArduinoJson.h>
 
 #include <esp_system.h>
+#include <esp_mac.h>
 
 #include "logging.h"
 #include "gitrevision.h"
@@ -23,7 +23,6 @@ App::App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *sour
     this->player = player;
     this->settings = settings;
 
-    this->lastStateReport = millis();
     this->volume = 1.0f;
 }
 
@@ -245,38 +244,93 @@ void App::announceMDNS()
     }
 }
 
+void App::ssdpNotify()
+{
+    const IPAddress SSDP_MULTICAST_ADDR(239, 255, 255, 250);
+    const uint16_t SSDP_PORT = 1900;
+
+    String deviceUUID = computeUUID();
+
+    // Send initial NOTIFY messages
+    char notify[1024];
+
+    // Send NOTIFY for different device types
+    String deviceTypes[] = {
+        "upnp:rootdevice",
+        "urn:schemas-upnp-org:device:Basic:1",
+        String("uuid:") + deviceUUID};
+
+    const char *SSDP_NOTIFY_TEMPLATE =
+        "NOTIFY * HTTP/1.1\r\n"
+        "HOST: 239.255.255.250:1900\r\n"
+        "CACHE-CONTROL: max-age=1800\r\n"
+        "LOCATION: http://%s:%d/description.xml\r\n"
+        "SERVER: SSDPServer/1.0\r\n"
+        "NT: %s\r\n"
+        "USN: uuid:%s::%s\r\n"
+        "NTS: ssdp:alive\r\n"
+        "BOOTID.UPNP.ORG: 1\r\n"
+        "CONFIGID.UPNP.ORG: 1\r\n"
+        "\r\n";
+
+    for (int i = 0; i < 3; i++)
+    {
+        sprintf(notify, SSDP_NOTIFY_TEMPLATE,
+                WiFi.localIP().toString().c_str(),
+                this->serverPort,
+                deviceTypes[i].c_str(),
+                deviceUUID.c_str(),
+                deviceTypes[i].c_str());
+
+        udp.beginPacket(SSDP_MULTICAST_ADDR, SSDP_PORT);
+        udp.write((uint8_t *)notify, strlen(notify));
+        udp.endPacket();
+
+        delay(100); // Small delay between notifications
+    }
+
+    INFO("Sent SSDP NOTIFY messages");
+}
+
 void App::announceSSDP()
 {
     INFO("Initializing SSDP...");
 
-    SSDP.setSchemaURL("description.xml");
-    SSDP.setHTTPPort(this->serverPort);
-    SSDP.setName(computeTechnicalName());
-    SSDP.setURL("/");
-    SSDP.setDeviceType(
-        "rootdevice"); // to appear as root device, other examples:
-                       // MediaRenderer, MediaServer ...
-    SSDP.setManufacturer(this->manufacturer);
-    SSDP.setModelName(this->devicetype);
-    SSDP.setServerName("SSDPServer/1.0");
-    SSDP.setModelNumber(this->version);
-    SSDP.setSerialNumber(this->computeSerialNumber());
+    const IPAddress SSDP_MULTICAST_ADDR(239, 255, 255, 250);
+    const uint16_t SSDP_PORT = 1900;
 
-    SSDP.setUUID(this->computeUUID().c_str());
-
-    if (!SSDP.begin())
+    // Join multicast group for SSDP
+    if (udp.beginMulticast(SSDP_MULTICAST_ADDR, SSDP_PORT))
     {
-        WARN("SSDP init failed!");
+        INFO("SSDP multicast joined successfully");
+
+        this->ssdpNotify();
     }
     else
     {
-        INFO("Done");
+        WARN("Failed to join SSDP multicast group");
     }
 }
 
-const char *App::getSSDPSchema()
+String App::getSSDPDescription()
 {
-    return SSDP.getSchema();
+    String deviceUUID = computeUUID();
+
+    String xml = "<?xml version='1.0'?>";
+    xml += "<root xmlns='urn:schemas-upnp-org:device-1-0'>";
+    xml += "<specVersion><major>1</major><minor>0</minor></specVersion>";
+    xml += "<device>";
+    xml += "<deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType>";
+    xml += "<friendlyName>" + this->name + "</friendlyName>";
+    xml += "<manufacturer>" + this->manufacturer + "</manufacturer>";
+    xml += "<modelName>" + this->devicetype + "</modelName>";
+    xml += "<modelNumber>" + this->version + "</modelNumber>";
+    xml += "<serialNumber>" + computeSerialNumber() + "</serialNumber>";
+    xml += "<UDN>uuid:" + computeUUID() + "</UDN>";
+    xml += "<presentationURL>" + getConfigurationURL() + "</presentationURL>";
+    xml += "</device>";
+    xml += "</root>";
+    return xml;
 }
 
 void App::loop()
@@ -284,12 +338,95 @@ void App::loop()
     const std::lock_guard<std::mutex> lock(this->loopmutex);
     this->player->copy();
 
+    static long lastStateReport = 0;
+
     long now = millis();
-    if (now - this->lastStateReport > 1000)
+    if (now - lastStateReport > 1000)
     {
         DEBUG("Publishing app state");
         publishState();
-        this->lastStateReport = now;
+        lastStateReport = now;
+    }
+
+    // SSDP
+
+    // Incoming messages
+    int packetSize = udp.parsePacket();
+    if (packetSize)
+    {
+        char packetBuffer[512];
+        int len = udp.read(packetBuffer, sizeof(packetBuffer) - 1);
+        if (len > 0)
+        {
+            packetBuffer[len] = '\0';
+
+            // Check if it's an M-SEARCH request
+            if (strstr(packetBuffer, "M-SEARCH") && strstr(packetBuffer, "ssdp:discover"))
+            {
+                INFO("Received SSDP M-SEARCH request");
+
+                // Extract search target
+                char *stLine = strstr(packetBuffer, "ST:");
+                String searchTarget = "upnp:rootdevice"; // Default
+
+                if (stLine)
+                {
+                    stLine += 3; // Skip "ST:"
+                    while (*stLine == ' ')
+                        stLine++; // Skip spaces
+                    char *end = strstr(stLine, "\r");
+                    if (end)
+                    {
+                        *end = '\0';
+                        searchTarget = String(stLine);
+                    }
+                }
+
+                char response[1024];
+                char dateStr[64];
+
+                // Simple date string (could be improved with real time)
+                sprintf(dateStr, "Mon, 01 Jan 1970 00:00:00 GMT");
+
+                String deviceUUID = computeUUID();
+
+                const char *SSDP_RESPONSE_TEMPLATE =
+                    "HTTP/1.1 200 OK\r\n"
+                    "CACHE-CONTROL: max-age=1800\r\n"
+                    "DATE: %s\r\n"
+                    "EXT:\r\n"
+                    "LOCATION: http://%s:%d/description.xml\r\n"
+                    "SERVER: SSDPServer/1.0\r\n"
+                    "ST: %s\r\n"
+                    "USN: uuid:%s::%s\r\n"
+                    "BOOTID.UPNP.ORG: 1\r\n"
+                    "CONFIGID.UPNP.ORG: 1\r\n"
+                    "\r\n";
+
+                sprintf(response, SSDP_RESPONSE_TEMPLATE,
+                        dateStr,
+                        WiFi.localIP().toString().c_str(),
+                        this->serverPort,
+                        searchTarget.c_str(),
+                        deviceUUID.c_str(),
+                        searchTarget.c_str());
+
+                // Send unicast response to requester
+                udp.beginPacket(this->udp.remoteIP(), this->udp.remotePort());
+                udp.write((uint8_t *)response, strlen(response));
+                udp.endPacket();
+
+                INFO("Sent SSDP response");
+            }
+        }
+    }
+
+    // Send periodic SSDP NOTIFY messages (every 30 seconds)
+    static unsigned long lastNotify = 0;
+    if (millis() - lastNotify > 30000)
+    {
+        lastNotify = millis();
+        this->ssdpNotify();
     }
 }
 

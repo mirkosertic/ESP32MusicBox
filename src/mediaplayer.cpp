@@ -20,24 +20,9 @@ MediaPlayer::MediaPlayer(MediaPlayerSource &source, AudioStream &output, AudioDe
     this->lastoverridecopytime = -1;
 }
 
-void MediaPlayer::setActive(bool isActive)
-{
-    AudioPlayer::setActive(isActive);
-}
-
 bool MediaPlayer::setVolume(float volume)
 {
     return AudioPlayer::setVolume(volume);
-}
-
-bool MediaPlayer::next(int offset)
-{
-    return AudioPlayer::next(offset);
-}
-
-bool MediaPlayer::previous(int offset)
-{
-    return AudioPlayer::previous(offset);
 }
 
 void MediaPlayer::playURL(String url, bool forceMono)

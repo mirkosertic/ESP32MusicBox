@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <functional>
 #include <WiFi.h>
-#include <ESP32SSDP.h>
+#include <WiFiUdp.h>
 #include <PubSubClient.h>
 #include <mutex>
 
@@ -48,11 +48,14 @@ private:
 
     VolumeSupport *volumeSupport;
 
-    long lastStateReport;
-
     std::mutex loopmutex;
 
     ChangeNotifierCallback changecallback;
+
+    WiFiUDP udp;
+
+private:
+    void ssdpNotify();
 
 public:
     App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport);
@@ -117,7 +120,7 @@ public:
 
     void announceSSDP();
 
-    const char *getSSDPSchema();
+    String getSSDPDescription();
 
     void writeCommandToTag(CommandData command);
 

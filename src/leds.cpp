@@ -17,7 +17,7 @@ Leds::Leds(App *app)
         this->leds[i] = CRGB::Black;
     }
 
-    FastLED.addLeds<NEOPIXEL, NEOPIXEL_DATA>(leds, NUM_LEDS);
+    FastLED.addLeds<NEOPIXEL, GPIO_NEOPIXEL_DATA>(leds, NUM_LEDS);
 
     this->lastLoopTime = 0;
     this->framecounter = 0;
