@@ -1,6 +1,8 @@
 #ifndef FRONTEND_H
 #define FRONTEND_H
 
+// For some random reason this is required to make ESPAsyncWebServer compile without errors
+#include <WebServer.h>
 #include <ESPAsyncWebServer.h>
 #include <FS.h>
 

@@ -2,11 +2,11 @@
 #define MEDIAPLAYERSOURCE_H
 
 #include <AudioTools.h>
-#include <AudioTools/Disk/AudioSourceSDMMC.h>
+#include <AudioTools/Disk/AudioSourceSD.h>
 
 typedef std::function<void(Stream *)> ChangeIndexCallback;
 
-class MediaPlayerSource : public AudioSourceSDMMC
+class MediaPlayerSource : public AudioSourceSD
 {
 private:
     ChangeIndexCallback changeindexcallback;

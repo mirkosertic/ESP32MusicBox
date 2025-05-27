@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <Wire.h>
+#include <SD.h>
 
 #include <esp_task_wdt.h>
 
@@ -42,11 +43,11 @@ MediaPlayer player(source, i2s, decoder);
 
 WiFiClient wifiClient;
 
-Settings settings(&SD_MMC, CONFIGURATION_FILE);
+Settings settings(&SD, CONFIGURATION_FILE);
 
 TagScanner *tagscanner = new TagScanner(&Wire1, GPIO_PN532_IRQ, GPIO_PN532_RST);
 App *app = new App(wifiClient, tagscanner, &source, &player, &settings, &player);
-Frontend *frontend = new Frontend(&SD_MMC, app, HTTP_SERVER_PORT, MP3_FILE, &settings);
+Frontend *frontend = new Frontend(&SD, app, HTTP_SERVER_PORT, MP3_FILE, &settings);
 Leds *leds = new Leds(app);
 Buttons *buttons = new Buttons(app, leds);
 VoiceAssistant *assistant = new VoiceAssistant(&i2s, &settings);
@@ -64,12 +65,6 @@ void wifiscannertask(void *arguments)
     settings.rescanForBetterNetworksAndReconfigure();
     delay(60000);
   }
-}
-
-void dummyhandler(bool, int, void *)
-{
-  INFO("Button pressed!");
-  // player.playURL("http://192.168.0.159:8123/api/tts_proxy/a5b81f9cf47b4f7b244c110c37305dab85944c2b_de-de_9d38d7a658_tts.piper.mp3", true);
 }
 
 void callbackPrintMetaData(MetaDataType type, const char *str, int len)
@@ -129,7 +124,16 @@ void setup()
       ;
   }
 
-  // TODO: Init SD Card
+  // Setup SD-Card
+  SPIClass spi = SPIClass(VSPI);
+  spi.begin(GPIO_SPI_CLK, GPIO_SPI_MISO, GPIO_SPI_MOSI, GPIO_SPI_SS);
+
+  if (!SD.begin(GPIO_SPI_SS, spi))
+  {
+    WARN("Could not enable SD-Card over SPI!");
+    while (true)
+      ;
+  }
 
   // AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
   source.begin();
@@ -283,7 +287,6 @@ void setup()
   player.begin(-1, false);
 
   // setup player, the player always runs on full volume
-  // playback volume is controlled by the audiokit PA, not by the player software volume control
   player.setVolume(1.0);
 
   // Start the physical button controller logic
@@ -376,9 +379,6 @@ void loop()
 
   // The main app loop
   app->loop();
-
-  AudioInfo from = player.audioInfo();
-  DEBUG_VAR("Player is running with Samplerate=%d, Channels=%d and Bits per sample=%d", from.sample_rate, from.channels, from.bits_per_sample);
 
   // Check if there is a command in the command queue
   CommandData command;

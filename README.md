@@ -15,14 +15,14 @@ This project provides an ESP32 based music box with the following features:
 
 ## Supported hardware
 
-* Ai-Thinker ESP32-A1S-Audiokit v2.2 (Tested with release A402)
+* ESP32 (tested with ESP32 DevKit C)
 * PN532 RFID Reader (i2c-Mode)
-* Ai-Thinker Board uses SD-Card in MMC 1Bit Mode. Buttons on Board must be 1=on(IO13 = KEY2), 2=off (), 3=on(IO15 = CMD), 4=off, 5=off.
+* SDCard Reader (SPI-Mode)
 * Neopixel / WS2812 bases LEDs for status visualization
 
 ## Schematics
 
-The KiCad 8.0 project is located in the kicad folder.
+The KiCad 9.0 project is located in the kicad folder.
 
 Here is the wiring schematic drawing:
 
