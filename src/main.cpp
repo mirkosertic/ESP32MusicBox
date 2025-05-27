@@ -117,6 +117,7 @@ void setup()
   cfg.i2s_format = I2S_STD_FORMAT; // default format
   cfg.copyFrom(info);
 
+  INFO("i2s sound system init");
   if (!i2s.begin(cfg))
   {
     WARN("Could not start i2s sound system!");
@@ -125,6 +126,7 @@ void setup()
   }
 
   // Setup SD-Card
+  INFO("sdcard display init");
   SPIClass spi = SPIClass(VSPI);
   spi.begin(GPIO_SPI_CLK, GPIO_SPI_MISO, GPIO_SPI_MOSI, GPIO_SPI_SS);
 
@@ -140,6 +142,7 @@ void setup()
 
   leds->setBootProgress(17 * 2);
 
+  INFO("Retrieving configuration");
   if (!settings.readFromConfig())
   {
     // No configuration available.
@@ -156,6 +159,7 @@ void setup()
 
   leds->setBootProgress(17 * 3);
 
+  INFO("WiFi configuration");
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
   WiFi.setHostname(app->computeTechnicalName().c_str());
@@ -175,6 +179,7 @@ void setup()
   decoder.driver()->setInfoCallback([](MP3FrameInfo &info, void *ref)
                                     { INFO_VAR("Got libHelix Info %d bitrate %d bits per sample %d channels", info.bitrate, info.bitsPerSample, info.nChans); }, nullptr);
 
+  INFO("i2c connection init");
   Wire1.begin(GPIO_WIRE_SDA, GPIO_WIRE_SCL, 100000); // Scan ok
 
   INFO("NFC reader init");
