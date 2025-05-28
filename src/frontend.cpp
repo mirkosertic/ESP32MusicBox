@@ -49,6 +49,7 @@ void Frontend::initialize()
   this->server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
 
+    INFO("webserver() - Rendering status page");
     IPAddress remote = request->client()->remoteIP();
 
     IPAddress apSubnet(192, 168, 4, 0); 
@@ -85,6 +86,7 @@ void Frontend::initialize()
     result["volume"] = (int) (this->app->getVolume() * 100);
     result["playbackprogress"] = this->app->playProgressInPercent();
 
+    INFO("webserver() - FS scan");
     File root;
     if (request->hasParam("path")) {
       String path = request->getParam("path")->value();
@@ -146,8 +148,19 @@ void Frontend::initialize()
 
       root.close();
     }
+    INFO("webserver() - FS scan done");
+
+    String jsonString;
+    serializeJson(result, jsonString);
+    Serial.println(jsonString);
+
+    INFO_VAR("webserver() - Free heap before %d", ESP.getFreeHeap());
 
     const String output = ministache::render(INDEX_TEMPLATE, result);
+
+    INFO_VAR("webserver() - Free heap after %d", ESP.getFreeHeap());
+
+    INFO_VAR("webserver() - HTML generation done. Size is %d, Template size is %d", output.length(), strlen(INDEX_TEMPLATE));
 
     AsyncWebServerResponse *response = request->beginResponse(200, "text/html", output);
     response->addHeader("Cache-Control","no-cache, must-revalidate");
@@ -164,6 +177,7 @@ void Frontend::initialize()
   this->server->on("/networks.html", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
 
+    INFO("webserver() - Rendering networks page");
     JsonDocument result;
 
     result["appname"] = this->app->getName();
@@ -232,6 +246,7 @@ void Frontend::initialize()
   this->server->on("/settings.html", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
 
+    INFO("webserver() - Rendering settings page");                    
     JsonDocument result;
 
     result["appname"] = this->app->getName();
@@ -258,7 +273,7 @@ void Frontend::initialize()
   // Toggle start stop
   this->server->on("/startstop", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
-    INFO("/startstop received");
+    INFO("webserver() - /startstop received");
     this->app->toggleActiveState();
 
     if (request->hasParam("path")) {
@@ -276,7 +291,7 @@ void Frontend::initialize()
   // Next
   this->server->on("/next", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
-    INFO("/next received");
+    INFO("webserver() - /next received");
     this->app->next();
 
     if (request->hasParam("path")) {
@@ -295,7 +310,7 @@ void Frontend::initialize()
   this->server->on("/previous", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
     
-    INFO("/previous received");
+    INFO("webserver() - /previous received");
     this->app->previous();
 
     if (request->hasParam("path")) {
@@ -314,7 +329,7 @@ void Frontend::initialize()
   this->server->on("/play", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
     
-    INFO("/play received");
+    INFO("webserver() - /play received");
 
     String path = request->getParam("path")->value();
     int index = request->getParam("index")->value().toInt();
@@ -346,7 +361,7 @@ void Frontend::initialize()
   this->server->on("/assign", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
     
-    INFO("/assign received");
+    INFO("webserver() - /assign received");
 
     CommandData command;
     memset(&command, 0, 44);
@@ -375,7 +390,7 @@ void Frontend::initialize()
   // delete
   this->server->on("/delete", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
-    INFO("/delete received");
+    INFO("webserver() - /delete received");
 
     this->app->clearTag();
 
@@ -394,14 +409,14 @@ void Frontend::initialize()
   this->server->on("/description.xml", HTTP_GET,
                    [&](AsyncWebServerRequest *request)
                    {
-                     INFO("/description.xml received");
+                     INFO("webserver() - /description.xml received");
 
                      request->send(200, "text/xml", app->getSSDPDescription());
                    });
 
   this->server->onNotFound([&](AsyncWebServerRequest *request)
                            {
-              INFO_VAR("Not Found : %s Method %s", request->url().c_str(), request->methodToString());
+              INFO_VAR("webserver() - Not Found : %s Method %s", request->url().c_str(), request->methodToString());
               request->send(404, "text/plain", "Not found"); });
 }
 

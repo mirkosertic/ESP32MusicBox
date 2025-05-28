@@ -2197,7 +2197,7 @@
 				(pin bidirectional line
 					(at -16.51 1.27 0)
 					(length 2.54)
-					(name "CLK"
+					(name "SCK"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -3195,7 +3195,7 @@
 		)
 		(uuid "c53a94f2-b07a-42ae-9bac-c8dde675c04b")
 	)
-	(text "The ESP32 IO Pins\nmust be configures\nas INPUT_PULL_DOWN."
+	(text "The ESP32 IO Pins\nmust be configures\nas INPUT_PULLDOWN"
 		(exclude_from_sim no)
 		(at 149.86 95.758 0)
 		(effects
@@ -3230,13 +3230,13 @@
 		(uuid "a0bd7e31-b597-4230-93c3-b13745431ad8")
 	)
 	(junction
-		(at 189.23 92.71)
+		(at 187.96 91.44)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "a117d579-a480-4db3-bddf-397a78912c5a")
 	)
 	(junction
-		(at 189.23 85.09)
+		(at 187.96 83.82)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "c78aa5ee-4993-4705-81c8-ac38505deed5")
@@ -3274,10 +3274,6 @@
 	(no_connect
 		(at 96.52 24.13)
 		(uuid "42ec9ded-f182-4377-82af-0034f1c3f4cd")
-	)
-	(no_connect
-		(at 134.62 44.45)
-		(uuid "58cde232-5d05-4c95-a2b4-b2614d9aebff")
 	)
 	(no_connect
 		(at 96.52 64.77)
@@ -3331,6 +3327,10 @@
 		(at 96.52 52.07)
 		(uuid "ea1a7356-591d-4cd0-8441-4ebd5d2f3487")
 	)
+	(no_connect
+		(at 134.62 46.99)
+		(uuid "fd4f831c-ab05-485d-890d-00d2a5a69b93")
+	)
 	(wire
 		(pts
 			(xy 152.4 46.99) (xy 176.53 46.99)
@@ -3343,7 +3343,7 @@
 	)
 	(wire
 		(pts
-			(xy 182.88 92.71) (xy 189.23 92.71)
+			(xy 181.61 91.44) (xy 187.96 91.44)
 		)
 		(stroke
 			(width 0)
@@ -3383,7 +3383,7 @@
 	)
 	(wire
 		(pts
-			(xy 182.88 85.09) (xy 189.23 85.09)
+			(xy 181.61 83.82) (xy 187.96 83.82)
 		)
 		(stroke
 			(width 0)
@@ -3403,7 +3403,7 @@
 	)
 	(wire
 		(pts
-			(xy 182.88 100.33) (xy 189.23 100.33)
+			(xy 181.61 99.06) (xy 187.96 99.06)
 		)
 		(stroke
 			(width 0)
@@ -3423,7 +3423,7 @@
 	)
 	(wire
 		(pts
-			(xy 189.23 85.09) (xy 189.23 92.71)
+			(xy 187.96 83.82) (xy 187.96 91.44)
 		)
 		(stroke
 			(width 0)
@@ -3563,7 +3563,7 @@
 	)
 	(wire
 		(pts
-			(xy 189.23 100.33) (xy 189.23 92.71)
+			(xy 187.96 99.06) (xy 187.96 91.44)
 		)
 		(stroke
 			(width 0)
@@ -3623,7 +3623,7 @@
 	)
 	(wire
 		(pts
-			(xy 189.23 82.55) (xy 189.23 85.09)
+			(xy 187.96 81.28) (xy 187.96 83.82)
 		)
 		(stroke
 			(width 0)
@@ -3691,16 +3691,6 @@
 		)
 		(uuid "1672b229-177d-41b5-863b-74393ad4401f")
 	)
-	(label "SPI_SS"
-		(at 134.62 46.99 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "20166a51-fd1e-4870-b60f-8e4f8d46e05d")
-	)
 	(label "I2C_SCL"
 		(at 54.61 40.64 180)
 		(effects
@@ -3712,7 +3702,7 @@
 		(uuid "229bb0f2-6073-4924-b855-c68725fcb55f")
 	)
 	(label "BT1"
-		(at 172.72 85.09 180)
+		(at 171.45 83.82 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3742,7 +3732,7 @@
 		(uuid "3e69fbef-38ae-49c5-ac30-679e6f6d1f02")
 	)
 	(label "BT3"
-		(at 172.72 100.33 180)
+		(at 171.45 99.06 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3861,7 +3851,7 @@
 		)
 		(uuid "8ff5d175-7e83-4d6f-9f66-bed5d8eaba72")
 	)
-	(label "SPI_CLK"
+	(label "SPI_SCK"
 		(at 97.79 87.63 180)
 		(effects
 			(font
@@ -3880,6 +3870,16 @@
 			(justify right bottom)
 		)
 		(uuid "96ed2a58-7a8b-469b-bd7b-878a05602094")
+	)
+	(label "SPI_SS"
+		(at 134.62 44.45 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "97b5e11f-c548-4e7c-be9c-837c5b3f619c")
 	)
 	(label "SPI_MOSI"
 		(at 97.79 90.17 180)
@@ -3962,7 +3962,7 @@
 		(uuid "d2959b3d-1913-422d-965b-e0b5b93168b0")
 	)
 	(label "BT2"
-		(at 172.72 92.71 180)
+		(at 171.45 91.44 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -4011,7 +4011,7 @@
 		)
 		(uuid "f698fa36-a2a1-4a90-871e-11c172af4424")
 	)
-	(label "SPI_CLK"
+	(label "SPI_SCK"
 		(at 134.62 41.91 0)
 		(effects
 			(font
@@ -4023,7 +4023,7 @@
 	)
 	(symbol
 		(lib_id "Switch:SW_Push")
-		(at 177.8 100.33 0)
+		(at 176.53 99.06 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -4031,7 +4031,7 @@
 		(dnp no)
 		(uuid "010fc4b3-5cb2-4150-9474-59b7b38dcec8")
 		(property "Reference" "Next"
-			(at 177.292 96.266 0)
+			(at 176.022 94.996 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4039,7 +4039,7 @@
 			)
 		)
 		(property "Value" "Button"
-			(at 177.8 95.25 0)
+			(at 176.53 93.98 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4048,7 +4048,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 177.8 95.25 0)
+			(at 176.53 93.98 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4057,7 +4057,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 177.8 95.25 0)
+			(at 176.53 93.98 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4066,7 +4066,7 @@
 			)
 		)
 		(property "Description" "Push button switch, generic, two pins"
-			(at 177.8 100.33 0)
+			(at 176.53 99.06 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4355,7 +4355,7 @@
 	)
 	(symbol
 		(lib_id "Switch:SW_Push")
-		(at 177.8 92.71 0)
+		(at 176.53 91.44 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -4363,7 +4363,7 @@
 		(dnp no)
 		(uuid "43f5b84c-9be6-43d4-a39f-2cf08e567750")
 		(property "Reference" "Prev"
-			(at 177.292 88.646 0)
+			(at 176.022 87.376 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4371,7 +4371,7 @@
 			)
 		)
 		(property "Value" "Button"
-			(at 177.8 87.63 0)
+			(at 176.53 86.36 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4380,7 +4380,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 177.8 87.63 0)
+			(at 176.53 86.36 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4389,7 +4389,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 177.8 87.63 0)
+			(at 176.53 86.36 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4398,7 +4398,7 @@
 			)
 		)
 		(property "Description" "Push button switch, generic, two pins"
-			(at 177.8 92.71 0)
+			(at 176.53 91.44 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4492,7 +4492,6 @@
 		)
 	)
 	(symbol
-		(lib_name "WS2812B_1")
 		(lib_id "custom_parts:WS2812B")
 		(at 59.69 92.71 0)
 		(unit 1)
@@ -5013,6 +5012,7 @@
 		)
 	)
 	(symbol
+		(lib_name "WS2812B_1")
 		(lib_id "custom_parts:WS2812B")
 		(at 34.29 92.71 0)
 		(unit 1)
@@ -5087,7 +5087,7 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 189.23 82.55 0)
+		(at 187.96 81.28 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -5095,7 +5095,7 @@
 		(dnp no)
 		(uuid "780cbc87-52d8-4f85-92a0-58dcb61a538e")
 		(property "Reference" "#PWR016"
-			(at 189.23 86.36 0)
+			(at 187.96 85.09 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5104,7 +5104,7 @@
 			)
 		)
 		(property "Value" "3V3"
-			(at 189.23 78.994 0)
+			(at 187.96 77.724 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5112,7 +5112,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 189.23 82.55 0)
+			(at 187.96 81.28 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5121,7 +5121,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 189.23 82.55 0)
+			(at 187.96 81.28 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5130,7 +5130,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 189.23 82.55 0)
+			(at 187.96 81.28 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6003,7 +6003,7 @@
 	)
 	(symbol
 		(lib_id "Switch:SW_Push")
-		(at 177.8 85.09 0)
+		(at 176.53 83.82 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -6011,7 +6011,7 @@
 		(dnp no)
 		(uuid "e1a1f2ce-7e0f-4314-b21d-f8e7d4b1e0af")
 		(property "Reference" "Start/Stop"
-			(at 177.292 81.026 0)
+			(at 176.022 79.756 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6019,7 +6019,7 @@
 			)
 		)
 		(property "Value" "Button"
-			(at 177.8 80.01 0)
+			(at 176.53 78.74 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6028,7 +6028,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 177.8 80.01 0)
+			(at 176.53 78.74 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6037,7 +6037,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 177.8 80.01 0)
+			(at 176.53 78.74 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6046,7 +6046,7 @@
 			)
 		)
 		(property "Description" "Push button switch, generic, two pins"
-			(at 177.8 85.09 0)
+			(at 176.53 83.82 0)
 			(effects
 				(font
 					(size 1.27 1.27)

@@ -6,6 +6,7 @@
 
 #include <AudioTools.h>
 #include <AudioTools/AudioCodecs/CodecMP3Helix.h>
+//#include <BluetoothA2DPSource.h>
 #include <ArduinoJson.h>
 #include <Driver.h>
 #include <esp_idf_version.h>
@@ -39,6 +40,7 @@ MediaPlayerSource source(STARTFILEPATH, MP3_FILE, true);
 
 I2SStream i2s;
 MP3DecoderHelix decoder;
+//BluetoothA2DPSource a2dpsource;
 MediaPlayer player(source, i2s, decoder);
 
 WiFiClient wifiClient;
@@ -72,17 +74,23 @@ void callbackPrintMetaData(MetaDataType type, const char *str, int len)
   INFO_VAR("Detected Metadata %s : %s", toStr(type), str);
 }
 
+
+int32_t callbackGetSoundData(uint8_t *data, int32_t len) {
+    // generate your sound data 
+    // return the effective length in bytes
+    return 0;
+}
+
 void setup()
 {
   Serial.begin(115200);
 
-  INFO("LED Status display init");
-  leds->begin();
-
-  INFO("setup started!");
-
+  INFO("Setup started");
   INFO_VAR("Running on Arduino : %d.%d.%d", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
   INFO_VAR("Running on ESP IDF : %s", esp_get_idf_version());
+
+  INFO("LED Status display init");
+  leds->begin();
 
   commandsHandle = xQueueCreate(10, sizeof(CommandData));
   if (commandsHandle == NULL)
@@ -126,11 +134,11 @@ void setup()
   }
 
   // Setup SD-Card
-  INFO("sdcard display init");
-  SPIClass spi = SPIClass(VSPI);
-  spi.begin(GPIO_SPI_CLK, GPIO_SPI_MISO, GPIO_SPI_MOSI, GPIO_SPI_SS);
+  INFO("SD-Card init");
+  //SPIClass spi = SPIClass(VSPI);
+  //spi.begin(GPIO_SPI_SCK, GPIO_SPI_MISO, GPIO_SPI_MOSI, GPIO_SPI_SS);
 
-  if (!SD.begin(GPIO_SPI_SS, spi))
+  if (!SD.begin())
   {
     WARN("Could not enable SD-Card over SPI!");
     while (true)
@@ -140,9 +148,14 @@ void setup()
   // AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
   source.begin();
 
+  // Setup Bluetooth source
+  //INFO("Bluetooth connectivity init");
+  //a2dpsource.set_data_callback(callbackGetSoundData);
+  //a2dpsource.start(app->computeTechnicalName().c_str());    
+
   leds->setBootProgress(17 * 2);
 
-  INFO("Retrieving configuration");
+  INFO("Retrieving system configuration");
   if (!settings.readFromConfig())
   {
     // No configuration available.
@@ -172,8 +185,6 @@ void setup()
   frontend->begin();
 
   leds->setBootProgress(17 * 4);
-
-  // https://github.com/Ai-Thinker-Open/ESP32-A1S-AudioKit/issues/3
 
   player.setMetadataCallback(callbackPrintMetaData);
   decoder.driver()->setInfoCallback([](MP3FrameInfo &info, void *ref)

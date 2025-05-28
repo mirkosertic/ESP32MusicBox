@@ -9,13 +9,13 @@ Button::Button(int pin, long sensitivity, ButtonHandler handler)
     this->statetime = 0;
     this->sensitivity = sensitivity;
     this->handler = handler;
-    pinMode(pin, INPUT_PULLUP);
+    pinMode(pin, INPUT_PULLDOWN);
 }
 
 bool Button::isPressed()
 {
     int input = digitalRead(pin);
-    return input == LOW;
+    return input == HIGH;
 }
 
 void Button::loop()
