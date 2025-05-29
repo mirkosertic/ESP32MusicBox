@@ -1,12 +1,13 @@
 #include <WiFi.h>
 #include <Wire.h>
 #include <SD.h>
+#include <SPIFFS.h>
 
 #include <esp_task_wdt.h>
 
 #include <AudioTools.h>
 #include <AudioTools/AudioCodecs/CodecMP3Helix.h>
-//#include <BluetoothA2DPSource.h>
+// #include <BluetoothA2DPSource.h>
 #include <ArduinoJson.h>
 #include <Driver.h>
 #include <esp_idf_version.h>
@@ -40,7 +41,7 @@ MediaPlayerSource source(STARTFILEPATH, MP3_FILE, true);
 
 I2SStream i2s;
 MP3DecoderHelix decoder;
-//BluetoothA2DPSource a2dpsource;
+// BluetoothA2DPSource a2dpsource;
 MediaPlayer player(source, i2s, decoder);
 
 WiFiClient wifiClient;
@@ -74,11 +75,11 @@ void callbackPrintMetaData(MetaDataType type, const char *str, int len)
   INFO_VAR("Detected Metadata %s : %s", toStr(type), str);
 }
 
-
-int32_t callbackGetSoundData(uint8_t *data, int32_t len) {
-    // generate your sound data 
-    // return the effective length in bytes
-    return 0;
+int32_t callbackGetSoundData(uint8_t *data, int32_t len)
+{
+  // generate your sound data
+  // return the effective length in bytes
+  return 0;
 }
 
 void setup()
@@ -89,6 +90,16 @@ void setup()
   INFO_VAR("Running on Arduino : %d.%d.%d", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
   INFO_VAR("Running on ESP IDF : %s", esp_get_idf_version());
 
+  INFO("SPIFFS init");
+  if (!SPIFFS.begin(true))
+  {
+    WARN("An Error has occurred while mounting SPIFFS");
+    while (true)
+    {
+      delay(1000);
+    }
+  }
+
   INFO("LED Status display init");
   leds->begin();
 
@@ -96,7 +107,7 @@ void setup()
   if (commandsHandle == NULL)
   {
     WARN("Command queue could not be created. Halt.");
-    while (1)
+    while (true)
     {
       delay(1000);
     }
@@ -135,10 +146,12 @@ void setup()
 
   // Setup SD-Card
   INFO("SD-Card init");
-  //SPIClass spi = SPIClass(VSPI);
-  //spi.begin(GPIO_SPI_SCK, GPIO_SPI_MISO, GPIO_SPI_MOSI, GPIO_SPI_SS);
+  SPI.begin(GPIO_SPI_SCK, GPIO_SPI_MISO, GPIO_SPI_MOSI, GPIO_SPI_SS);
+  // SPIClass spi = SPIClass(VSPI);
+  // spi.begin(GPIO_SPI_SCK, GPIO_SPI_MISO, GPIO_SPI_MOSI, GPIO_SPI_SS);
 
-  if (!SD.begin())
+  // if (!SD.begin(GPIO_SPI_SS, spi))
+  if (!SD.begin(GPIO_SPI_SS, SPI))
   {
     WARN("Could not enable SD-Card over SPI!");
     while (true)
@@ -149,9 +162,9 @@ void setup()
   source.begin();
 
   // Setup Bluetooth source
-  //INFO("Bluetooth connectivity init");
-  //a2dpsource.set_data_callback(callbackGetSoundData);
-  //a2dpsource.start(app->computeTechnicalName().c_str());    
+  // INFO("Bluetooth connectivity init");
+  // a2dpsource.set_data_callback(callbackGetSoundData);
+  // a2dpsource.start(app->computeTechnicalName().c_str());
 
   leds->setBootProgress(17 * 2);
 

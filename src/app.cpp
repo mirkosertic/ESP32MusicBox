@@ -9,6 +9,17 @@
 #include "logging.h"
 #include "gitrevision.h"
 
+void ssdpNotifierTask(void *parameters)
+{
+    App *target = (App *)parameters;
+    INFO("SSDP notifier started");
+    while (true)
+    {
+        target->ssdpNotify();
+        delay(30000);
+    }
+}
+
 App::App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport)
 {
     this->volumeSupport = volumeSupport;
@@ -246,6 +257,8 @@ void App::announceMDNS()
 
 void App::ssdpNotify()
 {
+    INFO("Sent SSDP NOTIFY messages");
+
     const IPAddress SSDP_MULTICAST_ADDR(239, 255, 255, 250);
     const uint16_t SSDP_PORT = 1900;
 
@@ -288,8 +301,6 @@ void App::ssdpNotify()
 
         delay(100); // Small delay between notifications
     }
-
-    INFO("Sent SSDP NOTIFY messages");
 }
 
 void App::announceSSDP()
@@ -304,7 +315,7 @@ void App::announceSSDP()
     {
         INFO("SSDP multicast joined successfully");
 
-        this->ssdpNotify();
+        xTaskCreate(ssdpNotifierTask, "SSDP Notifier", 4096, this, 5, NULL);
     }
     else
     {
@@ -345,6 +356,9 @@ void App::loop()
     {
         DEBUG("Publishing app state");
         publishState();
+
+        INFO_VAR("loop() - Free HEAP is %d", ESP.getFreeHeap());
+
         lastStateReport = now;
     }
 
@@ -419,14 +433,6 @@ void App::loop()
                 INFO("Sent SSDP response");
             }
         }
-    }
-
-    // Send periodic SSDP NOTIFY messages (every 30 seconds)
-    static unsigned long lastNotify = 0;
-    if (millis() - lastNotify > 30000)
-    {
-        lastNotify = millis();
-        this->ssdpNotify();
     }
 }
 

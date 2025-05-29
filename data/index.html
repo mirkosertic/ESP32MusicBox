@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{appname}}</title>
+  <title></title>
   <style>
     /* Minimalistic but beautiful styles */
     body {
@@ -199,73 +199,93 @@
       text-decoration: none;
     }
   </style>
+  <template id="hbstemplate">
+    <div class="container">
+      <h1>{{appname}}</h1>
+      
+      <div class="status-card">
+        <h2>Player Status</h2>
+        <p>Current song: {{songinfo}}
+        <div class="volume-control">
+          Volume: <input type="range" id="volume" min="0" max="100" value="{{volume}}" step="1"> <output for="volume">{{volume}} %</output>
+        </div>      
+        <br>Playback: {{playingstatus}} / {{playbackprogress}} %</p>
+      </div>
+      
+      <div class="player-controls">
+        <a href="/startstop?path={{basepath}}"><button>&#x23F8; Start/Stop</button></a>
+        <a href="/previous?path={{basepath}}"><button>&#x23ED; Previous Title</button></a>
+        <a href="/next?path={{basepath}}"><button>&#x23EE; Next Title</button></a>
+      </div>
+
+      <div class="rfid-status">
+        <h2>RFID Tag Scanner</h2>
+        {{#if tagscanner}}
+        <div class="rfid-tag active">
+          <div class="tag-info">
+            <span class="tag-icon">&#x1F4E6;</span>
+            <span>{{tagscanner.tagname}} {{tagscanner.info}}</span>
+          </div>
+          <div class="tag-actions">
+            <a href="/assign?path={{basepath}}"><button>Assign Tag to current directory</button></a>
+            <a href="/delete?path={{basepath}}"><button class="delete">Clear Tag</button></a>
+          </div>
+        </div>
+        {{/if}}
+      </div>
+
+      <div class="file-browser">
+        <h2>File Browser</h2>
+        <div class="directory-nav">
+          {{#if parent}}<a href="?path={{parent}}">&#128281;{{parent}}</a>{{/if}}
+          <span>{{base}}</span>
+        </div>
+        <ul class="file-list">
+          {{#files}}
+          {{#if dirname}}
+          <li><a href="/?path={{path}}">&#x1F4C1; {{dirname}}</a></li>
+          {{/if}}
+          {{#if filename}}
+          <li><a href="/play?path={{../basepath}}&index={{index}}">&#x1F50A;{{filename}}</a></li>
+          {{/if}}
+          {{/files}}
+        </ul>
+      </div>
+
+      <div class="system-status">
+        <div class="status-item">
+          <span class="status-icon">&#x1F4F6;</span>
+          <a href="/networks.html"><span>WIFI: {{wifistatus}}</span></a>
+        </div>
+        <div class="status-item">
+          <span class="status-icon">&#9881;</span>      
+          <a href="/settings.html"><span>Device Configuration</span></a>      
+        <div>
+      </div>
+    </div>
+  </template>
 </head>
-<body>
-  <div class="container">
-    <h1>{{appname}}</h1>
-    
-    <div class="status-card">
-      <h2>Player Status</h2>
-      <p>Current song: {{songinfo}}
-      <div class="volume-control">
-        Volume: <input type="range" id="volume" min="0" max="100" value="{{volume}}" step="1"> <output for="volume">{{volume}} %</output>
-      </div>      
-      <br>Playback: {{playingstatus}} / {{playbackprogress}} %</p>
-    </div>
-    
-    <div class="player-controls">
-      <a href="/startstop?path={{basepath}}"><button>&#x23F8; Start/Stop</button></a>
-      <a href="/previous?path={{basepath}}"><button>&#x23ED; Previous Title</button></a>
-      <a href="/next?path={{basepath}}"><button>&#x23EE; Next Title</button></a>
-    </div>
-
-    <div class="rfid-status">
-      <h2>RFID Tag Scanner</h2>
-      {{#tagscanner}}
-      <div class="rfid-tag active">
-        <div class="tag-info">
-          <span class="tag-icon">&#x1F4E6;</span>
-          <span>{{tagname}} {{info}}</span>
-        </div>
-        <div class="tag-actions">
-          <a href="/assign?path={{basepath}}"><button>Assign Tag to current directory</button></a>
-          <a href="/delete?path={{basepath}}"><button class="delete">Clear Tag</button></a>
-        </div>
-      </div>
-      {{/tagscanner}}
-    </div>
-
-    <div class="file-browser">
-      <h2>File Browser</h2>
-      <div class="directory-nav">
-        {{#parent}}<a href="?path={{parent}}">&#128281;{{parent}}</a>{{/parent}}
-        <span>{{base}}</span>
-      </div>
-      <ul class="file-list">
-        {{#files}}
-        {{#dirname}}
-        <li><a href="/?path={{path}}">&#x1F4C1; {{dirname}}</a></li>
-        {{/dirname}}
-        {{#filename}}
-        <li><a href="/play?path={{basepath}}&index={{index}}">&#x1F50A;{{filename}}</a></li>
-        {{/filename}}
-        {{/files}}
-      </ul>
-    </div>
-
-    <div class="system-status">
-      <div class="status-item">
-        <span class="status-icon">&#x1F4F6;</span>
-        <a href="/networks.html"><span>WIFI: {{wifistatus}}</span></a>
-      </div>
-      <div class="status-item">
-        <span class="status-icon">&#9881;</span>      
-        <a href="/settings.html"><span>Device Configuration</span></a>      
-      <div>
-    </div>
-  </div>
+<body id="body">
+  <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js"></script>      
   <script>
-      (function() {
+    const currentParams = new URLSearchParams(window.location.search);
+    const urlWithParams = currentParams.toString() ? `/index.json?${currentParams.toString()}`: '/index.json';
+
+    fetch(urlWithParams)
+      .then(response => {
+        if (!response.ok) {
+          console.log("Error fetching, Using default data");
+          return {"appname":"Dummy","wifistatus":"Okay","stateversion":0,"playingstatus":"Stopped","volume":100,"playbackprogress":0,"songinfo":"-","success":true,"basepath":"/","base":"/","files":[]};
+        }
+        return response.json();
+      })
+      .then(data => {
+        var template = Handlebars.compile(document.getElementById("hbstemplate").innerHTML);
+        var rendered = template(data);
+        var oldbody = document.getElementById("body");
+        oldbody.innerHTML = rendered;
+        document.title = data.appname;
+
         const volumeSlider = document.getElementById('volume');
         const output = document.querySelector('output');
 
@@ -274,7 +294,7 @@
         };
 
         function updateVolumeChange(event) {
-            window.location.href='/volume?path={{basepath}}&volume=' + event.target.value;
+            window.location.href= `/volume?path=${data.basepath}&volume=` + event.target.value;
         };
 
         volumeSlider.addEventListener('input', updateVolume);
@@ -283,14 +303,15 @@
         function checkStateVersion(url, currentversion) {
           const xhr = new XMLHttpRequest();
           
-          xhr.open('HEAD', url, true);
+          xhr.open('GET', url, true);
           
           xhr.onload = function() {
             if (xhr.status >= 200 && xhr.status < 300) {
               const stateVersion = xhr.getResponseHeader('x-stateversion');
               
               if (stateVersion > currentversion) {
-                window.location.reload(true);
+                // Fix me....
+                //window.location.reload(true);
               }
             }
           };
@@ -298,8 +319,11 @@
           xhr.send();
         };
 
-        setInterval(() => checkStateVersion("/", {{stateversion}}), 500);
-      })();
+        setInterval(() => checkStateVersion("/stateversion", data.stateversion), 500);
+      })
+      .catch(error => {
+        console.error('Error fetching data:', error);
+      });    
   </script>
 </body>
 </html>

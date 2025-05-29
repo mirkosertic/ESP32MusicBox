@@ -11,11 +11,11 @@ def process_templates(templates_dir, output_file):
                 var_name = os.path.splitext(filename)[0].upper() + "_TEMPLATE"
                 with open(os.path.join(templates_dir, filename), 'r') as f:
                     content = f.read().replace('"', '\\"').replace('\n', '\\n')
-                    out.write(f'const char* {var_name} = "{content}";\n\n')
+                    out.write(f'const char* {var_name} PROGMEM = "{content}";\n\n')
 
 Import("env")
 
-templates_dir = "templates"
+templates_dir = "data"
 
 OUTPUT_PATH = (
     Path(env.subst("$BUILD_DIR")) / "generated"

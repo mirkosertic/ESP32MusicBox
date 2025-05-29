@@ -131,7 +131,8 @@ void Settings::initializeWifiFromSettings()
     else
     {
       INFO("Connecting to Wifi with last known AP...");
-      WiFi.begin(this->wlan_sid, this->wlan_pwd, this->wlan_channel, this->wlan_bssid);
+      // TODO WiFi.begin(this->wlan_sid, this->wlan_pwd, this->wlan_channel, this->wlan_bssid);
+      WiFi.begin(this->wlan_sid, this->wlan_pwd);
     }
   }
   else
@@ -167,7 +168,8 @@ bool Settings::isMQTTEnabled()
 
 bool Settings::isVoiceAssistantEnabled()
 {
-  return this->voice_enabled;
+  // return this->voice_enabled;
+  return false;
 }
 
 String Settings::getVoiceAssistantServer()

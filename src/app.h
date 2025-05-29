@@ -54,9 +54,6 @@ private:
 
     WiFiUDP udp;
 
-private:
-    void ssdpNotify();
-
 public:
     App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport);
 
@@ -119,6 +116,8 @@ public:
     void announceMDNS();
 
     void announceSSDP();
+
+    void ssdpNotify();
 
     String getSSDPDescription();
 

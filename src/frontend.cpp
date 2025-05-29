@@ -1,8 +1,10 @@
 #include "frontend.h"
 
-#include <ArduinoJson.h>
-#include <Ministache.h>
+#include <SPIFFS.h>
 #include <WiFi.h>
+#include <ArduinoJson.h>
+#include <AsyncJson.h>
+#include <AsyncMessagePack.h>
 
 #include <esp_task_wdt.h>
 
@@ -64,9 +66,22 @@ void Frontend::initialize()
       return;
     }
 
-    JsonDocument result;
-    result["appname"] = this->app->getName();
-    result["wifistatus"] = categorizeRSSI(WiFi.RSSI());
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", INDEX_TEMPLATE);
+    //AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/index.html", "text/html");
+    response->addHeader("Cache-Control","no-cache, must-revalidate");
+    request->send(response); });
+
+  this->server->on("/index.json", HTTP_GET, [this](AsyncWebServerRequest *request)
+                   {
+
+    INFO("webserver() - Rendering index json");
+
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    response->setContentType("application/json");
+    response->setCode(200);
+    response->addHeader("Cache-Control","no-cache, must-revalidate");    
+
+    JsonObject result = response->getRoot().to<JsonObject>();
 
     if (this->app->getTagPresent()) {
       JsonObject tagscanner = result["tagscanner"].to<JsonObject>();
@@ -150,35 +165,46 @@ void Frontend::initialize()
     }
     INFO("webserver() - FS scan done");
 
-    String jsonString;
-    serializeJson(result, jsonString);
-    Serial.println(jsonString);
-
-    INFO_VAR("webserver() - Free heap before %d", ESP.getFreeHeap());
-
-    const String output = ministache::render(INDEX_TEMPLATE, result);
-
-    INFO_VAR("webserver() - Free heap after %d", ESP.getFreeHeap());
-
-    INFO_VAR("webserver() - HTML generation done. Size is %d, Template size is %d", output.length(), strlen(INDEX_TEMPLATE));
-
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", output);
-    response->addHeader("Cache-Control","no-cache, must-revalidate");
+    response->setLength();
     request->send(response); });
 
-  this->server->on("/", HTTP_HEAD, [this](AsyncWebServerRequest *request)
+  this->server->on("/stateversion", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
 
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "");
+    long version = this->app->getStateVersion();
+
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    response->setContentType("application/json");
+    response->setCode(200);
     response->addHeader("Cache-Control","no-cache, must-revalidate");
-    response->addHeader("x-stateversion",String(this->app->getStateVersion()));
+    response->addHeader("x-stateversion",String(version));
+
+    JsonObject result = response->getRoot().to<JsonObject>();
+    result["stateversion"] = version;
+
+    response->setLength();
     request->send(response); });
 
   this->server->on("/networks.html", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
 
     INFO("webserver() - Rendering networks page");
-    JsonDocument result;
+
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", NETWORKS_TEMPLATE);
+    response->addHeader("Cache-Control","no-cache, must-revalidate");
+    request->send(response); });
+
+  this->server->on("/networks.json", HTTP_GET, [this](AsyncWebServerRequest *request)
+                   {
+
+    INFO("webserver() - Rendering networks JSON page");
+
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    response->setContentType("application/json");
+    response->setCode(200);
+    response->addHeader("Cache-Control","no-cache, must-revalidate");    
+
+    JsonObject result = response->getRoot().to<JsonObject>();
 
     result["appname"] = this->app->getName();
     result["wifistatus"] = categorizeRSSI(WiFi.RSSI());    
@@ -238,24 +264,35 @@ void Frontend::initialize()
     // Delete the scan result to free memory for code below.
     WiFi.scanDelete();    
 
-    const String output = ministache::render(NETWORKS_TEMPLATE, result);
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", output);
-    response->addHeader("Cache-Control","no-cache, must-revalidate");
+    response->setLength();
     request->send(response); });
 
   this->server->on("/settings.html", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
 
     INFO("webserver() - Rendering settings page");                    
-    JsonDocument result;
+
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", SETTINGS_TEMPLATE);
+    response->addHeader("Cache-Control","no-cache, must-revalidate");
+    request->send(response); });
+
+  this->server->on("/settings.json", HTTP_GET, [this](AsyncWebServerRequest *request)
+                   {
+
+    INFO("webserver() - Rendering settings JSON page");                    
+
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    response->setContentType("application/json");
+    response->setCode(200);
+    response->addHeader("Cache-Control","no-cache, must-revalidate");    
+
+    JsonObject result = response->getRoot().to<JsonObject>();
 
     result["appname"] = this->app->getName();
     result["wifistatus"] = categorizeRSSI(WiFi.RSSI());    
-    result["settingsjson"] = this->settings->getSettingsAsJson();    
+    result["settingsjson"] = this->settings->getSettingsAsJson();   
 
-    const String output = ministache::render(SETTINGS_TEMPLATE, result);
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", output);
-    response->addHeader("Cache-Control","no-cache, must-revalidate");
+    response->setLength();
     request->send(response); });
 
   this->server->on("/updateconfig", HTTP_GET, [this](AsyncWebServerRequest *request)
