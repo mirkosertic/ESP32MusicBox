@@ -357,7 +357,9 @@ void App::loop()
         DEBUG("Publishing app state");
         publishState();
 
-        INFO_VAR("loop() - Free HEAP is %d", ESP.getFreeHeap());
+        unsigned int stackHighWatermark = uxTaskGetStackHighWaterMark(nullptr);
+
+        INFO_VAR("loop() - Free HEAP is %d, stackHighWatermark is %d", ESP.getFreeHeap(), stackHighWatermark);
 
         lastStateReport = now;
     }

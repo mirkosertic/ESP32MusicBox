@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{appname}} - Settings</title>
+  <title></title>
   <style>
     /* Minimalistic but beautiful styles */
     body {
@@ -85,46 +85,69 @@
         margin-top: 10px;
     }	
   </style>
-</head>
-<body>
-  <div class="container">
-    <h1>{{appname}} - Settings</h1>
-    
-    <div class="status-card">
-      <h2>Settings as JSON</h2>
-      <form action="/updateconfig" id="json-form" onsubmit="return validateAndSubmit();">
-        <textarea id="editor" name="configdata">{{settingsjson}}</textarea>
-        <div id="error-message"></div>
-        <button type="submit" id="submit-button">!! Save !!</button>
-      </form>	        
-    </div>
-    
-    <script>
-      function validateAndSubmit() {
-          var jsonString = document.getElementById('editor').value;
-          try {
-              JSON.parse(jsonString);
-              document.getElementById('error-message').textContent = '';
-              console.log('Form submitted with valid JSON:', jsonString);
-              return true;
-          } catch (e) {
-              console.log('Form submitted with valid JSON:', jsonString);
-              document.getElementById('error-message').textContent = 'Invalid JSON: ' + e.message;
-              return false;
-          }
-      }	
-    </script>
-
-    <div class="system-status">
-      <div class="status-item">
-        <span class="status-icon">&#x1F4F6;</span>
-        <a href="/networks.html"><span>WIFI: {{wifistatus}}</span></a>
+  <template id="hbstemplate">
+    <div class="container">
+      <h1>{{appname}} - Settings</h1>
+      
+      <div class="status-card">
+        <h2>Settings as JSON</h2>
+        <form action="/updateconfig" id="json-form" onsubmit="return validateAndSubmit();">
+          <textarea id="editor" name="configdata">{{settingsjson}}</textarea>
+          <div id="error-message"></div>
+          <button type="submit" id="submit-button">!! Save !!</button>
+        </form>	        
       </div>
-      <div class="status-item">
-        <span class="status-icon">&#9881;</span>      
-        <a href="/settings.html"><span>Device Configuration</span></a>      
-      <div>
+      
+      <div class="system-status">
+        <div class="status-item">
+          <span class="status-icon">&#x1F4F6;</span>
+          <a href="/networks.html"><span>WIFI: {{wifistatus}}</span></a>
+        </div>
+        <div class="status-item">
+          <span class="status-icon">&#9881;</span>      
+          <a href="/settings.html"><span>Device Configuration</span></a>      
+        <div>
+      </div>
     </div>
-  </div>
+
+  </template>  
+</head>
+<body id="body">
+  <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js"></script>      
+  <script>
+    function validateAndSubmit() {
+        var jsonString = document.getElementById('editor').value;
+        try {
+            JSON.parse(jsonString);
+            document.getElementById('error-message').textContent = '';
+            console.log('Form submitted with valid JSON:', jsonString);
+            return true;
+        } catch (e) {
+            console.log('Form submitted with valid JSON:', jsonString);
+            document.getElementById('error-message').textContent = 'Invalid JSON: ' + e.message;
+            return false;
+        }
+    }	
+
+
+    fetch('/settings.json')
+      .then(response => {
+        if (!response.ok) {
+          console.log("Error fetching, Using default data");
+          return {"appname":"Dummy","wifistatus":"Okay","settingsjson": "{}"};
+        }
+        return response.json();
+      })
+      .then(data => {
+        var template = Handlebars.compile(document.getElementById("hbstemplate").innerHTML);
+        var rendered = template(data);
+        var oldbody = document.getElementById("body");
+        oldbody.innerHTML = rendered;
+        document.title = data.appname;
+      })
+      .catch(error => {
+        console.error('Error fetching data:', error);
+      });    
+  </script>
 </body>
 </html>

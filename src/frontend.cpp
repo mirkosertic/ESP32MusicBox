@@ -66,8 +66,30 @@ void Frontend::initialize()
       return;
     }
 
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", INDEX_TEMPLATE);
-    //AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/index.html", "text/html");
+    unsigned int stackHighWatermark = uxTaskGetStackHighWaterMark(nullptr);        
+    INFO_VAR("webserver() - Free HEAP is %d, stackHighWatermark is %d", ESP.getFreeHeap(), stackHighWatermark);    
+
+    // Chunked response to optimize RAM usage    
+    size_t content_length = strlen_P(INDEX_TEMPLATE);
+    INFO_VAR("webserver() - Size of response is %d", content_length);        
+    AsyncWebServerResponse *response = request->beginResponse(
+        "text/html",
+        content_length,
+        [this, content_length](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+            size_t remaining = content_length - index;
+            size_t to_copy = min(maxLen, remaining);
+            
+            if (to_copy > 0) {
+                memcpy_P(buffer, INDEX_TEMPLATE + index, to_copy);
+            }
+
+            unsigned int stackHighWatermark = uxTaskGetStackHighWaterMark(nullptr);        
+            INFO_VAR("webserver() - Chunk Free HEAP is %d, stackHighWatermark is %d", ESP.getFreeHeap(), stackHighWatermark);    
+
+            return to_copy;
+        }
+    );    
+
     response->addHeader("Cache-Control","no-cache, must-revalidate");
     request->send(response); });
 
@@ -190,7 +212,23 @@ void Frontend::initialize()
 
     INFO("webserver() - Rendering networks page");
 
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", NETWORKS_TEMPLATE);
+    // Chunked response to optimize RAM usage    
+    size_t content_length = strlen_P(NETWORKS_TEMPLATE);
+    AsyncWebServerResponse *response = request->beginResponse(
+        "text/html",
+        content_length,
+        [this](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+            size_t remaining = strlen_P(NETWORKS_TEMPLATE) - index;
+            size_t to_copy = min(maxLen, remaining);
+            
+            if (to_copy > 0) {
+                memcpy_P(buffer, NETWORKS_TEMPLATE + index, to_copy);
+            }
+            
+            return to_copy;
+        }
+    );    
+
     response->addHeader("Cache-Control","no-cache, must-revalidate");
     request->send(response); });
 
@@ -270,9 +308,25 @@ void Frontend::initialize()
   this->server->on("/settings.html", HTTP_GET, [this](AsyncWebServerRequest *request)
                    {
 
-    INFO("webserver() - Rendering settings page");                    
+    INFO("webserver() - Rendering settings page");
 
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", SETTINGS_TEMPLATE);
+    // Chunked response to optimize RAM usage        
+    size_t content_length = strlen_P(SETTINGS_TEMPLATE);
+    AsyncWebServerResponse *response = request->beginResponse(
+        "text/html",
+        content_length,
+        [this](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+            size_t remaining = strlen_P(SETTINGS_TEMPLATE) - index;
+            size_t to_copy = min(maxLen, remaining);
+            
+            if (to_copy > 0) {
+                memcpy_P(buffer, SETTINGS_TEMPLATE + index, to_copy);
+            }
+            
+            return to_copy;
+        }
+    );    
+
     response->addHeader("Cache-Control","no-cache, must-revalidate");
     request->send(response); });
 
