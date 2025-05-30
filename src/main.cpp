@@ -391,6 +391,8 @@ void loop()
         // Start timeout again
         startupTime = now;
       }
+    } else {
+      frontend->loop();
     }
   }
 

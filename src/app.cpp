@@ -315,7 +315,7 @@ void App::announceSSDP()
     {
         INFO("SSDP multicast joined successfully");
 
-        xTaskCreate(ssdpNotifierTask, "SSDP Notifier", 4096, this, 5, NULL);
+        xTaskCreate(ssdpNotifierTask, "SSDP Notifier", 4096, this, 10, NULL);
     }
     else
     {

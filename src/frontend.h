@@ -1,9 +1,18 @@
 #ifndef FRONTEND_H
 #define FRONTEND_H
 
+#include <Arduino.h>
+
 // For some random reason this is required to make ESPAsyncWebServer compile without errors
+//#include <WebServer.h>
+
+#ifndef _ESPAsyncWebServer_H_
+#define _ESPAsyncWebServer_H_
+#endif
+
 #include <WebServer.h>
-#include <ESPAsyncWebServer.h>
+#include <MongooseCore.h>
+#include <MongooseHttpServer.h>
 #include <FS.h>
 
 #include "app.h"
@@ -12,9 +21,10 @@
 class Frontend
 {
 private:
+  uint16_t wsport;
   FS *fs;
   App *app;
-  AsyncWebServer *server;
+  MongooseHttpServer *server;
   const char *ext;
   Settings *settings;
 
@@ -26,6 +36,8 @@ public:
   ~Frontend();
 
   void begin();
+
+  void loop();  
 };
 
 #endif

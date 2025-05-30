@@ -90,7 +90,7 @@
     }
   </style>
   <template id="hbstemplate">
-    <div class="container">
+      <div class="container">
       <h1>{{appname}} - WLAN Networks</h1>
       
       <div class="status-card">
@@ -104,7 +104,7 @@
             <th>Encryption</th>
             <th>BSSID</th>
           </tr>
-          {{#networks}}
+          {{#each networks}}
           <tr>
             <td>{{ssid}}</td>
             <td>{{rssi}} ({{rssitext}})</td>
@@ -112,7 +112,7 @@
             <td>{{encryption}}</td>
             <td>{{bssid}}</td>
           </tr>
-          {{/networks}}
+          {{/each}}
         </table> 
       </div>
       
