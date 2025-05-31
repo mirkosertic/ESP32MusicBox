@@ -13,75 +13,88 @@
       background-color: #f5f5f5;
       color: #333;
     }
-    
+
     .container {
       max-width: 800px;
       margin: 0 auto;
       padding: 1rem;
     }
-    
+
     h1 {
       font-size: 1.8rem;
       margin-bottom: 0.75rem;
     }
-    
-    .status-card, .file-browser, .rfid-status, .system-status, .player-controls {
+
+    .status-card,
+    .file-browser,
+    .rfid-status,
+    .system-status,
+    .player-controls {
       background-color: #fff;
       border-radius: 8px;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       padding: 0.75rem;
       margin-bottom: 1rem;
     }
-    
-    .status-card h2, .file-browser h2, .rfid-status h2, .system-status h2, .player-controls h2 {
+
+    .status-card h2,
+    .file-browser h2,
+    .rfid-status h2,
+    .system-status h2,
+    .player-controls h2 {
       font-size: 1.3rem;
       margin-bottom: 0.5rem;
     }
 
     table {
-        width: 100%;
-        border-collapse: collapse;
-        background-color: white;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     }
-    th, td {
-        padding: 12px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
+
+    th,
+    td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
     }
+
     th {
-        background-color: black;
-        color: white;
+      background-color: black;
+      color: white;
     }
+
     xtr:nth-child(even) {
-        background-color: #f2f2f2;
+      background-color: #f2f2f2;
     }
+
     tr:hover {
-        background-color: #ddd;
-    }    
-   
+      background-color: #ddd;
+    }
+
     .system-status {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    
+
     .system-status .status-item {
       display: flex;
       align-items: center;
     }
-    
+
     .system-status .status-item span {
       margin-left: 0.3rem;
     }
-    
+
     .system-status .status-icon {
       font-size: 1.2rem;
     }
-    
+
     a {
       color: black;
-      text-decoration: none;		
+      text-decoration: none;
     }
 
     a:visited {
@@ -89,7 +102,7 @@
       text-decoration: none;
     }
   </style>
-  <template id="hbstemplate">
+  <script id="hbstemplate" type="text/x-handlebars-template">
       <div class="container">
       <h1>{{appname}} - WLAN Networks</h1>
       
@@ -127,16 +140,16 @@
         <div>
       </div>
     </div>
-  </template>  
+  </script>
 </head>
 <body id="body">
-  <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js"></script>      
+  <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js"></script>
   <script>
     fetch('/networks.json')
       .then(response => {
         if (!response.ok) {
           console.log("Error fetching, Using default data");
-          return {"appname":"Dummy","wifistatus":"Okay","networks": [{"ssid": "lala", "rssi": -37, "rssitext": "bad", "channel": 11, "encryption":"enc", "bssid": "abcdef"}]};
+          return { "appname": "Dummy", "wifistatus": "Okay", "networks": [{ "ssid": "lala", "rssi": -37, "rssitext": "bad", "channel": 11, "encryption": "enc", "bssid": "abcdef" }] };
         }
         return response.json();
       })

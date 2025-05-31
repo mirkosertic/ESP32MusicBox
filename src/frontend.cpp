@@ -79,7 +79,7 @@ void Frontend::initialize()
 
       request->send(response); });
 
-  this->server->on("/index.json$", HTTP_GET, [this](MongooseHttpServerRequest *request)
+  this->server->on("/status.json$", HTTP_GET, [this](MongooseHttpServerRequest *request)
                    {
 
       INFO("webserver() - Rendering index json");
@@ -112,6 +112,32 @@ void Frontend::initialize()
       result["volume"] = (int)(this->app->getVolume() * 100);
       result["playbackprogress"] = this->app->playProgressInPercent();
 
+      const char *songinfo = this->app->currentTitle();
+      if (songinfo)
+      {
+        result["songinfo"] = songinfo;
+      }
+      else
+      {
+        result["songinfo"] = "-";
+      }
+
+      serializeJson(result, *response);
+
+      request->send(response); });
+
+  this->server->on("/files.json$", HTTP_GET, [this](MongooseHttpServerRequest *request)
+                   {
+
+      INFO("webserver() - Rendering index json");
+
+      MongooseHttpServerResponseStream *response = request->beginResponseStream();
+      response->setContentType("application/json");
+      response->setCode(200);
+      response->addHeader("Cache-Control", "no-cache, must-revalidate");
+
+      JsonDocument result;
+
       INFO("webserver() - FS scan");
       File root;
       if (request->hasParam("path"))
@@ -131,17 +157,6 @@ void Frontend::initialize()
       }
       else
       {
-
-        const char *songinfo = this->app->currentTitle();
-        if (songinfo)
-        {
-          result["songinfo"] = songinfo;
-        }
-        else
-        {
-          result["songinfo"] = "-";
-        }
-
         String base(root.path());
         result["success"] = true;
         result["basepath"] = base;
@@ -195,23 +210,6 @@ void Frontend::initialize()
 
       serializeJson(result, *response);
 
-      request->send(response); });
-
-  this->server->on("/stateversion$", HTTP_GET, [this](MongooseHttpServerRequest *request)
-                   {
-
-      long version = this->app->getStateVersion();
-
-      MongooseHttpServerResponseStream *response = request->beginResponseStream();
-      response->setContentType("application/json");
-      response->setCode(200);
-      response->addHeader("Cache-Control", "no-cache, must-revalidate");
-      response->addHeader("x-stateversion", String(version));
-
-      JsonDocument result;
-      result["stateversion"] = version;
-
-      serializeJson(result, *response);
       request->send(response); });
 
   this->server->on("/networks.html$", HTTP_GET, [this](MongooseHttpServerRequest *request)
@@ -360,21 +358,16 @@ void Frontend::initialize()
     INFO("webserver() - /startstop received");
     this->app->toggleActiveState();
 
-    if (request->hasParam("path")) {
-      MongooseHttpServerResponseStream *response = request->beginResponseStream();
-      response->setCode(302);
-      response->setContentType("text/html");
-      response->addHeader("Cache-Control","no-cache, must-revalidate");      
-      response->addHeader("Location","/?path=" + request->getParam("path"));
-      request->send(response);       
-    } else {
-      MongooseHttpServerResponseStream *response = request->beginResponseStream();
-      response->setCode(302);
-      response->setContentType("text/html");
-      response->addHeader("Cache-Control","no-cache, must-revalidate");      
-      response->addHeader("Location","/");
-      request->send(response);       
-    } });
+    JsonDocument result;
+
+    MongooseHttpServerResponseStream *response = request->beginResponseStream();
+    response->setCode(200);
+    response->setContentType("application/json");
+    response->addHeader("Cache-Control","no-cache, must-revalidate");
+
+    serializeJson(result, *response);
+
+    request->send(response); });
 
   // Next
   this->server->on("/next$", HTTP_GET, [this](MongooseHttpServerRequest *request)
@@ -383,21 +376,16 @@ void Frontend::initialize()
     INFO("webserver() - /next received");
     this->app->next();
 
-    if (request->hasParam("path")) {
-      MongooseHttpServerResponseStream *response = request->beginResponseStream();
-      response->setCode(302);
-      response->setContentType("text/html");
-      response->addHeader("Cache-Control","no-cache, must-revalidate");      
-      response->addHeader("Location","/?path=" + request->getParam("path"));
-      request->send(response);       
-    } else {
-      MongooseHttpServerResponseStream *response = request->beginResponseStream();
-      response->setCode(302);
-      response->setContentType("text/html");
-      response->addHeader("Cache-Control","no-cache, must-revalidate");      
-      response->addHeader("Location","/");
-      request->send(response);       
-    } });
+    JsonDocument result;
+
+    MongooseHttpServerResponseStream *response = request->beginResponseStream();
+    response->setCode(200);
+    response->setContentType("application/json");
+    response->addHeader("Cache-Control","no-cache, must-revalidate");
+
+    serializeJson(result, *response);
+
+    request->send(response); });
 
   // Previous
   this->server->on("/previous$", HTTP_GET, [this](MongooseHttpServerRequest *request)
@@ -406,21 +394,16 @@ void Frontend::initialize()
     INFO("webserver() - /previous received");
     this->app->previous();
 
-    if (request->hasParam("path")) {
-      MongooseHttpServerResponseStream *response = request->beginResponseStream();
-      response->setCode(302);
-      response->setContentType("text/html");
-      response->addHeader("Cache-Control","no-cache, must-revalidate");      
-      response->addHeader("Location","/?path=" + request->getParam("path"));
-      request->send(response);       
-    } else {
-      MongooseHttpServerResponseStream *response = request->beginResponseStream();
-      response->setCode(302);
-      response->setContentType("text/html");
-      response->addHeader("Cache-Control","no-cache, must-revalidate");      
-      response->addHeader("Location","/");
-      request->send(response);       
-    } });
+    JsonDocument result;
+
+    MongooseHttpServerResponseStream *response = request->beginResponseStream();
+    response->setCode(200);
+    response->setContentType("application/json");
+    response->addHeader("Cache-Control","no-cache, must-revalidate");
+
+    serializeJson(result, *response);
+
+    request->send(response); });
 
   // play
   this->server->on("/play$", HTTP_GET, [this](MongooseHttpServerRequest *request)
@@ -433,11 +416,15 @@ void Frontend::initialize()
 
     this->app->play(path, index);
 
+    JsonDocument result;    
+
     MongooseHttpServerResponseStream *response = request->beginResponseStream();
-    response->setCode(302);
-    response->setContentType("text/html");
-    response->addHeader("Cache-Control","no-cache, must-revalidate");      
-    response->addHeader("Location","/?path=" + path);
+    response->setCode(200);
+    response->setContentType("application/json");
+    response->addHeader("Cache-Control","no-cache, must-revalidate");
+
+    serializeJson(result, *response);
+
     request->send(response); });
 
   // volume
@@ -446,16 +433,19 @@ void Frontend::initialize()
     
     INFO("webserver() - /volume received");
 
-    String path = request->getParam("path");
     int volume = request->getParam("volume").toInt();
 
     this->app->setVolume(volume / 100.0f);
 
+    JsonDocument result;
+
     MongooseHttpServerResponseStream *response = request->beginResponseStream();
-    response->setCode(302);
-    response->setContentType("text/html");
-    response->addHeader("Cache-Control","no-cache, must-revalidate");      
-    response->addHeader("Location","/?path=" + path);
+    response->setCode(200);
+    response->setContentType("application/json");
+    response->addHeader("Cache-Control","no-cache, must-revalidate");
+
+    serializeJson(result, *response);
+
     request->send(response); });
 
   // assign
@@ -541,9 +531,9 @@ void Frontend::initialize()
 
 void Frontend::begin()
 {
-  Mongoose.begin();  
+  Mongoose.begin();
 
-  this->server->begin(this->wsport);  
+  this->server->begin(this->wsport);
 
   this->initialize();
 }

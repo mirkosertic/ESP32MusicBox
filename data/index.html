@@ -13,36 +13,44 @@
       background-color: #f5f5f5;
       color: #333;
     }
-    
+
     .container {
       max-width: 800px;
       margin: 0 auto;
       padding: 1rem;
     }
-    
+
     h1 {
       font-size: 1.8rem;
       margin-bottom: 0.75rem;
     }
-    
-    .status-card, .file-browser, .rfid-status, .system-status, .player-controls {
+
+    .status-card,
+    .file-browser,
+    .rfid-status,
+    .system-status,
+    .player-controls {
       background-color: #fff;
       border-radius: 8px;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       padding: 0.75rem;
       margin-bottom: 1rem;
     }
-    
-    .status-card h2, .file-browser h2, .rfid-status h2, .system-status h2, .player-controls h2 {
+
+    .status-card h2,
+    .file-browser h2,
+    .rfid-status h2,
+    .system-status h2,
+    .player-controls h2 {
       font-size: 1.3rem;
       margin-bottom: 0.5rem;
     }
-    
+
     .file-list {
       list-style-type: none;
       padding: 0;
     }
-    
+
     .file-list li {
       padding: 0.3rem 0;
       border-bottom: 1px solid #e6e6e6;
@@ -50,37 +58,37 @@
 
     .file-list li:hover {
       background-color: #ddd;
-    }      
-    
+    }
+
     .file-list li:last-child {
       border-bottom: none;
     }
-    
+
     .file-list li a {
       color: #333;
       text-decoration: none;
     }
-    
+
     .file-list li a:hover {
       color: #666;
     }
-    
+
     .directory-nav {
       display: flex;
       align-items: center;
       margin-bottom: 0.5rem;
     }
-    
+
     .directory-nav a {
       color: #666;
       text-decoration: none;
       margin-right: 0.3rem;
     }
-    
+
     .directory-nav a:hover {
       color: #333;
     }
-    
+
     .rfid-tag {
       display: flex;
       align-items: center;
@@ -88,24 +96,24 @@
       padding: 0.3rem 0;
       border-bottom: 1px solid #e6e6e6;
     }
-    
+
     .rfid-tag.active {
       background-color: #f0f8ff;
     }
-    
+
     .rfid-tag:last-child {
       border-bottom: none;
     }
-    
+
     .rfid-tag .tag-info {
       display: flex;
       align-items: center;
     }
-    
+
     .rfid-tag .tag-info span {
       margin-left: 0.3rem;
     }
-    
+
     .rfid-tag .tag-actions button {
       background-color: #007bff;
       color: #fff;
@@ -115,49 +123,49 @@
       cursor: pointer;
       margin-left: 0.3rem;
     }
-    
+
     .rfid-tag .tag-actions button:hover {
       background-color: #0056b3;
     }
-    
+
     .rfid-tag .tag-actions button.disabled {
       background-color: #ccc;
       cursor: not-allowed;
     }
-    
+
     .rfid-tag .tag-actions button.delete {
       background-color: #dc3545;
     }
-    
+
     .rfid-tag .tag-actions button.delete:hover {
       background-color: #c82333;
     }
-    
+
     .system-status {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    
+
     .system-status .status-item {
       display: flex;
       align-items: center;
     }
-    
+
     .system-status .status-item span {
       margin-left: 0.3rem;
     }
-    
+
     .system-status .status-icon {
       font-size: 1.2rem;
     }
-    
+
     .player-controls {
       display: flex;
       justify-content: center;
       align-items: center;
     }
-    
+
     .player-controls button {
       background-color: #007bff;
       color: #fff;
@@ -167,31 +175,31 @@
       cursor: pointer;
       margin: 0 0.3rem;
     }
-    
+
     .player-controls button:hover {
       background-color: #0056b3;
     }
 
     .volume-control {
-        display: flex;
-        text-align: center;
-        align-items: center;
-        gap: 0.5rem;
+      display: flex;
+      text-align: center;
+      align-items: center;
+      gap: 0.5rem;
     }
 
     input[type="range"] {
-        max-width: 100%;
-        margin: 10px 0;
-        width: 20rem;
+      max-width: 100%;
+      margin: 10px 0;
+      width: 20rem;
     }
 
     output {
-        font-size: 18px;
+      font-size: 18px;
     }
 
     a {
       color: black;
-      text-decoration: none;		
+      text-decoration: none;
     }
 
     a:visited {
@@ -199,131 +207,216 @@
       text-decoration: none;
     }
   </style>
-  <template id="hbstemplate">
-    <div class="container">
-      <h1>{{appname}}</h1>
-      
-      <div class="status-card">
-        <h2>Player Status</h2>
-        <p>Current song: {{songinfo}}
-        <div class="volume-control">
-          Volume: <input type="range" id="volume" min="0" max="100" value="{{volume}}" step="1"> <output for="volume">{{volume}} %</output>
-        </div>      
-        <br>Playback: {{playingstatus}} / {{playbackprogress}} %</p>
-      </div>
-      
-      <div class="player-controls">
-        <a href="/startstop?path={{basepath}}"><button>&#x23F8; Start/Stop</button></a>
-        <a href="/previous?path={{basepath}}"><button>&#x23ED; Previous Title</button></a>
-        <a href="/next?path={{basepath}}"><button>&#x23EE; Next Title</button></a>
-      </div>
-
-      <div class="rfid-status">
-        <h2>RFID Tag Scanner</h2>
-        {{#if tagscanner}}
-        <div class="rfid-tag active">
-          <div class="tag-info">
-            <span class="tag-icon">&#x1F4E6;</span>
-            <span>{{tagscanner.tagname}} {{tagscanner.info}}</span>
-          </div>
-          <div class="tag-actions">
-            <a href="/assign?path={{basepath}}"><button>Assign Tag to current directory</button></a>
-            <a href="/delete?path={{basepath}}"><button class="delete">Clear Tag</button></a>
-          </div>
-        </div>
-        {{/if}}
-      </div>
-
-      <div class="file-browser">
-        <h2>File Browser</h2>
-        <div class="directory-nav">
-          {{#if parent}}<a href="?path={{parent}}">&#128281;{{parent}}</a>{{/if}}
-          <span>{{base}}</span>
-        </div>
-        <ul class="file-list">
-          {{#files}}
-          {{#if dirname}}
-          <li><a href="/?path={{path}}">&#x1F4C1; {{dirname}}</a></li>
-          {{/if}}
-          {{#if filename}}
-          <li><a href="/play?path={{../basepath}}&index={{index}}">&#x1F50A;{{filename}}</a></li>
-          {{/if}}
-          {{/files}}
-        </ul>
-      </div>
-
-      <div class="system-status">
-        <div class="status-item">
-          <span class="status-icon">&#x1F4F6;</span>
-          <a href="/networks.html"><span>WIFI: {{wifistatus}}</span></a>
-        </div>
-        <div class="status-item">
-          <span class="status-icon">&#9881;</span>      
-          <a href="/settings.html"><span>Device Configuration</span></a>      
-        <div>
-      </div>
+  <script id="playerstatustemplate" type="text/x-handlebars-template">
+    <h1>{{appname}}</h1>
+    
+    <div class="status-card">
+      <h2>Player Status</h2>
+      <p>Current song: {{songinfo}}
+      <div class="volume-control">
+        Volume: <input type="range" id="volume" min="0" max="100" value="{{volume}}" step="1"> <output for="volume">{{volume}} %</output>
+      </div>      
+      <br>Playback: {{playingstatus}} / {{playbackprogress}} %</p>
     </div>
-  </template>
+
+    <div class="player-controls">
+      <button id="startstop">&#x23F8; Start/Stop</button>
+      <button id="prev">&#x23ED; Previous Title</button>
+      <button id="next">&#x23EE; Next Title</button>
+    </div>
+
+    <div class="rfid-status">
+      <h2>RFID Tag Scanner</h2>
+      {{#if tagscanner}}
+      <div class="rfid-tag active">
+        <div class="tag-info">
+          <span class="tag-icon">&#x1F4E6;</span>
+          <span>{{tagscanner.tagname}} {{tagscanner.info}}</span>
+        </div>
+        <div class="tag-actions">
+          <a href="/assign?path={{basepath}}"><button>Assign Tag to current directory</button></a>
+          <a href="/delete?path={{basepath}}"><button class="delete">Clear Tag</button></a>
+        </div>
+      </div>
+      {{/if}}
+    </div>
+  </script>
+  <script id="systemstatustemplate" type="text/x-handlebars-template">
+    <div class="status-item">
+      <span class="status-icon">&#x1F4F6;</span>
+      <a href="/networks.html"><span>WIFI: {{wifistatus}}</span></a>
+    </div>
+    <div class="status-item">
+      <span class="status-icon">&#9881;</span>      
+      <a href="/settings.html"><span>Device Configuration</span></a>      
+    <div>
+  </script>
+  <script id="filestemplate" type="text/x-handlebars-template">
+      <h2>File Browser</h2>
+      <div class="directory-nav">
+        {{#if parent}}<a data-path="{{parent}}" data-fileaction="nav">&#128281;{{parent}}</a>{{/if}}
+        <span>{{base}}</span>
+      </div>
+      <ul class="file-list">
+        {{#files}}
+        {{#if dirname}}
+        <li><a data-path="{{path}}" data-fileaction="nav">&#x1F4C1; {{dirname}}</a></li>
+        {{/if}}
+        {{#if filename}}
+        <li><a data-path="{{../basepath}}" data-index="{{index}}" data-fileaction="play">&#x1F50A;{{filename}}</a></li>
+        {{/if}}
+        {{/files}}
+      </ul>
+    </div>
+  </script>
 </head>
-<body id="body">
-  <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js"></script>      
+<body>
+  <div class="container">
+    <div id="status"></div>
+
+    <div id="files" class="file-browser"></div>
+
+    <div id="systemstatus" class="system-status"></div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js"></script>
   <script>
     const currentParams = new URLSearchParams(window.location.search);
-    const urlWithParams = currentParams.toString() ? `/index.json?${currentParams.toString()}`: '/index.json';
+    const urlWithParams = currentParams.toString() ? `/index.json?${currentParams.toString()}` : '/index.json';
 
-    fetch(urlWithParams)
-      .then(response => {
-        if (!response.ok) {
-          console.log("Error fetching, Using default data");
-          return {"appname":"Dummy","wifistatus":"Okay","stateversion":0,"playingstatus":"Stopped","volume":100,"playbackprogress":0,"songinfo":"-","success":true,"basepath":"/","base":"/","files":[]};
-        }
-        return response.json();
-      })
-      .then(data => {
-        var template = Handlebars.compile(document.getElementById("hbstemplate").innerHTML);
-        var rendered = template(data);
-        var oldbody = document.getElementById("body");
-        oldbody.innerHTML = rendered;
-        document.title = data.appname;
+    function updateVolumeChange(event) {
+      fetch(`/volume?volume=` + event.target.value)
+        .then(response => {
+          console.info('Volume update sent, response = ' + response.status);
+        })
+        .catch(error => {
+          console.error('Error updating volume:', error);
+        });
+      return true;
+    }
 
-        const volumeSlider = document.getElementById('volume');
-        const output = document.querySelector('output');
+    function startstop(event) {
+      fetch('/startstop')
+        .then(response => {
+          console.info('start/stop sent, response = ' + response.status);
+        })
+        .catch(error => {
+          console.error('Error updating volume:', error);
+        });
+    }
 
-        function updateVolume(event) {
+    function previous(event) {
+      fetch('/previous')
+        .then(response => {
+          console.info('start/stop sent, response = ' + response.status);
+        })
+        .catch(error => {
+          console.error('Error updating volume:', error);
+        });
+    }
+
+    function next(event) {
+      fetch('/next')
+        .then(response => {
+          console.info('start/stop sent, response = ' + response.status);
+        })
+        .catch(error => {
+          console.error('Error updating volume:', error);
+        });
+    }
+
+    function play(path, index) {
+      fetch('/play?path=' + path + '&index=' + index)
+        .then(response => {
+          console.info('start/stop sent, response = ' + response.status);
+        })
+        .catch(error => {
+          console.error('Error updating volume:', error);
+        });
+    }
+
+    var playerstatustemplate = Handlebars.compile(document.getElementById("playerstatustemplate").innerHTML);
+    var systemstatustemplate = Handlebars.compile(document.getElementById("systemstatustemplate").innerHTML);
+    var filestemplate = Handlebars.compile(document.getElementById("filestemplate").innerHTML);
+
+    function statusupdate() {
+      fetch('/status.json')
+        .then(response => {
+          if (!response.ok) {
+            console.log('Error fetching, Using default data');
+            return { "appname": "Dummy", "wifistatus": "Okay", "stateversion": 0, "playingstatus": "Stopped", "volume": 100, "playbackprogress": 0, "songinfo": "-", "success": true, "basepath": "/", "base": "/" };
+          }
+          return response.json();
+        })
+        .then(data => {
+          document.getElementById('status').innerHTML = playerstatustemplate(data);
+          document.getElementById('systemstatus').innerHTML = systemstatustemplate(data);
+          document.title = data.appname;
+
+          const volumeSlider = document.getElementById('volume');
+          const output = document.querySelector('output');
+
+          function updateVolume(event) {
             output.textContent = event.target.value + " %";
-        };
-
-        function updateVolumeChange(event) {
-            window.location.href= `/volume?path=${data.basepath}&volume=` + event.target.value;
-        };
-
-        volumeSlider.addEventListener('input', updateVolume);
-        volumeSlider.addEventListener('change', updateVolumeChange);
-
-        function checkStateVersion(url, currentversion) {
-          const xhr = new XMLHttpRequest();
-          
-          xhr.open('GET', url, true);
-          
-          xhr.onload = function() {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              const stateVersion = xhr.getResponseHeader('x-stateversion');
-              
-              if (stateVersion > currentversion) {
-                // Fix me....
-                //window.location.reload(true);
-              }
-            }
           };
-          
-          xhr.send();
-        };
 
-        setInterval(() => checkStateVersion("/stateversion", data.stateversion), 500);
-      })
-      .catch(error => {
-        console.error('Error fetching data:', error);
-      });    
+          volumeSlider.addEventListener('input', updateVolume);
+          volumeSlider.addEventListener('change', updateVolumeChange);
+
+          document.getElementById("startstop").addEventListener("click", startstop);
+          document.getElementById("prev").addEventListener("click", previous);
+          document.getElementById("next").addEventListener("click", next);
+
+          setTimeout((event) => statusupdate(event), 500);
+        })
+        .catch(error => {
+          console.error('Error fetching data:', error);
+        });
+    }
+
+    function filesupdate(path) {
+      fetch('/files.json?path=' + path)
+        .then(response => {
+          if (!response.ok) {
+            console.log('Error fetching, Using default data');
+            return { "success": true, "basepath": "/", "base": "/", "files": [] };
+          }
+          return response.json();
+        })
+        .then(data => {
+          document.getElementById('files').innerHTML = filestemplate(data);
+
+          const elements = document.querySelectorAll('[data-fileaction]');
+          elements.forEach(element => {
+            element.addEventListener('click', function (event) {
+              const action = event.target.getAttribute('data-fileaction');
+
+              switch (action) {
+                case 'nav': {
+                  const path = event.target.getAttribute('data-path');
+                  console.log('Navigating to path ' + path);
+                  filesupdate(path);
+                  break;
+                }
+                case 'play': {
+                  const path = event.target.getAttribute('data-path');
+                  const index = event.target.getAttribute('data-index');
+                  console.log('Playing path ' + path + " and index " + index);
+                  play(path, index);
+                  break;
+                }
+                default:
+                  console.log('Unknown aktion : ', action);
+              }
+            });
+          });
+        })
+        .catch(error => {
+          console.error('Error fetching data:', error);
+        });
+    }
+
+    setTimeout((event) => statusupdate(event), 500);
+    filesupdate('/');
   </script>
 </body>
 </html>
