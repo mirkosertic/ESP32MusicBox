@@ -461,26 +461,22 @@ void Frontend::initialize()
     command.index = 0;
     command.volume = (uint8_t) (this->app->getVolume() * 100);
 
-    const char *path = request->getParam("path").c_str();
-    memcpy(&command.path[0], path, strlen(path));
+    String path = request->getParam("path");
+
+    INFO_VAR("webserver() - Path is %s", path.c_str());
+
+    memcpy(&command.path[0], path.c_str(), path.length());
 
     this->app->writeCommandToTag(command);
 
-    if (request->hasParam("path")) {
-      MongooseHttpServerResponseStream *response = request->beginResponseStream();
-      response->setCode(302);
-      response->setContentType("text/html");
-      response->addHeader("Cache-Control","no-cache, must-revalidate");      
-      response->addHeader("Location","/?path=" + request->getParam("path"));
-      request->send(response);       
-    } else {
-      MongooseHttpServerResponseStream *response = request->beginResponseStream();
-      response->setCode(302);
-      response->setContentType("text/html");
-      response->addHeader("Cache-Control","no-cache, must-revalidate");      
-      response->addHeader("Location","/");
-      request->send(response);       
-    } });
+    JsonDocument result;
+
+    MongooseHttpServerResponseStream *response = request->beginResponseStream();
+    response->setCode(200);
+    response->setContentType("application/json");
+    response->addHeader("Cache-Control","no-cache, must-revalidate");
+
+    serializeJson(result, *response); });
 
   // delete
   this->server->on("/delete$", HTTP_GET, [this](MongooseHttpServerRequest *request)
@@ -489,21 +485,16 @@ void Frontend::initialize()
 
     this->app->clearTag();
 
-    if (request->hasParam("path")) {
-      MongooseHttpServerResponseStream *response = request->beginResponseStream();
-      response->setCode(302);
-      response->setContentType("text/html");
-      response->addHeader("Cache-Control","no-cache, must-revalidate");      
-      response->addHeader("Location","/?path=" + request->getParam("path"));
-      request->send(response);       
-    } else {
-      MongooseHttpServerResponseStream *response = request->beginResponseStream();
-      response->setCode(302);
-      response->setContentType("text/html");
-      response->addHeader("Cache-Control","no-cache, must-revalidate");      
-      response->addHeader("Location","/");
-      request->send(response);       
-    } });
+    JsonDocument result;
+
+    MongooseHttpServerResponseStream *response = request->beginResponseStream();
+    response->setCode(200);
+    response->setContentType("application/json");
+    response->addHeader("Cache-Control","no-cache, must-revalidate");
+
+    serializeJson(result, *response);
+
+    request->send(response); });
 
   this->server->on("/description.xml$", HTTP_GET, [this](MongooseHttpServerRequest *request)
                    {

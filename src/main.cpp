@@ -194,9 +194,6 @@ void setup()
 
   // dnsServer.start(53, "*", apIP);
 
-  // Now we initialize the frontend with its webserver and routing
-  frontend->begin();
-
   leds->setBootProgress(17 * 4);
 
   player.setMetadataCallback(callbackPrintMetaData);
@@ -315,8 +312,9 @@ void setup()
 
   player.begin(-1, false);
 
-  // setup player, the player always runs on full volume
-  player.setVolume(1.0);
+  // setup player, the player runs with default volume
+  // TODO: Store in configuration?
+  player.setVolume(0.6);
 
   // Start the physical button controller logic
   buttons->begin();
@@ -341,6 +339,9 @@ void wifiConnected()
   {
     mqtt->begin(settings.getMQTTServer(), settings.getMQTTPort(), settings.getMQTTUsername(), settings.getMQTTPassword());
   }
+
+  // Start webserver, as we now have a WiFi stack...
+  frontend->begin();
 
   app->announceMDNS();
   app->announceSSDP();

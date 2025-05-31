@@ -234,8 +234,8 @@
           <span>{{tagscanner.tagname}} {{tagscanner.info}}</span>
         </div>
         <div class="tag-actions">
-          <a href="/assign?path={{basepath}}"><button>Assign Tag to current directory</button></a>
-          <a href="/delete?path={{basepath}}"><button class="delete">Clear Tag</button></a>
+          <button id="assigntag">Assign Tag to current directory</button>
+          <button id="erasetag" class="delete">Clear Tag</button>
         </div>
       </div>
       {{/if}}
@@ -253,7 +253,7 @@
   </script>
   <script id="filestemplate" type="text/x-handlebars-template">
       <h2>File Browser</h2>
-      <div class="directory-nav">
+      <div class="directory-nav" id="currentdir" data-path="{{#if parent}}{{parent}}{{/if}}{{base}}">
         {{#if parent}}<a data-path="{{parent}}" data-fileaction="nav">&#128281;{{parent}}</a>{{/if}}
         <span>{{base}}</span>
       </div>
@@ -300,37 +300,60 @@
           console.info('start/stop sent, response = ' + response.status);
         })
         .catch(error => {
-          console.error('Error updating volume:', error);
+          console.error('Error start/stop:', error);
         });
     }
 
     function previous(event) {
       fetch('/previous')
         .then(response => {
-          console.info('start/stop sent, response = ' + response.status);
+          console.info('previous sent, response = ' + response.status);
         })
         .catch(error => {
-          console.error('Error updating volume:', error);
+          console.error('Error on previous:', error);
         });
     }
 
     function next(event) {
       fetch('/next')
         .then(response => {
-          console.info('start/stop sent, response = ' + response.status);
+          console.info('next sent, response = ' + response.status);
         })
         .catch(error => {
-          console.error('Error updating volume:', error);
+          console.error('Error on next:', error);
+        });
+    }
+
+    function assigntag(event) {
+
+      const currentpath = document.getElementById('currentdir').getAttribute('data-path');
+
+      fetch('/assign?path=' + encodeURIComponent(currentpath))
+        .then(response => {
+          console.info('assign tag sent, response = ' + response.status);
+        })
+        .catch(error => {
+          console.error('Error assigning tag:', error);
+        });
+    }
+
+    function erasetag(event) {
+      fetch('/delete')
+        .then(response => {
+          console.info('erase tag sent, response = ' + response.status);
+        })
+        .catch(error => {
+          console.error('Error erasing tag:', error);
         });
     }
 
     function play(path, index) {
-      fetch('/play?path=' + path + '&index=' + index)
+      fetch('/play?path=' + encodeURIComponent(path) + '&index=' + index)
         .then(response => {
-          console.info('start/stop sent, response = ' + response.status);
+          console.info('play sent, response = ' + response.status);
         })
         .catch(error => {
-          console.error('Error updating volume:', error);
+          console.error('Error sending play:', error);
         });
     }
 
@@ -365,6 +388,15 @@
           document.getElementById("startstop").addEventListener("click", startstop);
           document.getElementById("prev").addEventListener("click", previous);
           document.getElementById("next").addEventListener("click", next);
+          
+          const assigntagebutton = document.getElementById("assigntag");
+          if (assigntagebutton)  {
+            assigntagebutton.addEventListener("click", assigntag);
+          }
+          const erasetagbutton = document.getElementById("erasetag");
+          if (erasetagbutton)  {
+            erasetagbutton.addEventListener("click", erasetag);
+          }
 
           setTimeout((event) => statusupdate(event), 500);
         })
@@ -374,7 +406,10 @@
     }
 
     function filesupdate(path) {
-      fetch('/files.json?path=' + path)
+
+      document.body.style.cursor = 'wait';
+
+      fetch('/files.json?path=' + encodeURIComponent(path))
         .then(response => {
           if (!response.ok) {
             console.log('Error fetching, Using default data');
@@ -409,8 +444,12 @@
               }
             });
           });
+
+          document.body.style.cursor = 'default';
         })
         .catch(error => {
+
+          document.body.style.cursor = 'default';          
           console.error('Error fetching data:', error);
         });
     }

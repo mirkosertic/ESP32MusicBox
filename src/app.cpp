@@ -9,17 +9,6 @@
 #include "logging.h"
 #include "gitrevision.h"
 
-void ssdpNotifierTask(void *parameters)
-{
-    App *target = (App *)parameters;
-    INFO("SSDP notifier started");
-    while (true)
-    {
-        target->ssdpNotify();
-        delay(30000);
-    }
-}
-
 App::App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport)
 {
     this->volumeSupport = volumeSupport;
@@ -298,8 +287,6 @@ void App::ssdpNotify()
         udp.beginPacket(SSDP_MULTICAST_ADDR, SSDP_PORT);
         udp.write((uint8_t *)notify, strlen(notify));
         udp.endPacket();
-
-        delay(100); // Small delay between notifications
     }
 }
 
@@ -314,8 +301,6 @@ void App::announceSSDP()
     if (udp.beginMulticast(SSDP_MULTICAST_ADDR, SSDP_PORT))
     {
         INFO("SSDP multicast joined successfully");
-
-        xTaskCreate(ssdpNotifierTask, "SSDP Notifier", 4096, this, 10, NULL);
     }
     else
     {
@@ -351,88 +336,93 @@ void App::loop()
 
     static long lastStateReport = 0;
 
-    long now = millis();
-    if (now - lastStateReport > 1000)
+    if (wificonnected)
     {
-        DEBUG("Publishing app state");
-        publishState();
-
-        unsigned int stackHighWatermark = uxTaskGetStackHighWaterMark(nullptr);
-
-        INFO_VAR("loop() - Free HEAP is %d, stackHighWatermark is %d", ESP.getFreeHeap(), stackHighWatermark);
-
-        lastStateReport = now;
-    }
-
-    // SSDP
-
-    // Incoming messages
-    int packetSize = udp.parsePacket();
-    if (packetSize)
-    {
-        char packetBuffer[512];
-        int len = udp.read(packetBuffer, sizeof(packetBuffer) - 1);
-        if (len > 0)
+        long now = millis();
+        if (now - lastStateReport > 1000)
         {
-            packetBuffer[len] = '\0';
+            DEBUG("Publishing app state");
+            publishState();
 
-            // Check if it's an M-SEARCH request
-            if (strstr(packetBuffer, "M-SEARCH") && strstr(packetBuffer, "ssdp:discover"))
+            unsigned int stackHighWatermark = uxTaskGetStackHighWaterMark(nullptr);
+
+            INFO_VAR("loop() - Free HEAP is %d, stackHighWatermark is %d", ESP.getFreeHeap(), stackHighWatermark);
+
+            lastStateReport = now;
+
+            ssdpNotify();
+        }
+
+        // SSDP
+
+        // Incoming messages
+        int packetSize = udp.parsePacket();
+        if (packetSize)
+        {
+            char packetBuffer[512];
+            int len = udp.read(packetBuffer, sizeof(packetBuffer) - 1);
+            if (len > 0)
             {
-                INFO("Received SSDP M-SEARCH request");
+                packetBuffer[len] = '\0';
 
-                // Extract search target
-                char *stLine = strstr(packetBuffer, "ST:");
-                String searchTarget = "upnp:rootdevice"; // Default
-
-                if (stLine)
+                // Check if it's an M-SEARCH request
+                if (strstr(packetBuffer, "M-SEARCH") && strstr(packetBuffer, "ssdp:discover"))
                 {
-                    stLine += 3; // Skip "ST:"
-                    while (*stLine == ' ')
-                        stLine++; // Skip spaces
-                    char *end = strstr(stLine, "\r");
-                    if (end)
+                    INFO("Received SSDP M-SEARCH request");
+
+                    // Extract search target
+                    char *stLine = strstr(packetBuffer, "ST:");
+                    String searchTarget = "upnp:rootdevice"; // Default
+
+                    if (stLine)
                     {
-                        *end = '\0';
-                        searchTarget = String(stLine);
+                        stLine += 3; // Skip "ST:"
+                        while (*stLine == ' ')
+                            stLine++; // Skip spaces
+                        char *end = strstr(stLine, "\r");
+                        if (end)
+                        {
+                            *end = '\0';
+                            searchTarget = String(stLine);
+                        }
                     }
+
+                    char response[1024];
+                    char dateStr[64];
+
+                    // Simple date string (could be improved with real time)
+                    sprintf(dateStr, "Mon, 01 Jan 1970 00:00:00 GMT");
+
+                    String deviceUUID = computeUUID();
+
+                    const char *SSDP_RESPONSE_TEMPLATE =
+                        "HTTP/1.1 200 OK\r\n"
+                        "CACHE-CONTROL: max-age=1800\r\n"
+                        "DATE: %s\r\n"
+                        "EXT:\r\n"
+                        "LOCATION: http://%s:%d/description.xml\r\n"
+                        "SERVER: SSDPServer/1.0\r\n"
+                        "ST: %s\r\n"
+                        "USN: uuid:%s::%s\r\n"
+                        "BOOTID.UPNP.ORG: 1\r\n"
+                        "CONFIGID.UPNP.ORG: 1\r\n"
+                        "\r\n";
+
+                    sprintf(response, SSDP_RESPONSE_TEMPLATE,
+                            dateStr,
+                            WiFi.localIP().toString().c_str(),
+                            this->serverPort,
+                            searchTarget.c_str(),
+                            deviceUUID.c_str(),
+                            searchTarget.c_str());
+
+                    // Send unicast response to requester
+                    udp.beginPacket(this->udp.remoteIP(), this->udp.remotePort());
+                    udp.write((uint8_t *)response, strlen(response));
+                    udp.endPacket();
+
+                    INFO("Sent SSDP response");
                 }
-
-                char response[1024];
-                char dateStr[64];
-
-                // Simple date string (could be improved with real time)
-                sprintf(dateStr, "Mon, 01 Jan 1970 00:00:00 GMT");
-
-                String deviceUUID = computeUUID();
-
-                const char *SSDP_RESPONSE_TEMPLATE =
-                    "HTTP/1.1 200 OK\r\n"
-                    "CACHE-CONTROL: max-age=1800\r\n"
-                    "DATE: %s\r\n"
-                    "EXT:\r\n"
-                    "LOCATION: http://%s:%d/description.xml\r\n"
-                    "SERVER: SSDPServer/1.0\r\n"
-                    "ST: %s\r\n"
-                    "USN: uuid:%s::%s\r\n"
-                    "BOOTID.UPNP.ORG: 1\r\n"
-                    "CONFIGID.UPNP.ORG: 1\r\n"
-                    "\r\n";
-
-                sprintf(response, SSDP_RESPONSE_TEMPLATE,
-                        dateStr,
-                        WiFi.localIP().toString().c_str(),
-                        this->serverPort,
-                        searchTarget.c_str(),
-                        deviceUUID.c_str(),
-                        searchTarget.c_str());
-
-                // Send unicast response to requester
-                udp.beginPacket(this->udp.remoteIP(), this->udp.remotePort());
-                udp.write((uint8_t *)response, strlen(response));
-                udp.endPacket();
-
-                INFO("Sent SSDP response");
             }
         }
     }
