@@ -49,7 +49,7 @@ void Frontend::initialize()
   this->server->on("/$", HTTP_GET, [this](MongooseHttpServerRequest *request)
                    {
 
-      INFO("webserver() - Rendering status page");
+      INFO("webserver() - Rendering / page");
       /*IPAddress remote = request->client()->remoteIP();
 
       IPAddress apSubnet(192, 168, 4, 0);
@@ -82,7 +82,7 @@ void Frontend::initialize()
   this->server->on("/status.json$", HTTP_GET, [this](MongooseHttpServerRequest *request)
                    {
 
-      INFO("webserver() - Rendering index json");
+      INFO("webserver() - Rendering /status.json");
 
       MongooseHttpServerResponseStream *response = request->beginResponseStream();
       response->setContentType("application/json");
@@ -129,7 +129,7 @@ void Frontend::initialize()
   this->server->on("/files.json$", HTTP_GET, [this](MongooseHttpServerRequest *request)
                    {
 
-      INFO("webserver() - Rendering index json");
+      INFO("webserver() - Rendering /files.json");
 
       MongooseHttpServerResponseStream *response = request->beginResponseStream();
       response->setContentType("application/json");
@@ -215,7 +215,7 @@ void Frontend::initialize()
   this->server->on("/networks.html$", HTTP_GET, [this](MongooseHttpServerRequest *request)
                    {
 
-      INFO("webserver() - Rendering networks page");
+      INFO("webserver() - Rendering /networks.html");
 
       // Chunked response to optimize RAM usage
       size_t content_length = strlen_P(NETWORKS_TEMPLATE);
@@ -230,7 +230,7 @@ void Frontend::initialize()
   this->server->on("/networks.json$", HTTP_GET, [this](MongooseHttpServerRequest *request)
                    {
 
-      INFO("webserver() - Rendering networks JSON page");
+      INFO("webserver() - Rendering /networks.json");
 
       MongooseHttpServerResponseStream *response = request->beginResponseStream();
       response->setContentType("application/json");
@@ -305,7 +305,7 @@ void Frontend::initialize()
   this->server->on("/settings.html$", HTTP_GET, [this](MongooseHttpServerRequest *request)
                    {
 
-      INFO("webserver() - Rendering settings page");
+      INFO("webserver() - Rendering /settings.html");
 
       // Chunked response to optimize RAM usage
       size_t content_length = strlen_P(SETTINGS_TEMPLATE);
@@ -320,7 +320,7 @@ void Frontend::initialize()
   this->server->on("/settings.json$", HTTP_GET, [this](MongooseHttpServerRequest *request)
                    {
 
-      INFO("webserver() - Rendering settings JSON page");                    
+      INFO("webserver() - Rendering /settings.json");
 
       MongooseHttpServerResponseStream *response = request->beginResponseStream();
       response->setContentType("application/json");
@@ -339,6 +339,8 @@ void Frontend::initialize()
 
   this->server->on("/updateconfig$", HTTP_GET, [this](MongooseHttpServerRequest *request)
                    {
+
+      INFO("webserver() - /updateconfig received");
 
       String jsonconfig = request->getParam("configdata");
       INFO_VAR("Got new config payload : %s", jsonconfig.c_str());

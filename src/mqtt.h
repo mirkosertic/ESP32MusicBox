@@ -22,8 +22,6 @@ private:
     String password;
     std::vector<MQTTCallback> mqttCallbacks;
 
-    long lastreconnectfailure;
-
     String tagtopic;
     String tagscannertopic;
     String currentsongtopic;
@@ -32,6 +30,8 @@ private:
     String playprogressstatetopic;
 
     String wifiqualitytopic;
+
+    bool initialized;
 
     String announceButton(String buttonId, String title, String icon, const std::function<void()> &clickHandler);
 

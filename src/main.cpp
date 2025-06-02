@@ -392,7 +392,11 @@ void loop()
         // Start timeout again
         startupTime = now;
       }
-    } else {
+    }
+    else
+    {
+      mqtt->loop();
+
       frontend->loop();
     }
   }
@@ -411,6 +415,9 @@ void loop()
 
   // The main app loop
   app->loop();
+
+  // Check for button input
+  buttons->loop();
 
   // Check if there is a command in the command queue
   CommandData command;
@@ -441,8 +448,6 @@ void loop()
       WARN_VAR("Unknown version : %d", command.version);
     }
   }
-
-  // TODO: Handle Input / Output Buttons
 
   esp_task_wdt_reset();
 }

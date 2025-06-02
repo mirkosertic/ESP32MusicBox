@@ -4,37 +4,11 @@
 
 #include "logging.h"
 
-void mqttTaskDelegate(void *argument)
-{
-    static long notifycounter = 0;
-    static long lastwificheck = millis();
-    INFO("MQTT task started");
-    MQTT *mqtt = (MQTT *)argument;
-    while (true)
-    {
-        notifycounter++;
-        if (notifycounter > 30000)
-        {
-            INFO("I am still alive!");
-            notifycounter = 0;
-        }
-        mqtt->loop();
-
-        long now = millis();
-        if (now - lastwificheck > 30000)
-        {
-            mqtt->publishWiFiQuality(WiFi.RSSI());
-            lastwificheck = now;
-        }
-
-        vTaskDelay(1);
-    }
-}
-
 MQTT::MQTT(WiFiClient &wifiClient, App *app)
 {
     this->app = app;
     this->pubsubclient = new PubSubClient(wifiClient);
+    this->initialized = false;
 }
 
 MQTT::~MQTT()
@@ -59,49 +33,61 @@ void MQTT::begin(String host, int port, String username, String password)
                                         String to(topic);
                                         String messagePayload = String(payload, length);
 
-                                        INFO_VAR("Got message on topic %s", topic);
+                                        INFO_VAR("mqtt() - Got message on topic %s", topic);
 
                                         for (const auto& func : this->mqttCallbacks) {
                                             func(to, messagePayload);
                                         } });
 
-    this->lastreconnectfailure = -1;
-
-    // Start the loop as a separate task running in the background
-    xTaskCreate(mqttTaskDelegate, "MQTT", 8192, this, 5, NULL);
+    this->initialized = true;
 }
 
 void MQTT::loop()
 {
-    long now = millis();
+    static long lastreconnectfailure = -1;
 
-    // Only try to reconnect every second
-    if (!this->pubsubclient->connected() && now - lastreconnectfailure > 1000)
+    if (this->initialized)
     {
-        INFO("Needs to reconnect, trying to reconnect");
-        bool result = this->pubsubclient->connect(this->clientid.c_str(), this->username.c_str(), this->password.c_str());
-        if (!result)
-        {
-            WARN_VAR("Connection failed, rc=%d, try again...", this->pubsubclient->state());
+        long now = millis();
 
-            this->lastreconnectfailure = now;
+        // Only try to reconnect every second
+        if (!this->pubsubclient->connected() && now - lastreconnectfailure > 1000)
+        {
+            INFO("Needs to reconnect, trying to reconnect");
+            bool result = this->pubsubclient->connect(this->clientid.c_str(), this->username.c_str(), this->password.c_str());
+            if (!result)
+            {
+                WARN_VAR("Connection failed, rc=%d, try again...", this->pubsubclient->state());
+
+                lastreconnectfailure = now;
+            }
+            else
+            {
+                INFO("Connected to broker!");
+                this->performAutoDiscovery();
+
+                // Subscribe to all state set topics
+                String subscribeWildCard = this->clientid + "/+/set";
+                INFO_VAR("Subscribing to topics %s", subscribeWildCard.c_str());
+                this->pubsubclient->subscribe(subscribeWildCard.c_str());
+
+                lastreconnectfailure = -1;
+            }
         }
         else
         {
-            INFO("Connected to broker!");
-            this->performAutoDiscovery();
+            static long lastwificheck = millis();
 
-            // Subscribe to all state set topics
-            String subscribeWildCard = this->clientid + "/+/set";
-            INFO_VAR("Subscribing to topics %s", subscribeWildCard.c_str());
-            this->pubsubclient->subscribe(subscribeWildCard.c_str());
+            this->pubsubclient->loop();
 
-            this->lastreconnectfailure = -1;
+            if (now - lastwificheck > 30000)
+            {
+                INFO("I am still alive!");
+
+                this->publishWiFiQuality(WiFi.RSSI());
+                lastwificheck = now;
+            }
         }
-    }
-    else
-    {
-        this->pubsubclient->loop();
     }
 }
 
