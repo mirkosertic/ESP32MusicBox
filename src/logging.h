@@ -1,22 +1,20 @@
 #include <Arduino.h>
 
-String LoggingFormatString(const char *format, ...);
-
-#define LOGGING_ENABLED true
+#define LOGGING_ENABLED
 
 // #define DEBUG_LOGGING_ENABLED
 
 #ifdef LOGGING_ENABLED
-#define INFO(msg) Serial.printf("[INFO] %d %d %s:%s():%d - %s\n", millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__, msg)
-#define INFO_VAR(msg, ...) Serial.printf("[INFO] %d %d %s:%s():%d - %s\n", millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__, LoggingFormatString(msg, __VA_ARGS__).c_str())
+#define INFO(msg) Serial.printf((String("[INFO] %d %d %s:%s():%d - ") + msg + "\n").c_str(), millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__);
+#define INFO_VAR(msg, ...) Serial.printf((String("[INFO] %d %d %s:%s():%d - ") + msg + "\n").c_str(), millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__, __VA_ARGS__);
 
-#define WARN(msg) Serial.printf("[WARN] %d %d %s:%s():%d - %s\n", millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__, msg)
-#define WARN_VAR(msg, ...) Serial.printf("[WARN] %d %d %s:%s():%d - %s\n", millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__, LoggingFormatString(msg, __VA_ARGS__).c_str())
+#define WARN(msg) Serial.printf((String("[WARN] %d %d %s:%s():%d - ") + msg + "\n").c_str(), millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__);
+#define WARN_VAR(msg, ...) Serial.printf((String("[WARN] %d %d %s:%s():%d - ") + msg + "\n").c_str(), millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__, __VA_ARGS__);
 #endif
 
 #ifdef DEBUG_LOGGING_ENABLED
-#define DEBUG(msg) Serial.printf("[DEBUG] %d %d %s:%s():%d - %s\n", millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__, msg)
-#define DEBUG_VAR(msg, ...) Serial.printf("[DEBUG] %d %d %s:%s():%d - %s\n", millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__, LoggingFormatString(msg, __VA_ARGS__).c_str())
+#define DEBUG(msg) Serial.printf((String("[DEBUG] %d %d %s:%s():%d - ") + msg + "\n").c_str(), millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__);
+#define DEBUG_VAR(msg, ...) Serial.printf((String("[DEBUG] %d %d %s:%s():%d - ") + msg + "\n").c_str(), millis(), xPortGetCoreID(), __FILE__, __func__, __LINE__, __VA_ARGS__);
 #endif
 
 #ifndef LOGGING_ENABLED

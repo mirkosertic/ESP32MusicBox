@@ -116,7 +116,9 @@ void setup()
   // esp_task_wdt_init(30, true); // 30 Sekunden Timeout
   // esp_task_wdt_add(NULL);
 
+#if USE_AUDIO_LOGGING
   AudioLogger::instance().begin(Serial, AudioLogger::Warning);
+#endif
 
   app->setDeviceType("ESP32 Musikbox");
   app->setName(DEVICENAME);
@@ -125,7 +127,7 @@ void setup()
   app->setServerPort(HTTP_SERVER_PORT);
 
   leds->setState(BOOT);
-  leds->setBootProgress(17);
+  leds->setBootProgress(0);
 
   // setup output
   AudioInfo info(44100, 2, 16);
@@ -143,6 +145,7 @@ void setup()
     while (true)
       ;
   }
+  leds->setBootProgress(10);
 
   // Setup SD-Card
   INFO("SD-Card init");
@@ -157,6 +160,7 @@ void setup()
     while (true)
       ;
   }
+  leds->setBootProgress(20);
 
   // AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
   source.begin();
@@ -166,7 +170,7 @@ void setup()
   // a2dpsource.set_data_callback(callbackGetSoundData);
   // a2dpsource.start(app->computeTechnicalName().c_str());
 
-  leds->setBootProgress(17 * 2);
+  leds->setBootProgress(30);
 
   INFO("Retrieving system configuration");
   if (!settings.readFromConfig())
@@ -183,7 +187,7 @@ void setup()
     settings.initializeWifiFromSettings();
   }
 
-  leds->setBootProgress(17 * 3);
+  leds->setBootProgress(40);
 
   INFO("WiFi configuration");
   WiFi.persistent(false);
@@ -194,7 +198,7 @@ void setup()
 
   // dnsServer.start(53, "*", apIP);
 
-  leds->setBootProgress(17 * 4);
+  leds->setBootProgress(50);
 
   player.setMetadataCallback(callbackPrintMetaData);
   decoder.driver()->setInfoCallback([](MP3FrameInfo &info, void *ref)
@@ -202,6 +206,8 @@ void setup()
 
   INFO("i2c connection init");
   Wire1.begin(GPIO_WIRE_SDA, GPIO_WIRE_SCL, 100000); // Scan ok
+
+  leds->setBootProgress(60);
 
   INFO("NFC reader init");
   tagscanner->begin([](bool authenticated, bool knownTag, uint8_t *uid, String uidStr, uint8_t uidlength, String tagName, TagData tagdata)
@@ -268,7 +274,7 @@ void setup()
 
     app->noTagPresent(); });
 
-  leds->setBootProgress(17 * 5);
+  leds->setBootProgress(70);
   INFO("NFC reader init finished");
 
   source.setChangeIndexCallback([](Stream *next)
@@ -310,7 +316,11 @@ void setup()
                             
                             app->incrementStateVersion(); });
 
+  leds->setBootProgress(80);
+
   player.begin(-1, false);
+
+  leds->setBootProgress(90);
 
   // setup player, the player runs with default volume
   // TODO: Store in configuration?

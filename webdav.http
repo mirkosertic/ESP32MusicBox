@@ -1,0 +1,3 @@
+curl -X PROPFIND \
+  -H "Depth: 1" \
+  http://192.168.0.39/webdav/10

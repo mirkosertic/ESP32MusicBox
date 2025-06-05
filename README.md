@@ -12,13 +12,14 @@ This project provides an ESP32 based music box with the following features:
 * Home Assistant integration with device autodiscovery
 * Web-based user interface
 * Integrated into your local network with SSDP / mDNS protocol
+* WebDAV support for file / content management
 
 ## Supported hardware
 
 * ESP32 (tested with ESP32 DevKit C)
 * PN532 RFID Reader (i2c-Mode)
 * SDCard Reader (SPI-Mode)
-* Neopixel / WS2812 bases LEDs for status visualization
+* NeoPixel / WS2812 based LEDs for status visualization
 
 ## Schematics
 

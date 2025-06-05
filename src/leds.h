@@ -5,8 +5,6 @@
 
 #include "app.h"
 
-#define NUM_LEDS 24
-
 enum LEDState
 {
     BOOT,
