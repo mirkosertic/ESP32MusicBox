@@ -22,13 +22,15 @@ Buttons::Buttons(App *app, Leds *leds)
                                  {
         if (action == PRESSED)
         {
-           this->app->toggleActiveState();
+            INFO("Start / Stop button pressed");
+            this->app->toggleActiveState();
         } });
 
     this->prev = new Button(GPIO_PREVIOUS, 300, [this](ButtonAction action)
                             {
         if (action == RELEASED) 
         {
+            INFO("Prev button released");            
             this->app->previous();
         }
         if (action == PRESSED_FOR_LONG_TIME)
@@ -48,6 +50,7 @@ Buttons::Buttons(App *app, Leds *leds)
                             {
         if (action == RELEASED)
         {
+            INFO("Next button released");                        
             this->app->next();
         }
         if (action == PRESSED_FOR_LONG_TIME)

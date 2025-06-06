@@ -131,8 +131,7 @@ void Settings::initializeWifiFromSettings()
     else
     {
       INFO("Connecting to Wifi with last known AP...");
-      // TODO WiFi.begin(this->wlan_sid, this->wlan_pwd, this->wlan_channel, this->wlan_bssid);
-      WiFi.begin(this->wlan_sid, this->wlan_pwd);
+      WiFi.begin(this->wlan_sid, this->wlan_pwd, this->wlan_channel, this->wlan_bssid);
     }
   }
   else

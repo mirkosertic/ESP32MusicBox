@@ -100,7 +100,7 @@
       
       <div class="status-card">
         <h2>Settings as JSON</h2>
-        <form action="/updateconfig" id="json-form" onsubmit="return validateAndSubmit();">
+        <form method="post" action="/updateconfig" id="json-form" onsubmit="return validateAndSubmit();">
           <textarea id="editor" name="configdata">{{settingsjson}}</textarea>
           <div id="error-message"></div>
           <button type="submit" id="submit-button">!! Save !!</button>

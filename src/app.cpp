@@ -475,7 +475,6 @@ void App::toggleActiveState()
     const std::lock_guard<std::mutex> lock(this->loopmutex);
     INFO("Toggling player state");
     this->player->setActive(!this->player->isActive());
-
     this->publishState();
 }
 

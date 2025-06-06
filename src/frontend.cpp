@@ -9,6 +9,30 @@
 #include "logging.h"
 #include "generated_html_templates.h"
 
+bool createDirectoryRecursive(FS *fs, const String &path)
+{
+  if (fs->exists(path))
+  {
+    return true;
+  }
+
+  int lastSlash = path.lastIndexOf('/');
+
+  if (lastSlash <= 0)
+  {
+    return fs->mkdir(path);
+  }
+
+  String parentPath = path.substring(0, lastSlash);
+
+  if (!createDirectoryRecursive(fs, parentPath))
+  {
+    return false;
+  }
+
+  return fs->mkdir(path);
+}
+
 class CustomPsychicStreamResponse : public PsychicResponse, public Print
 {
 private:
@@ -482,7 +506,7 @@ void Frontend::initialize()
 
       return response.send(); });
 
-  this->server->on("/updateconfig", HTTP_GET, [this](PsychicRequest *request)
+  this->server->on("/updateconfig", HTTP_POST, [this](PsychicRequest *request)
                    {
 
       INFO("webserver() - /updateconfig received");
@@ -493,6 +517,7 @@ void Frontend::initialize()
       this->settings->setSettingsFromJson(jsonconfig);
 
       PsychicResponse response(request);
+      response.setCode(301);
       response.addHeader("Cache-Control", "no-cache, must-revalidate");
       response.addHeader("Location", "/settings.html");
 
@@ -652,9 +677,9 @@ void Frontend::initialize()
                     INFO_VAR("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
                     PsychicResponse response(request);
-                    response.setCode(200);
+                    response.setCode(204);
                     response.addHeader("Cache-Control","no-cache, must-revalidate");      
-                    response.addHeader("Allow", "OPTIONS, GET, PUT, DELETE, PROPFIND, MKCOL");
+                    response.addHeader("Allow", "OPTIONS, GET, PUT, PROPFIND, MKCOL"); // No DELETE on Root!
                     response.addHeader("DAV", "1");
                     response.addHeader("MS-Author-Via", "DAV");
                     response.setContentLength(0);
@@ -665,13 +690,40 @@ void Frontend::initialize()
                    {
                     INFO_VAR("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
+                    String path = extractWebDAVPath(request);
+                    File root = fs->open(path);
+
                     PsychicResponse response(request);
-                    response.setCode(200);
-                    response.addHeader("Cache-Control","no-cache, must-revalidate");      
-                    response.addHeader("Allow", "OPTIONS, GET, PUT, DELETE, PROPFIND, MKCOL");
-                    response.addHeader("DAV", "1");
-                    response.addHeader("MS-Author-Via", "DAV");
-                    response.setContentLength(0);
+
+                    if (!root) {
+                      WARN_VAR("webserver() - Path %s not found", path.c_str());
+                      // Not found
+                      response.setCode(404);
+                      response.addHeader("Cache-Control","no-cache, must-revalidate");      
+                      response.addHeader("DAV", "1");
+                      response.addHeader("MS-Author-Via", "DAV");
+                      response.setContentLength(0);
+                    } else {
+                      if (root.isDirectory()) {
+                        INFO_VAR("webserver() - Path %s is directory / collection", path.c_str());
+                        response.setCode(204);
+                        response.addHeader("Cache-Control","no-cache, must-revalidate");      
+                        response.addHeader("Allow", "OPTIONS, GET, PUT, DELETE, PROPFIND, MKCOL");
+                        response.addHeader("DAV", "1");
+                        response.addHeader("MS-Author-Via", "DAV");
+                        response.setContentLength(0);
+                      } else {
+                        INFO_VAR("webserver() - Path %s is file", path.c_str());                        
+                        response.setCode(204);
+                        response.addHeader("Cache-Control","no-cache, must-revalidate");      
+                        response.addHeader("Allow", "OPTIONS, GET, PUT, DELETE, PROPFIND");
+                        response.addHeader("DAV", "1");
+                        response.addHeader("MS-Author-Via", "DAV");
+                        response.setContentLength(0);
+                      }
+                    }
+
+                    root.close();
 
                     return response.send(); });
 
@@ -690,11 +742,11 @@ void Frontend::initialize()
 
                     File root = fs->open(path);
                     if (!root) {
-                      INFO("webserver() - Path not found!");
+                      WARN("webserver() - Path not found!");
 
                       PsychicResponse response(request);
                       response.addHeader("Cache-Control","no-cache, must-revalidate");                          
-                      response.setCode(405);
+                      response.setCode(404);
                       response.setContentLength(0);
 
                       return response.send();
@@ -778,10 +830,175 @@ void Frontend::initialize()
 
                     return response.endSend(); });
 
+  this->server->on("/webdav/*", HTTP_MKCOL, [this](PsychicRequest *request)
+                   {
+                    INFO_VAR("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
+
+                    String path = extractWebDAVPath(request);
+
+                    CustomPsychicStreamResponse response(request, "application/xml");                    
+                    if (createDirectoryRecursive(fs, path)) {
+                      INFO_VAR("webserver() - Path %s created", path.c_str());
+
+                      response.setCode(201);
+                      response.addHeader("Cache-Control","no-cache, must-revalidate");      
+                      response.addHeader("DAV", "1");
+                      response.addHeader("MS-Author-Via", "DAV");
+                      response.setContentLength(0);
+
+                    } else {
+
+                      WARN_VAR("webserver() - Path %s NOT created", path.c_str());
+
+                      response.setCode(409);
+                      response.addHeader("Cache-Control","no-cache, must-revalidate");      
+                      response.addHeader("DAV", "1");
+                      response.addHeader("MS-Author-Via", "DAV");
+                      response.setContentLength(0);
+                    }
+
+                    return response.send(); });
+
+  this->server->on("/webdav/*", HTTP_PUT, [this](PsychicRequest *request)
+                   {
+                    INFO_VAR("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
+
+                    String path = extractWebDAVPath(request);
+
+                    File content = fs->open(path, "w", true);
+                    
+                    /*char buffer[512];
+                    httpd_req_t *re = request->request();
+                    size_t remaining = re->content_len;
+                    size_t actuallyReceived = 0;
+
+                    while (remaining > 0) {
+                      int received = httpd_req_recv(re, &buffer[0], sizeof(buffer));
+                      INFO_VAR("webserver() - read %d bytes", received);
+
+                      if (received == HTTPD_SOCK_ERR_TIMEOUT) {
+                        continue;
+                      }
+                      else if (received == HTTPD_SOCK_ERR_FAIL) {
+                        INFO("Failed to receive data.");
+                      }
+
+                      if (received > 0) {
+                        content.write((uint8_t *) &buffer[0], received);
+                      }
+
+                      remaining -= received;
+                      actuallyReceived += received;
+                    }*/
+                    content.print(request->body());
+
+                    content.close();
+
+                    CustomPsychicStreamResponse response(request, "application/xml");                    
+                    INFO_VAR("webserver() - content %s created", path.c_str());
+
+                    response.setCode(201);
+                    response.addHeader("Cache-Control","no-cache, must-revalidate");      
+                    response.addHeader("DAV", "1");
+                    response.addHeader("MS-Author-Via", "DAV");
+                    response.setContentLength(0);
+
+                    return response.send(); });
+
+  this->server->on("/webdav/*", HTTP_GET, [this](PsychicRequest *request)
+                   {
+                    INFO_VAR("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
+
+                    String path = extractWebDAVPath(request);
+
+                    File content = fs->open(path, "r");
+                    
+                    CustomPsychicStreamResponse response(request, "application/octet-stream");
+                    INFO_VAR("webserver() - content %s requested for download", path.c_str());
+
+                    response.setCode(207);
+                    response.addHeader("Cache-Control","no-cache, must-revalidate");      
+                    response.addHeader("DAV", "1");
+                    response.addHeader("MS-Author-Via", "DAV");
+
+                    response.beginSend();
+
+                    INFO("webserver() - start sending data to client");
+                    char buffer[512];
+                    size_t read = content.readBytes(&buffer[0], sizeof(buffer));
+                    while (read > 0) {
+                      response.write((uint8_t *)&buffer[0], read);
+                      read = content.readBytes(&buffer[0], sizeof(buffer));
+                    }
+                    INFO("webserver() - transfer finished");
+
+                    content.close();                    
+
+                    return response.endSend(); });
+
+  this->server->on("/webdav/*", HTTP_DELETE, [this](PsychicRequest *request)
+                   {
+                    INFO_VAR("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
+
+                    String path = extractWebDAVPath(request);
+
+                    File root = fs->open(path);
+
+                    PsychicResponse response(request);
+
+                    if (!root) {
+                      WARN_VAR("webserver() - Path %s not found", path.c_str());
+                      // Not found
+                      response.setCode(404);
+                      response.addHeader("Cache-Control","no-cache, must-revalidate");      
+                      response.addHeader("DAV", "1");
+                      response.addHeader("MS-Author-Via", "DAV");
+                      response.setContentLength(0);
+                    } else {
+                      boolean isdir = root.isDirectory();
+                      root.close();
+
+                      if (isdir) {
+                        if (fs->rmdir(path.c_str())) {
+                          INFO_VAR("webserver() - directory %s removed", path.c_str());
+                          response.setCode(201);
+                          response.addHeader("Cache-Control","no-cache, must-revalidate");      
+                          response.addHeader("DAV", "1");
+                          response.addHeader("MS-Author-Via", "DAV");
+                          response.setContentLength(0);
+                        } else {
+                          WARN_VAR("webserver() - directory %s NOT removed", path.c_str());                          
+                          response.setCode(404);
+                          response.addHeader("Cache-Control","no-cache, must-revalidate");      
+                          response.addHeader("DAV", "1");
+                          response.addHeader("MS-Author-Via", "DAV");
+                          response.setContentLength(0);
+                        }
+                      } else {
+                        if (fs->remove(path.c_str())) {
+                          INFO_VAR("webserver() - file %s removed", path.c_str());
+                          response.setCode(201);
+                          response.addHeader("Cache-Control","no-cache, must-revalidate");      
+                          response.addHeader("DAV", "1");
+                          response.addHeader("MS-Author-Via", "DAV");
+                          response.setContentLength(0);
+                        } else {
+                          WARN_VAR("webserver() - file %s NOT removed", path.c_str());                          
+                          response.setCode(404);
+                          response.addHeader("Cache-Control","no-cache, must-revalidate");      
+                          response.addHeader("DAV", "1");
+                          response.addHeader("MS-Author-Via", "DAV");
+                          response.setContentLength(0);
+                        }
+                      }
+                    }
+
+                    return response.send(); });
+
   // Default Handler
   this->server->onNotFound([this](PsychicRequest *request)
                            {
-              INFO_VAR("webserver() - Not Found %s %s", request->methodStr().c_str(), request->uri().c_str());
+              WARN_VAR("webserver() - Not Found %s %s", request->methodStr().c_str(), request->uri().c_str());
 
               PsychicResponse response(request);
               response.setCode(404);

@@ -1,7 +1,7 @@
-
-#define GPIO_STARTSTOP GPIO_NUM_36
-#define GPIO_PREVIOUS GPIO_NUM_39
-#define GPIO_NEXT GPIO_NUM_34
+// Make sure the the buttons are assigned to IO pins with pullup/puppdown resistors configurable by software!
+#define GPIO_STARTSTOP GPIO_NUM_4
+#define GPIO_PREVIOUS GPIO_NUM_16
+#define GPIO_NEXT GPIO_NUM_17
 
 #define GPIO_WIRE_SDA GPIO_NUM_21
 #define GPIO_WIRE_SCL GPIO_NUM_22

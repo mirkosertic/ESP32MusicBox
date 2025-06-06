@@ -8,6 +8,7 @@
 #include <AudioTools.h>
 #include <AudioTools/AudioCodecs/CodecMP3Helix.h>
 // #include <BluetoothA2DPSource.h>
+// #include <BluetoothA2DPSink.h>
 #include <ArduinoJson.h>
 #include <Driver.h>
 #include <esp_idf_version.h>
@@ -42,6 +43,7 @@ MediaPlayerSource source(STARTFILEPATH, MP3_FILE, true);
 I2SStream i2s;
 MP3DecoderHelix decoder;
 // BluetoothA2DPSource a2dpsource;
+// BluetoothA2DPSink a2dpsink;
 MediaPlayer player(source, i2s, decoder);
 
 WiFiClient wifiClient;
@@ -164,11 +166,6 @@ void setup()
 
   // AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
   source.begin();
-
-  // Setup Bluetooth source
-  // INFO("Bluetooth connectivity init");
-  // a2dpsource.set_data_callback(callbackGetSoundData);
-  // a2dpsource.start(app->computeTechnicalName().c_str());
 
   leds->setBootProgress(30);
 
@@ -328,6 +325,12 @@ void setup()
 
   // Start the physical button controller logic
   buttons->begin();
+
+  // INFO("Initializing Bluetooth");
+  //  Initialize Bluetooth connections
+  // a2dpsink.set_auto_reconnect(false);
+  // a2dp_sink.set_stream_reader(read_data_stream, false);
+  // a2dpsink.start(app->computeTechnicalName().c_str());
 
   // Boot complete
   leds->setBootProgress(100);

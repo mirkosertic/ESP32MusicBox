@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include "logging.h"
+
 Button::Button(int pin, long sensitivity, ButtonHandler handler)
 {
     this->pin = pin;
@@ -15,6 +17,7 @@ Button::Button(int pin, long sensitivity, ButtonHandler handler)
 bool Button::isPressed()
 {
     int input = digitalRead(pin);
+    DEBUG_VAR("Button %d status %d", this->pin, input);
     return input == HIGH;
 }
 
@@ -44,9 +47,10 @@ void Button::loop()
         // Close
         if (!this->pressed)
         {
+            this->pressed = true;
+
             this->handler(PRESSED);
 
-            this->pressed = true;
             this->statetime = currenttime;
         }
     }
