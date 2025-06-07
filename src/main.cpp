@@ -96,16 +96,6 @@ void setup()
   INFO("Running on ESP IDF : %s", esp_get_idf_version());
   INFO("Free HEAP is %d", ESP.getFreeHeap());
 
-  INFO("SPIFFS init");
-  if (!SPIFFS.begin(true))
-  {
-    WARN("An Error has occurred while mounting SPIFFS");
-    while (true)
-    {
-      delay(1000);
-    }
-  }
-
   INFO("LED Status display init");
   leds->begin();
 
@@ -367,7 +357,7 @@ void setup()
   // Boot complete
   leds->setBootProgress(100);
 
-  INFO("Init finish");
+  INFO("Init finished. Free HEAP is %d", ESP.getFreeHeap());
 
   leds->setState(PLAYER_STATUS);
 
