@@ -6,6 +6,7 @@ MediaPlayerSource::MediaPlayerSource(const char *startFilePath, const char *ext,
     : AudioSourceSD(startFilePath, ext, setupIndex)
 {
     this->is_sd_setup = true;
+    this->currentStream = NULL;
 }
 
 void MediaPlayerSource::setChangeIndexCallback(ChangeIndexCallback callback)
@@ -19,6 +20,16 @@ Stream *MediaPlayerSource::selectStream(int index)
     this->currentStream = AudioSourceSD::selectStream(index);
     this->changeindexcallback(this->currentStream);
     return this->currentStream;
+}
+
+const char *MediaPlayerSource::currentPlayFile()
+{
+    if (this->currentStream == NULL)
+    {
+        return NULL;
+    }
+    File *file = (File *)(this->currentStream);
+    return file->name();
 }
 
 int MediaPlayerSource::playProgressInPercent()

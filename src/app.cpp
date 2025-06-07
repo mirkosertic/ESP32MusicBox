@@ -9,7 +9,7 @@
 #include "logging.h"
 #include "gitrevision.h"
 
-App::App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport)
+App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport)
 {
     this->volumeSupport = volumeSupport;
     this->tagscanner = tagscanner;
@@ -284,9 +284,9 @@ void App::ssdpNotify()
                 deviceUUID.c_str(),
                 deviceTypes[i].c_str());
 
-        udp.beginPacket(SSDP_MULTICAST_ADDR, SSDP_PORT);
-        udp.write((uint8_t *)notify, strlen(notify));
-        udp.endPacket();
+        this->udp->beginPacket(SSDP_MULTICAST_ADDR, SSDP_PORT);
+        this->udp->write((uint8_t *)notify, strlen(notify));
+        this->udp->endPacket();
     }
 }
 
@@ -297,8 +297,10 @@ void App::announceSSDP()
     const IPAddress SSDP_MULTICAST_ADDR(239, 255, 255, 250);
     const uint16_t SSDP_PORT = 1900;
 
+    this->udp = new WiFiUDP();
+
     // Join multicast group for SSDP
-    if (udp.beginMulticast(SSDP_MULTICAST_ADDR, SSDP_PORT))
+    if (this->udp->beginMulticast(SSDP_MULTICAST_ADDR, SSDP_PORT))
     {
         INFO("SSDP multicast joined successfully");
     }
@@ -356,11 +358,11 @@ void App::loop()
         // SSDP
 
         // Incoming messages
-        int packetSize = udp.parsePacket();
+        int packetSize = this->udp->parsePacket();
         if (packetSize)
         {
             char packetBuffer[512];
-            int len = udp.read(packetBuffer, sizeof(packetBuffer) - 1);
+            int len = this->udp->read(packetBuffer, sizeof(packetBuffer) - 1);
             if (len > 0)
             {
                 packetBuffer[len] = '\0';
@@ -417,9 +419,9 @@ void App::loop()
                             searchTarget.c_str());
 
                     // Send unicast response to requester
-                    udp.beginPacket(this->udp.remoteIP(), this->udp.remotePort());
-                    udp.write((uint8_t *)response, strlen(response));
-                    udp.endPacket();
+                    this->udp->beginPacket(this->udp->remoteIP(), this->udp->remotePort());
+                    this->udp->write((uint8_t *)response, strlen(response));
+                    this->udp->endPacket();
 
                     INFO("Sent SSDP response");
                 }

@@ -186,30 +186,35 @@ void Leds::renderVolumeChange()
     else
     {
         int volumePercent = (int)(this->app->getVolume() * 100);
-        INFO("Volume is %d", volumePercent);
-
-        for (int i = 0; i < NUM_LEDS; i++)
+        static int lastVolumePercent = volumePercent;
+        if (lastVolumePercent != volumePercent)
         {
-            this->leds[i] = CRGB::Black;
+            INFO("Volume is %d", volumePercent);
+            lastVolumePercent = volumePercent;
+
+            for (int i = 0; i < NUM_LEDS; i++)
+            {
+                this->leds[i] = CRGB::Black;
+            }
+
+            int maxbrightness = 80;
+
+            CRGBPalette16 myPalette = volume_heatmap;
+
+            int total = NUM_LEDS * maxbrightness;
+            int progress = (int)(total / 100.0 * volumePercent);
+            int index = 0;
+            while (progress > 0)
+            {
+                int v = min(maxbrightness, progress);
+                CRGB color = ColorFromPalette(myPalette, (int)(255.0 * index / NUM_LEDS), v);
+                // CHSV targetHSV = rgb2hsv_approximate(CRGB::Orange);
+                // targetHSV.v = v;
+                this->leds[index++] = color;
+                progress -= v;
+            }
+            FastLED.show();
         }
-
-        int maxbrightness = 80;
-
-        CRGBPalette16 myPalette = volume_heatmap;
-
-        int total = NUM_LEDS * maxbrightness;
-        int progress = (int)(total / 100.0 * volumePercent);
-        int index = 0;
-        while (progress > 0)
-        {
-            int v = min(maxbrightness, progress);
-            CRGB color = ColorFromPalette(myPalette, (int)(255.0 * index / NUM_LEDS), v);
-            // CHSV targetHSV = rgb2hsv_approximate(CRGB::Orange);
-            // targetHSV.v = v;
-            this->leds[index++] = color;
-            progress -= v;
-        }
-        FastLED.show();
     }
 }
 

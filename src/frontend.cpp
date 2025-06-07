@@ -141,6 +141,54 @@ String categorizeRSSI(int rssi)
   }
 }
 
+String urlDecode(String input)
+{
+  String decoded = "";
+  char temp[] = "0x00";
+  unsigned int len = input.length();
+  unsigned int i = 0;
+
+  while (i < len)
+  {
+    char decodedChar;
+    char actualChar = input.charAt(i);
+
+    if (actualChar == '%')
+    {
+      // Check if we have enough characters for hex decoding
+      if (i + 2 < len)
+      {
+        temp[2] = input.charAt(i + 1);
+        temp[3] = input.charAt(i + 2);
+        decodedChar = strtol(temp, NULL, 16);
+        i += 3;
+      }
+      else
+      {
+        // Invalid encoding, just add the % character
+        decodedChar = actualChar;
+        i++;
+      }
+    }
+    else if (actualChar == '+')
+    {
+      // Convert + to space
+      decodedChar = ' ';
+      i++;
+    }
+    else
+    {
+      // Regular character
+      decodedChar = actualChar;
+      i++;
+    }
+
+    decoded += decodedChar;
+  }
+
+  return decoded;
+}
+
 String extractWebDAVPath(PsychicRequest *request)
 {
   String uri = request->uri().c_str();
@@ -150,11 +198,11 @@ String extractWebDAVPath(PsychicRequest *request)
     int len = p.length();
     if (len > 1 && p.endsWith("/"))
     {
-      return p.substring(0, len - 1);
+      return urlDecode(p.substring(0, len - 1));
     }
-    return p;
+    return urlDecode(p);
   }
-  return uri;
+  return urlDecode(uri);
 }
 
 String urlencode(String str)
@@ -779,8 +827,9 @@ void Frontend::initialize()
                       {
                         response.println("  <D:response>");
                         response.print("    <D:href>");
-//                        response.print(path);
+                        //response.print(path);
                         response.print(urlencode(name));
+                        //response.print(name);
                         response.println("</D:href>");
 
                         response.println("    <D:propstat>");
@@ -801,6 +850,7 @@ void Frontend::initialize()
                         response.print("    <D:href>");
                         //response.print(path);
                         response.print(urlencode(name));
+                        //response.print(name);
                         response.println("</D:href>");
 
 
@@ -859,51 +909,51 @@ void Frontend::initialize()
 
                     return response.send(); });
 
-  this->server->on("/webdav/*", HTTP_PUT, [this](PsychicRequest *request)
-                   {
-                    INFO("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
+  PsychicUploadHandler *puthandler = new PsychicUploadHandler();
+  puthandler->onUpload([this](PsychicRequest *request, const String &filename, uint64_t position, uint8_t *data, size_t length, bool final)
+                       {
+      INFO("webserver() - got data chunk with position %llu and length %u", position, length);
 
-                    String path = extractWebDAVPath(request);
+      String path = extractWebDAVPath(request);
 
-                    File content = fs->open(path, "w", true);
-                    
-                    /*char buffer[512];
-                    httpd_req_t *re = request->request();
-                    size_t remaining = re->content_len;
-                    size_t actuallyReceived = 0;
+      File content;
+      if (position == 0) {
+        INFO("webserver() - creating file %s", path.c_str());
+        content = fs->open(path, FILE_WRITE, true);
+      } else {
+        INFO("webserver() - opening file %s for append", path.c_str());        
+        content = fs->open(path, FILE_APPEND);
+      }
 
-                    while (remaining > 0) {
-                      int received = httpd_req_recv(re, &buffer[0], sizeof(buffer));
-                      INFO("webserver() - read %d bytes", received);
+      if (!content) {
+        WARN("webserver() - failed to access file");
+        return ESP_FAIL;
+      } 
 
-                      if (received == HTTPD_SOCK_ERR_TIMEOUT) {
-                        continue;
-                      }
-                      else if (received == HTTPD_SOCK_ERR_FAIL) {
-                        INFO("Failed to receive data.");
-                      }
+      if (!content.write(data, length)) {
+        WARN("webserver() - Failed wo write data");
+        return ESP_FAIL;
+      }
 
-                      if (received > 0) {
-                        content.write((uint8_t *) &buffer[0], received);
-                      }
+      close(content);
 
-                      remaining -= received;
-                      actuallyReceived += received;
-                    }*/
-                    content.print(request->body());
+      return ESP_OK; });
+  puthandler->onRequest([this](PsychicRequest *request)
+                        {
+      CustomPsychicStreamResponse response(request, "application/xml");                    
 
-                    content.close();
+      String path = extractWebDAVPath(request);      
 
-                    CustomPsychicStreamResponse response(request, "application/xml");                    
-                    INFO("webserver() - content %s created", path.c_str());
+      INFO("webserver() - content %s created", path.c_str());
 
-                    response.setCode(201);
-                    response.addHeader("Cache-Control","no-cache, must-revalidate");      
-                    response.addHeader("DAV", "1");
-                    response.addHeader("MS-Author-Via", "DAV");
-                    response.setContentLength(0);
+      response.setCode(201);
+      response.addHeader("Cache-Control","no-cache, must-revalidate");      
+      response.addHeader("DAV", "1");
+      response.addHeader("MS-Author-Via", "DAV");
+      response.setContentLength(0);
 
-                    return response.send(); });
+      return response.send(); });
+  this->server->on("/webdav/*", HTTP_PUT, puthandler);
 
   this->server->on("/webdav/*", HTTP_GET, [this](PsychicRequest *request)
                    {
@@ -913,11 +963,11 @@ void Frontend::initialize()
 
                     File content = fs->open(path, "r");
                     
+                    // TODO: Fix WDT
                     CustomPsychicStreamResponse response(request, "application/octet-stream");
                     INFO("webserver() - content %s requested for download", path.c_str());
-
-                    response.setCode(207);
-                    response.addHeader("Cache-Control","no-cache, must-revalidate");      
+                    response.setCode(200);
+                                        response.addHeader("Cache-Control","no-cache, must-revalidate");      
                     response.addHeader("DAV", "1");
                     response.addHeader("MS-Author-Via", "DAV");
 

@@ -20,6 +20,8 @@ public:
     virtual Stream *selectStream(int index) override;
 
     int playProgressInPercent();
+
+    const char *currentPlayFile();
 };
 
 #endif

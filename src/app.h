@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 #include <functional>
-#include <WiFi.h>
 #include <WiFiUdp.h>
 #include <PubSubClient.h>
 #include <mutex>
@@ -52,10 +51,10 @@ private:
 
     ChangeNotifierCallback changecallback;
 
-    WiFiUDP udp;
+    WiFiUDP *udp;
 
 public:
-    App(WiFiClient &wifiClient, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport);
+    App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport);
 
     ~App();
 

@@ -6,10 +6,11 @@
 
 #include "logging.h"
 
-Settings::Settings(FS *fs, String configurationfilename)
+Settings::Settings(FS *fs, String configurationfilename, bool btmode)
 {
   this->fs = fs;
   this->configurationfilename = configurationfilename;
+  this->btmode = btmode;
 }
 
 bool Settings::readFromConfig()
@@ -120,7 +121,7 @@ bool Settings::writeToConfig()
 
 void Settings::initializeWifiFromSettings()
 {
-  if (this->wlan_enabled)
+  if (this->wlan_enabled && !btmode)
   {
     WiFi.disconnect();
     if (this->wlan_bssid[0] == 0 && this->wlan_bssid[1] == 0 && this->wlan_bssid[2] == 0 && this->wlan_bssid[3] == 0 && this->wlan_bssid[4] == 0 && this->wlan_bssid[5] == 0)
@@ -289,6 +290,11 @@ void Settings::setSettingsFromJson(String json)
 
 void Settings::rescanForBetterNetworksAndReconfigure()
 {
+  if (btmode)
+  {
+    INFO("WiFi is disabled");
+    return;
+  }
   INFO("Scanning for WiFi networks...");
   int numNetworks = WiFi.scanComplete();
   if (numNetworks == WIFI_SCAN_FAILED)
@@ -387,5 +393,5 @@ void Settings::resetStoredBSSIDAndReconfigureWiFi()
 
 bool Settings::isWiFiEnabled()
 {
-  return this->wlan_enabled;
+  return this->wlan_enabled && !btmode;
 }

@@ -38,24 +38,27 @@ const int HTTP_SERVER_PORT = 80;
 // IPAddress apIP(192, 168, 4, 1);
 // DNSServer dnsServer;
 
-MediaPlayerSource source(STARTFILEPATH, MP3_FILE, true);
+MediaPlayerSource *source = new MediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
 
-I2SStream i2s;
-MP3DecoderHelix decoder;
+I2SStream *i2s = new I2SStream();
+MP3DecoderHelix *decoder = new MP3DecoderHelix();
+;
 // BluetoothA2DPSource a2dpsource;
 //  BluetoothA2DPSink a2dpsink;
-MediaPlayer player(source, i2s, decoder);
+MediaPlayer *player = new MediaPlayer(*source, *i2s, *decoder);
 
 WiFiClient wifiClient;
 
-Settings settings(&SD, CONFIGURATION_FILE);
+bool btspeakermode = false;
+
+Settings *settings = new Settings(&SD, CONFIGURATION_FILE, false);
 
 TagScanner *tagscanner = new TagScanner(&Wire1, GPIO_PN532_IRQ, GPIO_PN532_RST);
-App *app = new App(wifiClient, tagscanner, &source, &player, &settings, &player);
-Frontend *frontend = new Frontend(&SD, app, HTTP_SERVER_PORT, MP3_FILE, &settings);
+App *app = new App(tagscanner, source, player, settings, player);
+Frontend *frontend = new Frontend(&SD, app, HTTP_SERVER_PORT, MP3_FILE, settings);
 Leds *leds = new Leds(app);
 Buttons *buttons = new Buttons(app, leds);
-VoiceAssistant *assistant = new VoiceAssistant(&i2s, &settings);
+VoiceAssistant *assistant = new VoiceAssistant(i2s, settings);
 MQTT *mqtt = new MQTT(wifiClient, app);
 
 QueueHandle_t commandsHandle;
@@ -67,7 +70,7 @@ void wifiscannertask(void *arguments)
   INFO("WiFi scanner task started");
   while (true)
   {
-    settings.rescanForBetterNetworksAndReconfigure();
+    settings->rescanForBetterNetworksAndReconfigure();
     delay(60000);
   }
 }
@@ -91,7 +94,7 @@ void setup()
   INFO("Setup started");
   INFO("Running on Arduino : %d.%d.%d", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
   INFO("Running on ESP IDF : %s", esp_get_idf_version());
-  INFO("Free HEAP is %d", ESP.getFreeHeap());  
+  INFO("Free HEAP is %d", ESP.getFreeHeap());
 
   INFO("SPIFFS init");
   if (!SPIFFS.begin(true))
@@ -160,7 +163,7 @@ void setup()
 
   // setup output
   AudioInfo info(44100, 2, 16);
-  auto cfg = i2s.defaultConfig(TX_MODE);
+  auto cfg = i2s->defaultConfig(TX_MODE);
   cfg.pin_bck = GPIO_I2S_BCK;
   cfg.pin_ws = GPIO_I2S_WS;
   cfg.pin_data = GPIO_I2S_DATA;
@@ -168,7 +171,7 @@ void setup()
   cfg.copyFrom(info);
 
   INFO("i2s sound system init");
-  if (!i2s.begin(cfg))
+  if (!i2s->begin(cfg))
   {
     WARN("Could not start i2s sound system!");
     while (true)
@@ -192,41 +195,44 @@ void setup()
   leds->setBootProgress(20);
 
   // AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
-  source.begin();
+  source->begin();
 
   leds->setBootProgress(30);
 
   INFO("Retrieving system configuration");
-  if (!settings.readFromConfig())
+  if (!settings->readFromConfig())
   {
     // No configuration available.
-    settings.initializeWifiFromSettings();
+    settings->initializeWifiFromSettings();
   }
   else
   {
     if (buttons->isStartStopPressed())
     {
-      settings.resetStoredBSSID();
+      settings->resetStoredBSSID();
     }
-    settings.initializeWifiFromSettings();
+    settings->initializeWifiFromSettings();
   }
 
   leds->setBootProgress(40);
 
-  INFO("WiFi configuration");
-  WiFi.persistent(false);
-  WiFi.mode(WIFI_STA);
-  WiFi.setHostname(app->computeTechnicalName().c_str());
-  WiFi.setAutoReconnect(true);
+  if (!btspeakermode)
+  {
+    INFO("WiFi configuration");
+    WiFi.persistent(false);
+    WiFi.mode(WIFI_STA);
+    WiFi.setHostname(app->computeTechnicalName().c_str());
+    WiFi.setAutoReconnect(true);
+  }
   // WiFi.softAP(app->computeTechnicalName().c_str());
 
   // dnsServer.start(53, "*", apIP);
 
   leds->setBootProgress(50);
 
-  player.setMetadataCallback(callbackPrintMetaData);
-  decoder.driver()->setInfoCallback([](MP3FrameInfo &info, void *ref)
-                                    { INFO("Got libHelix Info %d bitrate %d bits per sample %d channels", info.bitrate, info.bitsPerSample, info.nChans); }, nullptr);
+  player->setMetadataCallback(callbackPrintMetaData);
+  decoder->driver()->setInfoCallback([](MP3FrameInfo &info, void *ref)
+                                     { INFO("Got libHelix Info %d bitrate %d bits per sample %d channels", info.bitrate, info.bitsPerSample, info.nChans); }, nullptr);
 
   INFO("i2c connection init");
   Wire1.begin(GPIO_WIRE_SDA, GPIO_WIRE_SCL, 100000); // Scan ok
@@ -301,12 +307,12 @@ void setup()
   leds->setBootProgress(70);
   INFO("NFC reader init finished");
 
-  source.setChangeIndexCallback([](Stream *next)
-                                { 
+  source->setChangeIndexCallback([](Stream *next)
+                                 { 
                                   INFO("In info callback");
                                   if (next != nullptr)
                                   {
-                                    const char *songinfo = source.toStr();
+                                    const char *songinfo = source->toStr();
                                     if (songinfo)
                                     {
                                       mqtt->publishCurrentSong(String(songinfo));
@@ -342,13 +348,13 @@ void setup()
 
   leds->setBootProgress(80);
 
-  player.begin(-1, false);
+  player->begin(-1, false);
 
   leds->setBootProgress(90);
 
   // setup player, the player runs with default volume
   // TODO: Store in configuration?
-  player.setVolume(0.6);
+  player->setVolume(0.6);
 
   // Start the physical button controller logic
   buttons->begin();
@@ -374,9 +380,9 @@ void wifiConnected()
 
   INFO("Connected to WiFi network. Local IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 
-  if (settings.isMQTTEnabled())
+  if (settings->isMQTTEnabled())
   {
-    mqtt->begin(settings.getMQTTServer(), settings.getMQTTPort(), settings.getMQTTUsername(), settings.getMQTTPassword());
+    mqtt->begin(settings->getMQTTServer(), settings->getMQTTPort(), settings->getMQTTUsername(), settings->getMQTTPassword());
   }
 
   // Start webserver, as we now have a WiFi stack...
@@ -385,10 +391,10 @@ void wifiConnected()
   app->announceMDNS();
   app->announceSSDP();
 
-  if (settings.isVoiceAssistantEnabled())
+  if (settings->isVoiceAssistantEnabled())
   {
     INFO("Starting voice assistant integration");
-    assistant->begin(settings.getVoiceAssistantServer(), settings.getVoiceAssistantPort(), settings.getVoiceAssistantAccessToken(), app->computeUUID(), [](HAState state)
+    assistant->begin(settings->getVoiceAssistantServer(), settings->getVoiceAssistantPort(), settings->getVoiceAssistantAccessToken(), app->computeUUID(), [](HAState state)
                      {
                         if (state == AUTHENTICATED || state == FINISHED) {
                             INFO("Got state change from VoiceAssistant, starting a new pipeline");
@@ -397,7 +403,7 @@ void wifiConnected()
                         } }, [](String urlToPlay)
                      { 
                           INFO("Playing feedback url %s", urlToPlay.c_str()); 
-                          player.playURL(urlToPlay, true); });
+                          player->playURL(urlToPlay, true); });
   }
 
   leds->setState(PLAYER_STATUS);
@@ -407,11 +413,11 @@ void wifiConnected()
 void loop()
 {
   // dnsServer.processNextRequest();
-  if (settings.isWiFiEnabled())
+  if (settings->isWiFiEnabled())
   {
     if (WiFi.isConnected() && !app->isWifiConnected())
     {
-      settings.writeToConfig();
+      settings->writeToConfig();
 
       wifiConnected();
 
@@ -426,7 +432,7 @@ void loop()
       {
         INFO("WiFi is not connected, so reinit the connection");
         // More than 30 seconds no WiFi connect, we reset the stored bssid
-        settings.resetStoredBSSIDAndReconfigureWiFi();
+        settings->resetStoredBSSIDAndReconfigureWiFi();
 
         // Start timeout again
         startupTime = now;
@@ -447,7 +453,7 @@ void loop()
   // sequentially here
 
   // Record a time slice
-  if (settings.isVoiceAssistantEnabled())
+  if (settings->isVoiceAssistantEnabled())
   {
     assistant->processAudioData();
   }

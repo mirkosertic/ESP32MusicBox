@@ -112,7 +112,7 @@ size_t MediaPlayer::copy()
 
 const char *MediaPlayer::currentSong()
 {
-    return this->source->toStr();
+    return this->source->currentPlayFile();
 }
 
 int MediaPlayer::playProgressInPercent()
