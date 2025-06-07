@@ -126,7 +126,7 @@ void TagScanner::scan()
 
         // Display some basic information about the card
         INFO("Found an ISO14443A tag");
-        // INFO_VAR("UID Length: %d bytes, UID is %s", (int) tagscanneruidLength, uidStr.c_str());
+        // INFO("UID Length: %d bytes, UID is %s", (int) tagscanneruidLength, uidStr.c_str());
 
         if (tagscanneruidLength == 4)
         {
@@ -308,8 +308,8 @@ void TagScanner::begin(TagDetectedCallback callback, NoTagCallback noTagCallback
         while (true)
             ;
     }
-    INFO_VAR("Chip PN5 is %d", (versiondata >> 24) & 0xFF);
-    INFO_VAR("Firmware ver. %d.%d", (versiondata >> 16) & 0xFF, (versiondata >> 8) & 0xFF);
+    INFO("Chip PN5 is %d", (versiondata >> 24) & 0xFF);
+    INFO("Firmware ver. %d.%d", (versiondata >> 16) & 0xFF, (versiondata >> 8) & 0xFF);
     this->pn532->SAMConfig();
 
     xTaskCreate(scandispatcher, "NFC Scanner", 4096, this, 5, NULL);

@@ -234,12 +234,12 @@ void Frontend::initialize()
       }*/
 
       unsigned int stackHighWatermark = uxTaskGetStackHighWaterMark(nullptr);
-      INFO_VAR("webserver() - Free HEAP is %d, stackHighWatermark is %d", ESP.getFreeHeap(), stackHighWatermark);
+      INFO("webserver() - Free HEAP is %d, stackHighWatermark is %d", ESP.getFreeHeap(), stackHighWatermark);
 
       // Chunked response to optimize RAM usage
       size_t content_length = strlen(INDEX_TEMPLATE);
 
-      INFO_VAR("webserver() - Size of response is %d", content_length);
+      INFO("webserver() - Size of response is %d", content_length);
       CustomPsychicStreamResponse response(request, "text/html");
 
       response.addHeader("Cache-Control", "no-cache, must-revalidate");
@@ -512,7 +512,7 @@ void Frontend::initialize()
       INFO("webserver() - /updateconfig received");
 
       String jsonconfig = request->getParam("configdata")->value();
-      INFO_VAR("Got new config payload : %s", jsonconfig.c_str());
+      INFO("Got new config payload : %s", jsonconfig.c_str());
 
       this->settings->setSettingsFromJson(jsonconfig);
 
@@ -625,7 +625,7 @@ void Frontend::initialize()
 
     String path = request->getParam("path")->value();
 
-    INFO_VAR("webserver() - Path is %s", path.c_str());
+    INFO("webserver() - Path is %s", path.c_str());
 
     memcpy(&command.path[0], path.c_str(), path.length());
 
@@ -674,7 +674,7 @@ void Frontend::initialize()
   // WebDav Minimal Level 1 compliance
   this->server->on("/webdav", HTTP_OPTIONS, [this](PsychicRequest *request)
                    {
-                    INFO_VAR("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
+                    INFO("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
                     PsychicResponse response(request);
                     response.setCode(204);
@@ -688,7 +688,7 @@ void Frontend::initialize()
 
   this->server->on("/webdav/*", HTTP_OPTIONS, [this](PsychicRequest *request)
                    {
-                    INFO_VAR("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
+                    INFO("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
                     String path = extractWebDAVPath(request);
                     File root = fs->open(path);
@@ -696,7 +696,7 @@ void Frontend::initialize()
                     PsychicResponse response(request);
 
                     if (!root) {
-                      WARN_VAR("webserver() - Path %s not found", path.c_str());
+                      WARN("webserver() - Path %s not found", path.c_str());
                       // Not found
                       response.setCode(404);
                       response.addHeader("Cache-Control","no-cache, must-revalidate");      
@@ -705,7 +705,7 @@ void Frontend::initialize()
                       response.setContentLength(0);
                     } else {
                       if (root.isDirectory()) {
-                        INFO_VAR("webserver() - Path %s is directory / collection", path.c_str());
+                        INFO("webserver() - Path %s is directory / collection", path.c_str());
                         response.setCode(204);
                         response.addHeader("Cache-Control","no-cache, must-revalidate");      
                         response.addHeader("Allow", "OPTIONS, GET, PUT, DELETE, PROPFIND, MKCOL");
@@ -713,7 +713,7 @@ void Frontend::initialize()
                         response.addHeader("MS-Author-Via", "DAV");
                         response.setContentLength(0);
                       } else {
-                        INFO_VAR("webserver() - Path %s is file", path.c_str());                        
+                        INFO("webserver() - Path %s is file", path.c_str());                        
                         response.setCode(204);
                         response.addHeader("Cache-Control","no-cache, must-revalidate");      
                         response.addHeader("Allow", "OPTIONS, GET, PUT, DELETE, PROPFIND");
@@ -729,7 +729,7 @@ void Frontend::initialize()
 
   this->server->on("/webdav/*", HTTP_PROPFIND, [this](PsychicRequest *request)
                    {
-                    INFO_VAR("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
+                    INFO("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
                     String path = extractWebDAVPath(request);
 
@@ -738,7 +738,7 @@ void Frontend::initialize()
                       depth = request->getParam("Depth")->value().toInt();
                     }
 
-                    INFO_VAR("webserver() - /webdav %s PROPFIND depth %d path %s received", path.c_str(), depth, path.c_str());
+                    INFO("webserver() - /webdav %s PROPFIND depth %d path %s received", path.c_str(), depth, path.c_str());
 
                     File root = fs->open(path);
                     if (!root) {
@@ -773,7 +773,7 @@ void Frontend::initialize()
 
                       String name(entry.name());
 
-                      INFO_VAR("webserver() - Found file path %s name %s", path.c_str(), name.c_str());
+                      INFO("webserver() - Found file path %s name %s", path.c_str(), name.c_str());
 
                       if (entry.isDirectory())
                       {
@@ -832,13 +832,13 @@ void Frontend::initialize()
 
   this->server->on("/webdav/*", HTTP_MKCOL, [this](PsychicRequest *request)
                    {
-                    INFO_VAR("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
+                    INFO("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
                     String path = extractWebDAVPath(request);
 
                     CustomPsychicStreamResponse response(request, "application/xml");                    
                     if (createDirectoryRecursive(fs, path)) {
-                      INFO_VAR("webserver() - Path %s created", path.c_str());
+                      INFO("webserver() - Path %s created", path.c_str());
 
                       response.setCode(201);
                       response.addHeader("Cache-Control","no-cache, must-revalidate");      
@@ -848,7 +848,7 @@ void Frontend::initialize()
 
                     } else {
 
-                      WARN_VAR("webserver() - Path %s NOT created", path.c_str());
+                      WARN("webserver() - Path %s NOT created", path.c_str());
 
                       response.setCode(409);
                       response.addHeader("Cache-Control","no-cache, must-revalidate");      
@@ -861,7 +861,7 @@ void Frontend::initialize()
 
   this->server->on("/webdav/*", HTTP_PUT, [this](PsychicRequest *request)
                    {
-                    INFO_VAR("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
+                    INFO("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
                     String path = extractWebDAVPath(request);
 
@@ -874,7 +874,7 @@ void Frontend::initialize()
 
                     while (remaining > 0) {
                       int received = httpd_req_recv(re, &buffer[0], sizeof(buffer));
-                      INFO_VAR("webserver() - read %d bytes", received);
+                      INFO("webserver() - read %d bytes", received);
 
                       if (received == HTTPD_SOCK_ERR_TIMEOUT) {
                         continue;
@@ -895,7 +895,7 @@ void Frontend::initialize()
                     content.close();
 
                     CustomPsychicStreamResponse response(request, "application/xml");                    
-                    INFO_VAR("webserver() - content %s created", path.c_str());
+                    INFO("webserver() - content %s created", path.c_str());
 
                     response.setCode(201);
                     response.addHeader("Cache-Control","no-cache, must-revalidate");      
@@ -907,14 +907,14 @@ void Frontend::initialize()
 
   this->server->on("/webdav/*", HTTP_GET, [this](PsychicRequest *request)
                    {
-                    INFO_VAR("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
+                    INFO("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
                     String path = extractWebDAVPath(request);
 
                     File content = fs->open(path, "r");
                     
                     CustomPsychicStreamResponse response(request, "application/octet-stream");
-                    INFO_VAR("webserver() - content %s requested for download", path.c_str());
+                    INFO("webserver() - content %s requested for download", path.c_str());
 
                     response.setCode(207);
                     response.addHeader("Cache-Control","no-cache, must-revalidate");      
@@ -938,7 +938,7 @@ void Frontend::initialize()
 
   this->server->on("/webdav/*", HTTP_DELETE, [this](PsychicRequest *request)
                    {
-                    INFO_VAR("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
+                    INFO("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
                     String path = extractWebDAVPath(request);
 
@@ -947,7 +947,7 @@ void Frontend::initialize()
                     PsychicResponse response(request);
 
                     if (!root) {
-                      WARN_VAR("webserver() - Path %s not found", path.c_str());
+                      WARN("webserver() - Path %s not found", path.c_str());
                       // Not found
                       response.setCode(404);
                       response.addHeader("Cache-Control","no-cache, must-revalidate");      
@@ -960,14 +960,14 @@ void Frontend::initialize()
 
                       if (isdir) {
                         if (fs->rmdir(path.c_str())) {
-                          INFO_VAR("webserver() - directory %s removed", path.c_str());
+                          INFO("webserver() - directory %s removed", path.c_str());
                           response.setCode(201);
                           response.addHeader("Cache-Control","no-cache, must-revalidate");      
                           response.addHeader("DAV", "1");
                           response.addHeader("MS-Author-Via", "DAV");
                           response.setContentLength(0);
                         } else {
-                          WARN_VAR("webserver() - directory %s NOT removed", path.c_str());                          
+                          WARN("webserver() - directory %s NOT removed", path.c_str());                          
                           response.setCode(404);
                           response.addHeader("Cache-Control","no-cache, must-revalidate");      
                           response.addHeader("DAV", "1");
@@ -976,14 +976,14 @@ void Frontend::initialize()
                         }
                       } else {
                         if (fs->remove(path.c_str())) {
-                          INFO_VAR("webserver() - file %s removed", path.c_str());
+                          INFO("webserver() - file %s removed", path.c_str());
                           response.setCode(201);
                           response.addHeader("Cache-Control","no-cache, must-revalidate");      
                           response.addHeader("DAV", "1");
                           response.addHeader("MS-Author-Via", "DAV");
                           response.setContentLength(0);
                         } else {
-                          WARN_VAR("webserver() - file %s NOT removed", path.c_str());                          
+                          WARN("webserver() - file %s NOT removed", path.c_str());                          
                           response.setCode(404);
                           response.addHeader("Cache-Control","no-cache, must-revalidate");      
                           response.addHeader("DAV", "1");
@@ -998,7 +998,7 @@ void Frontend::initialize()
   // Default Handler
   this->server->onNotFound([this](PsychicRequest *request)
                            {
-              WARN_VAR("webserver() - Not Found %s %s", request->methodStr().c_str(), request->uri().c_str());
+              WARN("webserver() - Not Found %s %s", request->methodStr().c_str(), request->uri().c_str());
 
               PsychicResponse response(request);
               response.setCode(404);

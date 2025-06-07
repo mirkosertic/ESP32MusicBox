@@ -10,7 +10,7 @@ MediaPlayer::MediaPlayer(MediaPlayerSource &source, AudioStream &output, AudioDe
 
     this->overrideHelix = new MP3DecoderHelix();
     this->overrideHelix->driver()->setInfoCallback([](MP3FrameInfo &info, void *ref)
-                                                   { INFO_VAR("Got libHelix Info %d bitrate %d bits per sample %d channels", info.bitrate, info.bitsPerSample, info.nChans); }, nullptr);
+                                                   { INFO("Got libHelix Info %d bitrate %d bits per sample %d channels", info.bitrate, info.bitsPerSample, info.nChans); }, nullptr);
 
     this->overrideFormatConverter = new FormatConverterStream(output);
     this->overrideDecoder = new EncodedAudioStream(this->overrideFormatConverter, this->overrideHelix);
@@ -27,7 +27,7 @@ bool MediaPlayer::setVolume(float volume)
 
 void MediaPlayer::playURL(String url, bool forceMono)
 {
-    INFO_VAR("Playing URL %s", url.c_str());
+    INFO("Playing URL %s", url.c_str());
 
     if (this->overrideStream != nullptr)
     {
@@ -37,7 +37,7 @@ void MediaPlayer::playURL(String url, bool forceMono)
     this->overrideStream = new URLStream(2024);
     if (!this->overrideStream->begin(url.c_str()))
     {
-        WARN_VAR("Could not begin stream from %s", url.c_str());
+        WARN("Could not begin stream from %s", url.c_str());
     }
     this->overrideDecoder->begin();
 
@@ -68,17 +68,17 @@ size_t MediaPlayer::copy()
     }
 
     AudioInfo outinfo = this->output->audioInfo();
-    DEBUG_VAR("Player is running with Samplerate=%d, Channels=%d and Bits per sample=%d", outinfo.sample_rate, outinfo.channels, outinfo.bits_per_sample);
+    DEBUG("Player is running with Samplerate=%d, Channels=%d and Bits per sample=%d", outinfo.sample_rate, outinfo.channels, outinfo.bits_per_sample);
 
     AudioInfo from = this->overrideDecoder->audioInfo();
-    DEBUG_VAR("Decoder is running with Samplerate=%d, Channels=%d and Bits per sample=%d", from.sample_rate, from.channels, from.bits_per_sample);
+    DEBUG("Decoder is running with Samplerate=%d, Channels=%d and Bits per sample=%d", from.sample_rate, from.channels, from.bits_per_sample);
     AudioInfo out = this->overrideDecoder->audioInfoOut();
-    DEBUG_VAR("Decoder out is running with Samplerate=%d, Channels=%d and Bits per sample=%d", out.sample_rate, out.channels, out.bits_per_sample);
+    DEBUG("Decoder out is running with Samplerate=%d, Channels=%d and Bits per sample=%d", out.sample_rate, out.channels, out.bits_per_sample);
 
     AudioInfo conv = this->overrideFormatConverter->audioInfo();
-    DEBUG_VAR("Conv is running with Samplerate=%d, Channels=%d and Bits per sample=%d", conv.sample_rate, conv.channels, conv.bits_per_sample);
+    DEBUG("Conv is running with Samplerate=%d, Channels=%d and Bits per sample=%d", conv.sample_rate, conv.channels, conv.bits_per_sample);
     AudioInfo convout = this->overrideFormatConverter->audioInfoOut();
-    DEBUG_VAR("Conv out is running with Samplerate=%d, Channels=%d and Bits per sample=%d", convout.sample_rate, convout.channels, convout.bits_per_sample);
+    DEBUG("Conv out is running with Samplerate=%d, Channels=%d and Bits per sample=%d", convout.sample_rate, convout.channels, convout.bits_per_sample);
 
     size_t result = this->overrideCopy.copy();
     long now = millis();

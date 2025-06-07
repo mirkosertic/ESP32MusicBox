@@ -37,7 +37,7 @@ bool Settings::readFromConfig()
       String data;
       serializeJsonPretty(document, data);
 
-      INFO_VAR("Configuration file read : %s", data.c_str());
+      INFO("Configuration file read : %s", data.c_str());
 
       JsonObject network = document["network"].as<JsonObject>();
       this->wlan_enabled = network["enabled"].as<bool>();

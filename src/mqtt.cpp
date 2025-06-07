@@ -20,7 +20,7 @@ MQTT::~MQTT()
 void MQTT::begin(String host, int port, String username, String password)
 {
     this->clientid = app->computeTechnicalName();
-    INFO_VAR("Connecting to %s:%d as client %s", host, port, this->clientid.c_str());
+    INFO("Connecting to %s:%d as client %s", host, port, this->clientid.c_str());
     this->host = host;
     this->port = port;
     this->username = username;
@@ -33,7 +33,7 @@ void MQTT::begin(String host, int port, String username, String password)
                                         String to(topic);
                                         String messagePayload = String(payload, length);
 
-                                        INFO_VAR("mqtt() - Got message on topic %s", topic);
+                                        INFO("mqtt() - Got message on topic %s", topic);
 
                                         for (const auto& func : this->mqttCallbacks) {
                                             func(to, messagePayload);
@@ -57,7 +57,7 @@ void MQTT::loop()
             bool result = this->pubsubclient->connect(this->clientid.c_str(), this->username.c_str(), this->password.c_str());
             if (!result)
             {
-                WARN_VAR("Connection failed, rc=%d, try again...", this->pubsubclient->state());
+                WARN("Connection failed, rc=%d, try again...", this->pubsubclient->state());
 
                 lastreconnectfailure = now;
             }
@@ -68,7 +68,7 @@ void MQTT::loop()
 
                 // Subscribe to all state set topics
                 String subscribeWildCard = this->clientid + "/+/set";
-                INFO_VAR("Subscribing to topics %s", subscribeWildCard.c_str());
+                INFO("Subscribing to topics %s", subscribeWildCard.c_str());
                 this->pubsubclient->subscribe(subscribeWildCard.c_str());
 
                 lastreconnectfailure = -1;
@@ -101,9 +101,9 @@ void MQTT::performAutoDiscovery()
 
     this->volumestatetopic = this->announceNumber("volume", "Volume", "mdi:volume-source", "slider", 0, 100, [this](String newvalue)
                                                   {
-                                                    INFO_VAR("Got new volume as String %s", newvalue.c_str());
+                                                    INFO("Got new volume as String %s", newvalue.c_str());
                                                     long volume = newvalue.toInt();
-                                                    INFO_VAR("New volume as number is %d", volume);
+                                                    INFO("New volume as number is %d", volume);
                                                     if (volume != 0)
                                                     {
                                                         this->app->setVolume(volume / 100.0); 
@@ -168,7 +168,7 @@ String MQTT::announceButton(String buttonId, String title, String icon, const st
     this->mqttCallbacks.push_back([commandTopic, clickHandler](String topic, String payload)
                                   {
             if (topic == commandTopic) {
-                INFO_VAR("Got Message on %s -> %s", commandTopic.c_str(), payload.c_str());
+                INFO("Got Message on %s -> %s", commandTopic.c_str(), payload.c_str());
                 if (payload == "PRESS") {
                     INFO("Pressed!");
                     clickHandler();
@@ -218,7 +218,7 @@ String MQTT::announceNumber(String numberId, String title, String icon, String m
     this->mqttCallbacks.push_back([commandTopic, changeHandler](String topic, String payload)
                                   {
             if (topic == commandTopic) {
-                INFO_VAR("Changed topic %s with payload %s", topic.c_str(), payload.c_str());
+                INFO("Changed topic %s with payload %s", topic.c_str(), payload.c_str());
                 changeHandler(payload);
             } });
 
@@ -314,7 +314,7 @@ void MQTT::publish(String topic, String payload)
     }
     else
     {
-        WARN_VAR("Cannot publish to topic %s -> value %s. The client is not connected", topic.c_str(), payload.c_str());
+        WARN("Cannot publish to topic %s -> value %s. The client is not connected", topic.c_str(), payload.c_str());
     }
 }
 

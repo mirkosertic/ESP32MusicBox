@@ -236,11 +236,11 @@ void App::announceMDNS()
     String technicalName = this->computeTechnicalName();
     if (MDNS.begin(technicalName))
     {
-        INFO_VAR("Registered as mDNS-Name %s", technicalName.c_str());
+        INFO("Registered as mDNS-Name %s", technicalName.c_str());
     }
     else
     {
-        WARN_VAR("Registered as mDNS-Name %s failed", technicalName.c_str());
+        WARN("Registered as mDNS-Name %s failed", technicalName.c_str());
     }
 }
 
@@ -346,7 +346,7 @@ void App::loop()
 
             unsigned int stackHighWatermark = uxTaskGetStackHighWaterMark(nullptr);
 
-            INFO_VAR("loop() - Free HEAP is %d, stackHighWatermark is %d", ESP.getFreeHeap(), stackHighWatermark);
+            INFO("loop() - Free HEAP is %d, stackHighWatermark is %d", ESP.getFreeHeap(), stackHighWatermark);
 
             lastStateReport = now;
 
@@ -463,7 +463,7 @@ void App::publishState()
 void App::setVolume(float volume)
 {
     const std::lock_guard<std::mutex> lock(this->loopmutex);
-    INFO_VAR("Setting volume to %f", volume);
+    INFO("Setting volume to %f", volume);
     this->volumeSupport->setVolume(volume);
     this->volume = volume;
 
@@ -511,14 +511,14 @@ void App::play(String path, int index)
 {
     const std::lock_guard<std::mutex> lock(this->loopmutex);
 
-    INFO_VAR("Playing song in path %s with index %d", path.c_str(), index);
+    INFO("Playing song in path %s with index %d", path.c_str(), index);
     strcpy(this->currentpath, path.c_str());
 
     INFO("Player active=false");
     this->player->setActive(false);
     INFO("Setting path");
     this->source->setPath(currentpath);
-    INFO_VAR("Playing index %d", index);
+    INFO("Playing index %d", index);
     this->player->begin(index, true);
 
     this->publishState();

@@ -186,7 +186,7 @@ void Leds::renderVolumeChange()
     else
     {
         int volumePercent = (int)(this->app->getVolume() * 100);
-        INFO_VAR("Volume is %d", volumePercent);
+        INFO("Volume is %d", volumePercent);
 
         for (int i = 0; i < NUM_LEDS; i++)
         {
@@ -203,9 +203,9 @@ void Leds::renderVolumeChange()
         while (progress > 0)
         {
             int v = min(maxbrightness, progress);
-            CRGB color = ColorFromPalette(myPalette, (int) (255.0 * index / NUM_LEDS), v);
-            //CHSV targetHSV = rgb2hsv_approximate(CRGB::Orange);
-            //targetHSV.v = v;
+            CRGB color = ColorFromPalette(myPalette, (int)(255.0 * index / NUM_LEDS), v);
+            // CHSV targetHSV = rgb2hsv_approximate(CRGB::Orange);
+            // targetHSV.v = v;
             this->leds[index++] = color;
             progress -= v;
         }

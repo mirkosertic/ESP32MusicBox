@@ -17,7 +17,7 @@ Button::Button(int pin, long sensitivity, ButtonHandler handler)
 bool Button::isPressed()
 {
     int input = digitalRead(pin);
-    DEBUG_VAR("Button %d status %d", this->pin, input);
+    DEBUG("Button %d status %d", this->pin, input);
     return input == HIGH;
 }
 

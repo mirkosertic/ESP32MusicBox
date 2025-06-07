@@ -7,7 +7,7 @@
 
 #include <AudioTools.h>
 #include <AudioTools/AudioCodecs/CodecMP3Helix.h>
-// #include <BluetoothA2DPSource.h>
+#include <BluetoothA2DPSource.h>
 // #include <BluetoothA2DPSink.h>
 #include <ArduinoJson.h>
 #include <Driver.h>
@@ -43,7 +43,7 @@ MediaPlayerSource source(STARTFILEPATH, MP3_FILE, true);
 I2SStream i2s;
 MP3DecoderHelix decoder;
 // BluetoothA2DPSource a2dpsource;
-// BluetoothA2DPSink a2dpsink;
+//  BluetoothA2DPSink a2dpsink;
 MediaPlayer player(source, i2s, decoder);
 
 WiFiClient wifiClient;
@@ -74,7 +74,7 @@ void wifiscannertask(void *arguments)
 
 void callbackPrintMetaData(MetaDataType type, const char *str, int len)
 {
-  INFO_VAR("Detected Metadata %s : %s", toStr(type), str);
+  INFO("Detected Metadata %s : %s", toStr(type), str);
 }
 
 int32_t callbackGetSoundData(uint8_t *data, int32_t len)
@@ -89,8 +89,9 @@ void setup()
   Serial.begin(115200);
 
   INFO("Setup started");
-  INFO_VAR("Running on Arduino : %d.%d.%d", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
-  INFO_VAR("Running on ESP IDF : %s", esp_get_idf_version());
+  INFO("Running on Arduino : %d.%d.%d", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
+  INFO("Running on ESP IDF : %s", esp_get_idf_version());
+  INFO("Free HEAP is %d", ESP.getFreeHeap());  
 
   INFO("SPIFFS init");
   if (!SPIFFS.begin(true))
@@ -104,6 +105,32 @@ void setup()
 
   INFO("LED Status display init");
   leds->begin();
+
+  // Bluetooth
+  /*INFO("Initializing Bluetooth");
+  INFO("Free HEAP is %d", ESP.getFreeHeap());
+  a2dpsource.set_local_name(app->computeTechnicalName().c_str());
+  a2dpsource.clean_last_connection();
+  a2dpsource.set_reset_ble(true);
+  a2dpsource.set_ssid_callback([](const char *ssid, esp_bd_addr_t address, int rrsi)
+                               {
+    INFO("bluetooth() - Found SSID %s with RRSI %d", ssid, rrsi);
+    return false; });
+  a2dpsource.set_discovery_mode_callback([](esp_bt_gap_discovery_state_t discoveryMode)
+                                         {
+    switch (discoveryMode)
+    {
+    case ESP_BT_GAP_DISCOVERY_STARTED:
+      INFO("bluetooth() - Discovery started");
+      break;
+    case ESP_BT_GAP_DISCOVERY_STOPPED:
+      INFO("bluetooth() - Discovery stopped");
+      break;
+    } });
+  a2dpsource.start();
+
+  INFO("Bluetooth task finished");  */
+  INFO("Free HEAP is %d", ESP.getFreeHeap());
 
   commandsHandle = xQueueCreate(10, sizeof(CommandData));
   if (commandsHandle == NULL)
@@ -199,7 +226,7 @@ void setup()
 
   player.setMetadataCallback(callbackPrintMetaData);
   decoder.driver()->setInfoCallback([](MP3FrameInfo &info, void *ref)
-                                    { INFO_VAR("Got libHelix Info %d bitrate %d bits per sample %d channels", info.bitrate, info.bitsPerSample, info.nChans); }, nullptr);
+                                    { INFO("Got libHelix Info %d bitrate %d bits per sample %d channels", info.bitrate, info.bitsPerSample, info.nChans); }, nullptr);
 
   INFO("i2c connection init");
   Wire1.begin(GPIO_WIRE_SDA, GPIO_WIRE_SCL, 100000); // Scan ok
@@ -326,8 +353,7 @@ void setup()
   // Start the physical button controller logic
   buttons->begin();
 
-  // INFO("Initializing Bluetooth");
-  //  Initialize Bluetooth connections
+  // Initialize Bluetooth connections
   // a2dpsink.set_auto_reconnect(false);
   // a2dp_sink.set_stream_reader(read_data_stream, false);
   // a2dpsink.start(app->computeTechnicalName().c_str());
@@ -346,7 +372,7 @@ void wifiConnected()
 {
   IPAddress ip = WiFi.localIP();
 
-  INFO_VAR("Connected to WiFi network. Local IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+  INFO("Connected to WiFi network. Local IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 
   if (settings.isMQTTEnabled())
   {
@@ -370,7 +396,7 @@ void wifiConnected()
                             assistant->startPipeline(true);
                         } }, [](String urlToPlay)
                      { 
-                          INFO_VAR("Playing feedback url %s", urlToPlay.c_str()); 
+                          INFO("Playing feedback url %s", urlToPlay.c_str()); 
                           player.playURL(urlToPlay, true); });
   }
 
@@ -445,7 +471,7 @@ void loop()
       if (command.command == COMMAND_PLAY_DIRECTORY)
       {
         String path(String((char *)&command.path[0]));
-        INFO_VAR("Playing %s from index %d with volume %d", path.c_str(), (int)command.index, (int)command.volume);
+        INFO("Playing %s from index %d with volume %d", path.c_str(), (int)command.index, (int)command.volume);
 
         app->setVolume(command.volume / 100.0);
 
@@ -453,12 +479,12 @@ void loop()
       }
       else
       {
-        WARN_VAR("Unknown command : %d", command.command);
+        WARN("Unknown command : %d", command.command);
       }
     }
     else
     {
-      WARN_VAR("Unknown version : %d", command.version);
+      WARN("Unknown version : %d", command.version);
     }
   }
 
