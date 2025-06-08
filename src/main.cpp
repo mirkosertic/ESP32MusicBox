@@ -7,8 +7,7 @@
 
 #include <AudioTools.h>
 #include <AudioTools/AudioCodecs/CodecMP3Helix.h>
-#include <BluetoothA2DPSource.h>
-// #include <BluetoothA2DPSink.h>
+// #include <BluetoothA2DPSource.h>
 #include <ArduinoJson.h>
 #include <Driver.h>
 #include <esp_idf_version.h>
@@ -38,28 +37,27 @@ const int HTTP_SERVER_PORT = 80;
 // IPAddress apIP(192, 168, 4, 1);
 // DNSServer dnsServer;
 
-MediaPlayerSource *source = new MediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
+MediaPlayerSource *source;
+I2SStream *i2s;
+MP3DecoderHelix *decoder;
+MediaPlayer *player;
 
-I2SStream *i2s = new I2SStream();
-MP3DecoderHelix *decoder = new MP3DecoderHelix();
-;
-// BluetoothA2DPSource a2dpsource;
-//  BluetoothA2DPSink a2dpsink;
-MediaPlayer *player = new MediaPlayer(*source, *i2s, *decoder);
-
-WiFiClient wifiClient;
-
+// BluetoothA2DPSource *a2dpsource;
 bool btspeakermode = false;
 
-Settings *settings = new Settings(&SD, CONFIGURATION_FILE, false);
+Settings *settings;
 
-TagScanner *tagscanner = new TagScanner(&Wire1, GPIO_PN532_IRQ, GPIO_PN532_RST);
-App *app = new App(tagscanner, source, player, settings, player);
-Frontend *frontend = new Frontend(&SD, app, HTTP_SERVER_PORT, MP3_FILE, settings);
-Leds *leds = new Leds(app);
-Buttons *buttons = new Buttons(app, leds);
-VoiceAssistant *assistant = new VoiceAssistant(i2s, settings);
-MQTT *mqtt = new MQTT(wifiClient, app);
+TagScanner *tagscanner;
+App *app;
+Leds *leds;
+
+// Only relevant in case of WiFi enabled
+WiFiClient *wifiClient = NULL;
+;
+Frontend *frontend = NULL;
+Buttons *buttons = NULL;
+VoiceAssistant *assistant = NULL;
+MQTT *mqtt = NULL;
 
 QueueHandle_t commandsHandle;
 
@@ -96,33 +94,25 @@ void setup()
   INFO("Running on ESP IDF : %s", esp_get_idf_version());
   INFO("Free HEAP is %d", ESP.getFreeHeap());
 
+  btspeakermode = false;
+
+  INFO("Creating core components")
+  source = new MediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
+  i2s = new I2SStream();
+  decoder = new MP3DecoderHelix();
+  player = new MediaPlayer(*source, *i2s, *decoder);
+
+  settings = new Settings(&SD, CONFIGURATION_FILE, btspeakermode);
+
+  tagscanner = new TagScanner(&Wire1, GPIO_PN532_IRQ, GPIO_PN532_RST);
+  app = new App(tagscanner, source, player, settings, player);
+  leds = new Leds(app);
+  buttons = new Buttons(app, leds);
+  INFO("Core components created. Free HEAP is %d", ESP.getFreeHeap());
+
   INFO("LED Status display init");
   leds->begin();
 
-  // Bluetooth
-  /*INFO("Initializing Bluetooth");
-  INFO("Free HEAP is %d", ESP.getFreeHeap());
-  a2dpsource.set_local_name(app->computeTechnicalName().c_str());
-  a2dpsource.clean_last_connection();
-  a2dpsource.set_reset_ble(true);
-  a2dpsource.set_ssid_callback([](const char *ssid, esp_bd_addr_t address, int rrsi)
-                               {
-    INFO("bluetooth() - Found SSID %s with RRSI %d", ssid, rrsi);
-    return false; });
-  a2dpsource.set_discovery_mode_callback([](esp_bt_gap_discovery_state_t discoveryMode)
-                                         {
-    switch (discoveryMode)
-    {
-    case ESP_BT_GAP_DISCOVERY_STARTED:
-      INFO("bluetooth() - Discovery started");
-      break;
-    case ESP_BT_GAP_DISCOVERY_STOPPED:
-      INFO("bluetooth() - Discovery stopped");
-      break;
-    } });
-  a2dpsource.start();
-
-  INFO("Bluetooth task finished");  */
   INFO("Free HEAP is %d", ESP.getFreeHeap());
 
   commandsHandle = xQueueCreate(10, sizeof(CommandData));
@@ -208,11 +198,44 @@ void setup()
 
   if (!btspeakermode)
   {
-    INFO("WiFi configuration");
+    INFO("WiFi configuration and creating networking components. Free HEAP is %d", ESP.getFreeHeap());
+    wifiClient = new WiFiClient();
+    frontend = new Frontend(&SD, app, HTTP_SERVER_PORT, MP3_FILE, settings);
+    assistant = new VoiceAssistant(i2s, settings);
+    mqtt = new MQTT(*wifiClient, app);
+
     WiFi.persistent(false);
     WiFi.mode(WIFI_STA);
     WiFi.setHostname(app->computeTechnicalName().c_str());
     WiFi.setAutoReconnect(true);
+
+    INFO("Networking initialized. Free HEAP is %d", ESP.getFreeHeap());
+  }
+  else
+  {
+    /*  INFO("Bluetooth configuration. Free HEAP is %d", ESP.getFreeHeap());
+      a2dpsource = new BluetoothA2DPSource();
+      a2dpsource->set_local_name(app->computeTechnicalName().c_str());
+      a2dpsource->clean_last_connection();
+      a2dpsource->set_reset_ble(true);
+      a2dpsource->set_ssid_callback([](const char *ssid, esp_bd_addr_t address, int rrsi)
+                                    {
+        INFO("bluetooth() - Found SSID %s with RRSI %d", ssid, rrsi);
+        return false; });
+      a2dpsource->set_discovery_mode_callback([](esp_bt_gap_discovery_state_t discoveryMode)
+                                              {
+        switch (discoveryMode)
+        {
+        case ESP_BT_GAP_DISCOVERY_STARTED:
+          INFO("bluetooth() - Discovery started");
+          break;
+        case ESP_BT_GAP_DISCOVERY_STOPPED:
+          INFO("bluetooth() - Discovery stopped");
+          break;
+        } });
+      a2dpsource->start();
+
+      INFO("Bluetooth initialized. Free HEAP is %d", ESP.getFreeHeap());*/
   }
   // WiFi.softAP(app->computeTechnicalName().c_str());
 
@@ -235,7 +258,9 @@ void setup()
     if (authenticated) 
     {
       // A tag was detected
-      mqtt->publishTagScannerInfo(tagName);
+      if (mqtt != NULL) {
+        mqtt->publishTagScannerInfo(tagName);
+      }
 
       app->setTagData(knownTag, tagName, uid, uidlength, tagdata);
 
@@ -271,7 +296,9 @@ void setup()
         String target;
         serializeJson(result, target);
 
-        mqtt->publishScannedTag(target);
+        if (mqtt != NULL) {
+          mqtt->publishScannedTag(target);
+        }
 
         leds->setState(CARD_DETECTED);
       }
@@ -282,7 +309,9 @@ void setup()
     }
     else {
       // Authentication error
-      mqtt->publishTagScannerInfo("Authentication error");
+      if (mqtt != NULL) {
+        mqtt->publishTagScannerInfo("Authentication error");
+      }
 
       app->noTagPresent();
 
@@ -290,7 +319,9 @@ void setup()
     } }, []()
                     {
     // No tag currently detected
-    mqtt->publishTagScannerInfo("");
+    if (mqtt != NULL)  {
+      mqtt->publishTagScannerInfo("");
+    }
 
     app->noTagPresent(); });
 
@@ -303,7 +334,7 @@ void setup()
                                   if (next != nullptr)
                                   {
                                     const char *songinfo = source->toStr();
-                                    if (songinfo)
+                                    if (songinfo && mqtt != NULL)
                                     {
                                       mqtt->publishCurrentSong(String(songinfo));
                                     }
@@ -317,24 +348,27 @@ void setup()
 
   app->begin([](bool active, float volume, const char *currentsong, int playProgressInPercent)
              {
-                            if (active)
-                            {
-                              mqtt->publishPlaybackState(String("Playing"));
-                            }
-                            else
-                            {
-                              mqtt->publishPlaybackState(String("Stopped"));
-                            }
+                  if (mqtt != NULL)  {
 
-                            mqtt->publishVolume(((int)(volume * 100)));
-                            if (currentsong)
-                            {
-                              mqtt->publishCurrentSong(String(currentsong));
-                            }
+                      if (active)
+                      {
+                        mqtt->publishPlaybackState(String("Playing"));
+                      }
+                      else
+                      {
+                        mqtt->publishPlaybackState(String("Stopped"));
+                      }
 
-                            mqtt->publishPlayProgress(playProgressInPercent);
+                      mqtt->publishVolume(((int)(volume * 100)));
+                      if (currentsong)
+                      {
+                        mqtt->publishCurrentSong(String(currentsong));
+                      }
+
+                      mqtt->publishPlayProgress(playProgressInPercent);
+                  }
                             
-                            app->incrementStateVersion(); });
+                  app->incrementStateVersion(); });
 
   leds->setBootProgress(80);
 
@@ -403,7 +437,7 @@ void wifiConnected()
 void loop()
 {
   // dnsServer.processNextRequest();
-  if (settings->isWiFiEnabled())
+  if (settings->isWiFiEnabled() && wifiClient != NULL)
   {
     if (WiFi.isConnected() && !app->isWifiConnected())
     {
@@ -443,7 +477,7 @@ void loop()
   // sequentially here
 
   // Record a time slice
-  if (settings->isVoiceAssistantEnabled())
+  if (settings->isVoiceAssistantEnabled() && assistant != NULL)
   {
     assistant->processAudioData();
   }

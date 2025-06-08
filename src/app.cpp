@@ -454,7 +454,7 @@ bool App::isActive()
 
 const char *App::currentTitle()
 {
-    return this->source->toStr();
+    return this->source->currentPlayFile();
 }
 
 void App::publishState()

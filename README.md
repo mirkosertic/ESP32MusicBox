@@ -34,7 +34,7 @@ Here is the wiring schematic drawing:
 Status visualization with LEDs:
 
 - Boot-Sequence - LEDs enabled step by step to visualize boot progress
-- Leds cycling in brightness - orange in case Wifi is not connected but enabled, green in case if playback paused or no playback yet
+- Leds cycling in brightness - orange in case WiFi is not connected but enabled, green in case if playback paused or no playback yet
 - Leds green from 0% to 100% filling the circle - Playback progress while playing something
 - Leds blinking red - Unknown RFID card detected
 - Leds blinking green - RFID card programmed / Known card detected
