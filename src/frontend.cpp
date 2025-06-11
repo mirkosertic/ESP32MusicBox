@@ -267,19 +267,22 @@ void Frontend::initialize()
                    {
 
       INFO("webserver() - Rendering / page");
-      /*IPAddress remote = request->client()->remoteIP();
+      IPAddress remote = request->client()->remoteIP();
 
       IPAddress apSubnet(192, 168, 4, 0);
       IPAddress apSubnetMask(255, 255, 255, 0);
       if ((remote & apSubnetMask) == (apSubnet & apSubnetMask))
       {
         INFO("Root request thru AP IP - Redirecting to configuration page");
-        AsyncWebServerResponse *response = request->beginResponse(302, "text/html");
-        response->addHeader("Cache-Control","no-cache, must-revalidate");
-        response->addHeader("Location","/settings.html");
-        request->send(response);
-        return;
-      }*/
+        CustomPsychicStreamResponse response(request, "text/html");
+        response.setCode(302);
+        response.addHeader("Cache-Control","no-cache, must-revalidate");
+        response.addHeader("Location","/settings.html");
+        response.setContentLength(0),
+
+        response.beginSend();
+        return response.endSend();
+      }
 
       unsigned int stackHighWatermark = uxTaskGetStackHighWaterMark(nullptr);
       INFO("webserver() - Free HEAP is %d, stackHighWatermark is %d", ESP.getFreeHeap(), stackHighWatermark);

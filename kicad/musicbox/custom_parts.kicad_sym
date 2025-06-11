@@ -531,7 +531,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "1"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -549,7 +549,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "3"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -567,7 +567,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "2"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -585,7 +585,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "4"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -686,7 +686,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "1"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -704,7 +704,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "2"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -722,7 +722,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "3"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -740,7 +740,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "4"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -758,7 +758,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "5"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -776,7 +776,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "6"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -794,7 +794,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "7"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -812,7 +812,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "8"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -830,7 +830,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "9"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -848,7 +848,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "10"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -866,7 +866,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "11"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -884,7 +884,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "12"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -902,7 +902,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "13"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -920,7 +920,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "14"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -938,7 +938,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "15"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -956,7 +956,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "16"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -974,7 +974,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "17"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -992,7 +992,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "18"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1010,7 +1010,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "19"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1028,7 +1028,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "20"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1046,7 +1046,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "21"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1064,7 +1064,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "22"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1082,7 +1082,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "23"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1100,7 +1100,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "24"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1118,7 +1118,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "25"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1136,7 +1136,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "26"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1154,7 +1154,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "27"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1172,7 +1172,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "28"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1190,7 +1190,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "29"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1208,7 +1208,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "30"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1226,7 +1226,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "31"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1244,7 +1244,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "32"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1262,7 +1262,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "33"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1280,7 +1280,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "34"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1298,7 +1298,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "35"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1316,7 +1316,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "36"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1334,7 +1334,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "37"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1352,7 +1352,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "38"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1432,17 +1432,25 @@
 					)
 				)
 			)
+			(text "SPK+\nSPK-\n"
+				(at 7.112 -3.302 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
 			(pin input line
 				(at -13.97 5.08 0)
 				(length 2.54)
-				(name "SD"
+				(name "LRC"
 					(effects
 						(font
 							(size 1.27 1.27)
 						)
 					)
 				)
-				(number "3"
+				(number "1"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1453,14 +1461,14 @@
 			(pin input line
 				(at -13.97 2.54 0)
 				(length 2.54)
-				(name "GAIN"
+				(name "BCLK"
 					(effects
 						(font
 							(size 1.27 1.27)
 						)
 					)
 				)
-				(number "4"
+				(number "2"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1478,7 +1486,7 @@
 						)
 					)
 				)
-				(number "5"
+				(number "3"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1489,14 +1497,14 @@
 			(pin input line
 				(at -13.97 -2.54 0)
 				(length 2.54)
-				(name "BCLK"
+				(name "GAIN"
 					(effects
 						(font
 							(size 1.27 1.27)
 						)
 					)
 				)
-				(number "6"
+				(number "4"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1507,14 +1515,14 @@
 			(pin input line
 				(at -13.97 -5.08 0)
 				(length 2.54)
-				(name "LRC"
+				(name "SD"
 					(effects
 						(font
 							(size 1.27 1.27)
 						)
 					)
 				)
-				(number "7"
+				(number "5"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1532,7 +1540,7 @@
 						)
 					)
 				)
-				(number "1"
+				(number "7"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1550,43 +1558,7 @@
 						)
 					)
 				)
-				(number "2"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-			)
-			(pin output line
-				(at 13.97 -1.27 180)
-				(length 2.54)
-				(name "SPK+"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(number ""
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-			)
-			(pin output line
-				(at 13.97 -3.81 180)
-				(length 2.54)
-				(name "SPK-"
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(number ""
+				(number "6"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1676,7 +1648,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "2"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1694,7 +1666,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "3"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1712,7 +1684,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "4"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1723,14 +1695,14 @@
 			(pin input line
 				(at -12.7 -3.81 0)
 				(length 2.54)
-				(name "RST0"
+				(name "RST"
 					(effects
 						(font
 							(size 1.27 1.27)
 						)
 					)
 				)
-				(number ""
+				(number "5"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1748,7 +1720,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "1"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1766,7 +1738,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "6"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1856,7 +1828,7 @@
 						)
 					)
 				)
-				(number "1"
+				(number "2"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1874,7 +1846,7 @@
 						)
 					)
 				)
-				(number "2"
+				(number "4"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1910,7 +1882,7 @@
 						)
 					)
 				)
-				(number "4"
+				(number "5"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1928,7 +1900,7 @@
 						)
 					)
 				)
-				(number "5"
+				(number "1"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -2055,7 +2027,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "1"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -2073,7 +2045,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "2"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -2163,7 +2135,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "1"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -2181,7 +2153,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "2"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -2199,7 +2171,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "3"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -2217,7 +2189,7 @@
 						)
 					)
 				)
-				(number ""
+				(number "4"
 					(effects
 						(font
 							(size 1.27 1.27)
