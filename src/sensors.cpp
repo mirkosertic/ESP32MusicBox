@@ -1,23 +1,26 @@
-#include "buttons.h"
+#include "sensors.h"
 
 #include "logging.h"
 #include "pins.h"
 
-void buttonsdelegate(void *arguments)
+void sensorsdelegate(void *arguments)
 {
-    INFO("Buttons task started");
-    Buttons *buttons = (Buttons *)arguments;
+    INFO("Sensors task started");
+    Sensors *sensors = (Sensors *)arguments;
     while (true)
     {
-        buttons->loop();
+        sensors->loop();
         delay(15);
     }
 }
 
-Buttons::Buttons(App *app, Leds *leds)
+Sensors::Sensors(App *app, Leds *leds)
 {
     this->app = app;
     this->leds = leds;
+
+    pinMode(GPIO_VOLTAGE_MEASURE, INPUT);    
+
     this->startstop = new Button(GPIO_STARTSTOP, 300, [this](ButtonAction action)
                                  {
         if (action == PRESSED)
@@ -67,27 +70,34 @@ Buttons::Buttons(App *app, Leds *leds)
         } });
 }
 
-Buttons::~Buttons()
+Sensors::~Sensors()
 {
     delete this->prev;
     delete this->next;
     delete this->startstop;
 }
 
-void Buttons::begin()
+void Sensors::begin()
 {
     // Start the loop as a separate task running in the background
-    xTaskCreate(buttonsdelegate, "Buttons", 8192, this, 2, NULL);
+    xTaskCreate(sensorsdelegate, "Sensors", 8192, this, 2, NULL);
 }
 
-void Buttons::loop()
+void Sensors::loop()
 {
     this->prev->loop();
     this->next->loop();
     this->startstop->loop();
 }
 
-bool Buttons::isStartStopPressed()
+bool Sensors::isStartStopPressed()
 {
     return this->startstop->isPressed();
+}
+
+int Sensors::getBatteryVoltage()
+{
+    int value = analogRead(GPIO_VOLTAGE_MEASURE);
+    DEBUG("Battery voltage ADC is %d", value);
+    return (int)(value / 4096.0 * 7.445);
 }

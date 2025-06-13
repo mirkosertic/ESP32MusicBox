@@ -7,7 +7,7 @@
 
 #include <AudioTools.h>
 #include <AudioTools/AudioCodecs/CodecMP3Helix.h>
-// #include <BluetoothA2DPSource.h>
+#include <BluetoothA2DPSource.h>
 #include <ArduinoJson.h>
 #include <Driver.h>
 #include <esp_idf_version.h>
@@ -23,11 +23,11 @@
 #include "mediaplayer.h"
 #include "mediaplayersource.h"
 #include "commands.h"
-#include "buttons.h"
 #include "logging.h"
 #include "voiceassistant.h"
 #include "pins.h"
 #include "leds.h"
+#include "sensors.h"
 
 const char *CONFIGURATION_FILE = "/configuration.json";
 const char *STARTFILEPATH = "/";
@@ -50,12 +50,11 @@ Settings *settings;
 TagScanner *tagscanner;
 App *app;
 Leds *leds;
+Sensors *sensors = NULL;
 
 // Only relevant in case of WiFi enabled
 WiFiClient *wifiClient = NULL;
-;
 Frontend *frontend = NULL;
-Buttons *buttons = NULL;
 VoiceAssistant *assistant = NULL;
 MQTT *mqtt = NULL;
 
@@ -107,7 +106,7 @@ void setup()
   tagscanner = new TagScanner(&Wire1, GPIO_PN532_IRQ, GPIO_PN532_RST);
   app = new App(tagscanner, source, player, settings, player);
   leds = new Leds(app);
-  buttons = new Buttons(app, leds);
+  sensors = new Sensors(app, leds);
   INFO("Core components created. Free HEAP is %d", ESP.getFreeHeap());
 
   INFO("LED Status display init");
@@ -187,7 +186,7 @@ void setup()
   }
   else
   {
-    if (buttons->isStartStopPressed())
+    if (sensors->isStartStopPressed())
     {
       settings->resetStoredBSSID();
     }
@@ -366,6 +365,8 @@ void setup()
                       }
 
                       mqtt->publishPlayProgress(playProgressInPercent);
+
+                      mqtt->publishBatteryVoltage(sensors->getBatteryVoltage());
                   }
                             
                   app->incrementStateVersion(); });
@@ -381,7 +382,7 @@ void setup()
   player->setVolume(0.6);
 
   // Start the physical button controller logic
-  buttons->begin();
+  sensors->begin();
 
   // Initialize Bluetooth connections
   // a2dpsink.set_auto_reconnect(false);
@@ -486,7 +487,7 @@ void loop()
   app->loop();
 
   // Check for button input
-  buttons->loop();
+  sensors->loop();
 
   // Check if there is a command in the command queue
   CommandData command;

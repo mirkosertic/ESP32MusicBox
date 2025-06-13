@@ -1,11 +1,11 @@
-#ifndef BUTTONS_H
-#define BUTTONS_H
+#ifndef SENSORS_H
+#define SENSORS_H
 
 #include "app.h"
 #include "button.h"
 #include "leds.h"
 
-class Buttons
+class Sensors
 {
 private:
     App *app;
@@ -15,14 +15,16 @@ private:
     Button *startstop;
 
 public:
-    Buttons(App *app, Leds *leds);
-    ~Buttons();
+    Sensors(App *app, Leds *leds);
+    ~Sensors();
 
     void begin();
 
     void loop();
 
     bool isStartStopPressed();
+
+    int getBatteryVoltage();    
 };
 
 #endif

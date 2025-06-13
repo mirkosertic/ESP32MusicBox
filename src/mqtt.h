@@ -28,6 +28,7 @@ private:
     String playbackstatetopic;
     String volumestatetopic;
     String playprogressstatetopic;
+    String voltagetopic;
 
     String wifiqualitytopic;
 
@@ -66,6 +67,8 @@ public:
     void publishWiFiQuality(int rssi);
 
     void publishPlayProgress(int progressInPercent);
+
+    void publishBatteryVoltage(int voltage);
 };
 
 #endif

@@ -1,7 +1,11 @@
 .pio
 .vscode
 config/secrets.ini
-kicad/musicbox/musicbox-backups/*
-kicad/musicbox/*.lck
-kicad/musicbox/*.bak
-kicad/musicbox/fp-info-cache
+kicad/esp32_devkit/musicbox-backups/*
+kicad/esp32_devkit/*.lck
+kicad/esp32_devkit/*.bak
+kicad/esp32_devkit/fp-info-cache
+kicad/lolin_d32_pro/musicbox-backups/*
+kicad/lolin_d32_pro/*.lck
+kicad/lolin_d32_pro/*.bak
+kicad/lolin_d32_pro/fp-info-cache

@@ -131,6 +131,8 @@ void MQTT::performAutoDiscovery()
     this->wifiqualitytopic = this->announceSensor("wifiquality", "WiFi Quality", "mdi:wifi", "SIGNAL_STRENGTH", "dBm");
 
     this->playprogressstatetopic = this->announceSensor("playprogress", "Play progress", "mdi:progress-clock", "", "%");
+
+    this->voltagetopic = this->announceSensor("vcc", "Battery status", "mdi:car-battery", "VOLTAGE", "mV");
 }
 
 String MQTT::announceButton(String buttonId, String title, String icon, const std::function<void()> &clickHandler)
@@ -351,4 +353,9 @@ void MQTT::publishWiFiQuality(int rssi)
 void MQTT::publishPlayProgress(int progressInPercent)
 {
     this->publish(this->playprogressstatetopic, String(progressInPercent));
+}
+
+void MQTT::publishBatteryVoltage(int voltage)
+{
+    this->publish(this->voltagetopic, String(voltage));
 }
