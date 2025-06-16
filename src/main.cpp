@@ -42,8 +42,8 @@ I2SStream *i2s;
 MP3DecoderHelix *decoder;
 MediaPlayer *player;
 
-// BluetoothA2DPSource *a2dpsource;
-bool btspeakermode = false;
+BluetoothA2DPSource *a2dpsource;
+bool btspeakermode = true;
 
 Settings *settings;
 
@@ -93,7 +93,40 @@ void setup()
   INFO("Running on ESP IDF : %s", esp_get_idf_version());
   INFO("Free HEAP is %d", ESP.getFreeHeap());
 
-  btspeakermode = false;
+  INFO("I2C connection init");
+  if (!Wire1.begin(GPIO_WIRE_SDA, GPIO_WIRE_SCL, 100000))
+  {
+    WARN("I2C initialization failed!");
+    while (true)
+      ;
+  }
+
+  int nDevices;
+
+  INFO("Scanning I2C devices");
+
+  nDevices = 0;
+  for (byte address = 1; address < 127; address++)
+  {
+    // The i2c_scanner uses the return value of
+    // the Write.endTransmisstion to see if
+    // a device did acknowledge to the address.
+    Wire1.beginTransmission(address);
+    byte error = Wire1.endTransmission();
+
+    if (error == 0)
+    {
+      INFO("Found device at 0x%02X", address);
+
+      nDevices++;
+    }
+    else if (error == 4)
+    {
+      INFO("Unknown error at 0x%02X", address);
+    }
+  }
+
+  INFO("Scan done, %d devices found", nDevices);
 
   INFO("Creating core components")
   source = new MediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
@@ -165,7 +198,7 @@ void setup()
   // spi.begin(GPIO_SPI_SCK, GPIO_SPI_MISO, GPIO_SPI_MOSI, GPIO_SPI_SS);
 
   // if (!SD.begin(GPIO_SPI_SS, spi))
-  if (!SD.begin(GPIO_SPI_SS, SPI))
+  if (!SD.begin(GPIO_SPI_SS))
   {
     WARN("Could not enable SD-Card over SPI!");
     while (true)
@@ -200,7 +233,11 @@ void setup()
     INFO("WiFi configuration and creating networking components. Free HEAP is %d", ESP.getFreeHeap());
     wifiClient = new WiFiClient();
     frontend = new Frontend(&SD, app, HTTP_SERVER_PORT, MP3_FILE, settings);
-    assistant = new VoiceAssistant(i2s, settings);
+    if (settings->isVoiceAssistantEnabled())
+    {
+      INFO("Initializing voice assistant client. Free HEAP is %d", ESP.getFreeHeap());
+      assistant = new VoiceAssistant(i2s, settings);
+    }
     mqtt = new MQTT(*wifiClient, app);
 
     WiFi.persistent(false);
@@ -212,29 +249,30 @@ void setup()
   }
   else
   {
-    /*  INFO("Bluetooth configuration. Free HEAP is %d", ESP.getFreeHeap());
-      a2dpsource = new BluetoothA2DPSource();
-      a2dpsource->set_local_name(app->computeTechnicalName().c_str());
-      a2dpsource->clean_last_connection();
-      a2dpsource->set_reset_ble(true);
-      a2dpsource->set_ssid_callback([](const char *ssid, esp_bd_addr_t address, int rrsi)
-                                    {
-        INFO("bluetooth() - Found SSID %s with RRSI %d", ssid, rrsi);
-        return false; });
-      a2dpsource->set_discovery_mode_callback([](esp_bt_gap_discovery_state_t discoveryMode)
-                                              {
-        switch (discoveryMode)
-        {
-        case ESP_BT_GAP_DISCOVERY_STARTED:
-          INFO("bluetooth() - Discovery started");
-          break;
-        case ESP_BT_GAP_DISCOVERY_STOPPED:
-          INFO("bluetooth() - Discovery stopped");
-          break;
-        } });
-      a2dpsource->start();
+    INFO("Bluetooth configuration. Free HEAP is %d", ESP.getFreeHeap());
+    a2dpsource = new BluetoothA2DPSource();
+    a2dpsource->set_local_name(app->computeTechnicalName().c_str());
+    a2dpsource->clean_last_connection();
+    a2dpsource->set_reset_ble(true);
+    a2dpsource->set_ssid_callback([](const char *ssid, esp_bd_addr_t address, int rrsi)
+                                  {
+      INFO("bluetooth() - Found SSID %s with RRSI %d", ssid, rrsi);
+      return false; });
+    a2dpsource->set_discovery_mode_callback([](esp_bt_gap_discovery_state_t discoveryMode)
+                                            {
+      switch (discoveryMode)
+      {
+      case ESP_BT_GAP_DISCOVERY_STARTED:
+        INFO("bluetooth() - Discovery started");
+        break;
+      case ESP_BT_GAP_DISCOVERY_STOPPED:
+        INFO("bluetooth() - Discovery stopped");
+        break;
+      } });
 
-      INFO("Bluetooth initialized. Free HEAP is %d", ESP.getFreeHeap());*/
+    a2dpsource->start();
+
+    INFO("Bluetooth initialized. Free HEAP is %d", ESP.getFreeHeap());
   }
   // WiFi.softAP(app->computeTechnicalName().c_str());
 
@@ -245,9 +283,6 @@ void setup()
   player->setMetadataCallback(callbackPrintMetaData);
   decoder->driver()->setInfoCallback([](MP3FrameInfo &info, void *ref)
                                      { INFO("Got libHelix Info %d bitrate %d bits per sample %d channels", info.bitrate, info.bitsPerSample, info.nChans); }, nullptr);
-
-  INFO("i2c connection init");
-  Wire1.begin(GPIO_WIRE_SDA, GPIO_WIRE_SCL, 100000); // Scan ok
 
   leds->setBootProgress(60);
 

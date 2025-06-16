@@ -89,7 +89,7 @@ TagData::TagData(const TagData &source)
 TagScanner::TagScanner(TwoWire *wire, uint8_t irq, uint8_t reset)
 {
     this->wire = wire;
-    this->pn532 = new Adafruit_PN532(irq, reset, &Wire1);
+    this->pn532 = new Adafruit_PN532(irq, reset, wire);
     this->tagPresent = false;
     this->currentTagName = "";
 

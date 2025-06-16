@@ -98,6 +98,6 @@ bool Sensors::isStartStopPressed()
 int Sensors::getBatteryVoltage()
 {
     int value = analogRead(GPIO_VOLTAGE_MEASURE);
-    DEBUG("Battery voltage ADC is %d", value);
+    INFO("Battery voltage ADC is %d", value);
     return (int)(value / 4096.0 * 7.445);
 }
