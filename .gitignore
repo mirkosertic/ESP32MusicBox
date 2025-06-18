@@ -3,6 +3,8 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+sdkconfig.*
+!sdkconfig.defaults
 config/secrets.ini
 kicad/esp32_devkit/musicbox-backups/*
 kicad/esp32_devkit/*.lck
@@ -12,3 +14,4 @@ kicad/lolin_d32_pro/musicbox-backups/*
 kicad/lolin_d32_pro/*.lck
 kicad/lolin_d32_pro/*.bak
 kicad/lolin_d32_pro/fp-info-cache
+

@@ -201,7 +201,7 @@ void TagScanner::scan()
                         this->pn532->PrintHexChar(&data[16], 16);
                         this->pn532->PrintHexChar(&data[32], 16);
 
-                        memcpy(&tagdata, &data[0], 48);
+                        memcpy((uint8_t *)&tagdata, (uint8_t *)&data[0], 48);
 
                         if (validateDataPacket(tagdata))
                         {
@@ -308,8 +308,8 @@ void TagScanner::begin(TagDetectedCallback callback, NoTagCallback noTagCallback
         while (true)
             ;
     }
-    INFO("Chip PN5 is %d", (versiondata >> 24) & 0xFF);
-    INFO("Firmware ver. %d.%d", (versiondata >> 16) & 0xFF, (versiondata >> 8) & 0xFF);
+    INFO("Chip PN5 is %lu", (versiondata >> 24) & 0xFF);
+    INFO("Firmware ver. %lu.%lu", (versiondata >> 16) & 0xFF, (versiondata >> 8) & 0xFF);
     this->pn532->SAMConfig();
 
     xTaskCreate(scandispatcher, "NFC Scanner", 4096, this, 5, NULL);

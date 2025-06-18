@@ -42,6 +42,10 @@ I2SStream *i2s;
 MP3DecoderHelix *decoder;
 MediaPlayer *player;
 
+// Setup of synchronized buffer
+BufferRTOS<uint8_t> buffer(0);
+QueueStream<uint8_t> out(buffer);
+
 BluetoothA2DPSource *a2dpsource;
 bool btspeakermode = true;
 
@@ -79,9 +83,15 @@ void callbackPrintMetaData(MetaDataType type, const char *str, int len)
 
 int32_t callbackGetSoundData(uint8_t *data, int32_t len)
 {
-  // generate your sound data
-  // return the effective length in bytes
-  return 0;
+  if (buffer.available() < len)
+  {
+    // Need more data
+    return 0;
+  }
+  DEBUG("Requesting %d bytes for Bluetooth", len);
+  size_t result_bytes = buffer.readArray(data, len);
+  DEBUG("Transfering %d bytes over Bluetooth, requested were %d", result_bytes, len);
+  return result_bytes;
 }
 
 void setup()
@@ -91,7 +101,10 @@ void setup()
   INFO("Setup started");
   INFO("Running on Arduino : %d.%d.%d", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
   INFO("Running on ESP IDF : %s", esp_get_idf_version());
-  INFO("Free HEAP is %d", ESP.getFreeHeap());
+  INFO("Max  HEAP  is %d", ESP.getHeapSize());
+  INFO("Free HEAP  is %d", ESP.getFreeHeap());
+  INFO("Max  PSRAM is %d", ESP.getPsramSize());
+  INFO("Free PSRAM is %d", ESP.getFreePsram());
 
   INFO("I2C connection init");
   if (!Wire1.begin(GPIO_WIRE_SDA, GPIO_WIRE_SCL, 100000))
@@ -132,13 +145,29 @@ void setup()
   source = new MediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
   i2s = new I2SStream();
   decoder = new MP3DecoderHelix();
-  player = new MediaPlayer(*source, *i2s, *decoder);
+
+  // TODO: Toggle BT Speaker mode on startup by pressed buttons
+
+  if (!btspeakermode)
+  {
+    INFO("Using I2S for sound output");
+    player = new MediaPlayer(*source, *i2s, *decoder);
+  }
+  else
+  {
+    INFO("Using A2DP for sound output");
+    player = new MediaPlayer(*source, out, *decoder);
+
+    // Inform the player what to output
+    AudioInfo info(44100, 2, 16);
+    player->setAudioInfo(info);
+  }
 
   settings = new Settings(&SD, CONFIGURATION_FILE, btspeakermode);
 
   tagscanner = new TagScanner(&Wire1, GPIO_PN532_IRQ, GPIO_PN532_RST);
   app = new App(tagscanner, source, player, settings, player);
-  leds = new Leds(app);
+  leds = new Leds(app, btspeakermode);
   sensors = new Sensors(app, leds);
   INFO("Core components created. Free HEAP is %d", ESP.getFreeHeap());
 
@@ -249,14 +278,24 @@ void setup()
   }
   else
   {
+    INFO("Bluetooth initializing buffers. Free HEAP is %d", ESP.getFreeHeap());
+
+    buffer.resize(5 * 1024);
+
     INFO("Bluetooth configuration. Free HEAP is %d", ESP.getFreeHeap());
+
     a2dpsource = new BluetoothA2DPSource();
     a2dpsource->set_local_name(app->computeTechnicalName().c_str());
     a2dpsource->clean_last_connection();
     a2dpsource->set_reset_ble(true);
+    a2dpsource->set_auto_reconnect(false);
     a2dpsource->set_ssid_callback([](const char *ssid, esp_bd_addr_t address, int rrsi)
                                   {
       INFO("bluetooth() - Found SSID %s with RRSI %d", ssid, rrsi);
+      if (String(ssid).startsWith("iClever-")) {
+        INFO("bluetooth() - Candidate for pairing found!");
+        return true;
+      }
       return false; });
     a2dpsource->set_discovery_mode_callback([](esp_bt_gap_discovery_state_t discoveryMode)
                                             {
@@ -269,8 +308,29 @@ void setup()
         INFO("bluetooth() - Discovery stopped");
         break;
       } });
-
+    a2dpsource->set_data_callback(callbackGetSoundData);
+    a2dpsource->set_on_connection_state_changed([](esp_a2d_connection_state_t state, void *obj)
+                                                {
+      switch (state)
+      {
+        case ESP_A2D_CONNECTION_STATE_DISCONNECTED:
+          INFO("bluetooth() - DISCONNECTED");
+          break;
+        case ESP_A2D_CONNECTION_STATE_CONNECTING:
+          INFO("bluetooth() - CONNECTING");
+          break;
+        case ESP_A2D_CONNECTION_STATE_CONNECTED:
+          INFO("bluetooth() - CONNECTED");
+          leds->setState(BTCONNECTED);
+          break;
+        case ESP_A2D_CONNECTION_STATE_DISCONNECTING:
+          INFO("bluetooth() - DISCONNECTING");
+          break;
+      } }, NULL);
     a2dpsource->start();
+
+    // Start output when buffer is 95% full
+    out.begin(95);
 
     INFO("Bluetooth initialized. Free HEAP is %d", ESP.getFreeHeap());
   }
@@ -419,15 +479,14 @@ void setup()
   // Start the physical button controller logic
   sensors->begin();
 
-  // Initialize Bluetooth connections
-  // a2dpsink.set_auto_reconnect(false);
-  // a2dp_sink.set_stream_reader(read_data_stream, false);
-  // a2dpsink.start(app->computeTechnicalName().c_str());
-
   // Boot complete
   leds->setBootProgress(100);
 
-  INFO("Init finished. Free HEAP is %d", ESP.getFreeHeap());
+  INFO("Init finished.");
+  INFO("Max  HEAP  is %d", ESP.getHeapSize());
+  INFO("Free HEAP  is %d", ESP.getFreeHeap());
+  INFO("Max  PSRAM is %d", ESP.getPsramSize());
+  INFO("Free PSRAM is %d", ESP.getFreePsram());
 
   leds->setState(PLAYER_STATUS);
 
@@ -467,7 +526,12 @@ void wifiConnected()
   }
 
   leds->setState(PLAYER_STATUS);
+
   INFO("Init done");
+  INFO("Max  HEAP  is %d", ESP.getHeapSize());
+  INFO("Free HEAP  is %d", ESP.getFreeHeap());
+  INFO("Max  PSRAM is %d", ESP.getPsramSize());
+  INFO("Free PSRAM is %d", ESP.getFreePsram());
 }
 
 void loop()
@@ -537,9 +601,11 @@ void loop()
       if (command.command == COMMAND_PLAY_DIRECTORY)
       {
         String path(String((char *)&command.path[0]));
-        INFO("Playing %s from index %d with volume %d", path.c_str(), (int)command.index, (int)command.volume);
+        // In BT Mode we always play with 100% volume, as the volume is controlled by the headphones
+        int volume = btspeakermode ? 100 : (int)command.volume;
+        INFO("Playing %s from index %d with volume %d", path.c_str(), (int)command.index, volume);
 
-        app->setVolume(command.volume / 100.0);
+        app->setVolume(volume / 100.0);
 
         app->play(path, command.index);
       }

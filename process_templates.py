@@ -24,6 +24,7 @@ OUTPUT_PATH = (
 output_file = os.path.join(OUTPUT_PATH, "generated_html_templates.h")
 
 def before_build():
+    print("GENERATING HTML TEMPLATE HEADER FILES")
     if not os.path.exists(OUTPUT_PATH):
         os.makedirs(OUTPUT_PATH)
     process_templates(templates_dir, output_file)

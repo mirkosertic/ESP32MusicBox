@@ -126,7 +126,7 @@ void VoiceAssistant::webSocketEvent(WStype_t type, uint8_t *payload, size_t leng
     DeserializationError error = deserializeJson(doc, payload);
     if (error)
     {
-      WARN("Failed to parse: %s with %s", payload, error.f_str());
+      WARN("Failed to parse: %s with %s", payload, error.c_str());
     }
     else
     {
@@ -489,7 +489,7 @@ void VoiceAssistant::finishAudioStream()
     transferbuffer[0] = this->binaryHandler;
 
     this->webSocket->sendBIN(&transferbuffer[0], 1);
-    this->state == TTSFINISHED;
+    this->state = TTSFINISHED;
   }
   else
   {

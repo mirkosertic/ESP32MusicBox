@@ -13,10 +13,11 @@ This project provides an ESP32 based music box with the following features:
 * Web-based user interface
 * Integrated into your local network with SSDP / mDNS protocol
 * WebDAV support for file / content management
+* Optional Bluetooth A2DP output
 
 ## Supported hardware
 
-* ESP32 (tested with ESP32 DevKit C)
+* ESP32 (tested with ESP32 DevKit C, Lolin D32 Pro with PSRAM recommended)
 * PN532 RFID Reader (i2c-Mode)
 * SDCard Reader (SPI-Mode)
 * NeoPixel / WS2812 based LEDs for status visualization

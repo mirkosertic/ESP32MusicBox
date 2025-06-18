@@ -20,7 +20,7 @@ MQTT::~MQTT()
 void MQTT::begin(String host, int port, String username, String password)
 {
     this->clientid = app->computeTechnicalName();
-    INFO("Connecting to %s:%d as client %s", host, port, this->clientid.c_str());
+    INFO("Connecting to %s:%d as client %s", host.c_str(), port, this->clientid.c_str());
     this->host = host;
     this->port = port;
     this->username = username;
@@ -103,7 +103,7 @@ void MQTT::performAutoDiscovery()
                                                   {
                                                     INFO("Got new volume as String %s", newvalue.c_str());
                                                     long volume = newvalue.toInt();
-                                                    INFO("New volume as number is %d", volume);
+                                                    INFO("New volume as number is %ld", volume);
                                                     if (volume != 0)
                                                     {
                                                         this->app->setVolume(volume / 100.0); 

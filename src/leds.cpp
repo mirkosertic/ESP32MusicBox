@@ -9,9 +9,10 @@ DEFINE_GRADIENT_PALETTE(volume_heatmap){
     224, 0, 255, 0,
     224, 255, 0, 0};
 
-Leds::Leds(App *app)
+Leds::Leds(App *app, bool btspeakermode)
 {
     this->app = app;
+    this->btspeakermode = btspeakermode;
     for (int i = 0; i < NUM_LEDS; i++)
     {
         this->leds[i] = CRGB::Black;
@@ -59,7 +60,7 @@ void Leds::renderPlayerStatusIdle()
     CRGB color;
     if (this->app->isWifiConnected() || !this->app->isWifiEnabled())
     {
-        color = CRGB::Green;
+        color = this->btspeakermode ? CRGB::Blue : CRGB::Green;
     }
     else
     {
@@ -174,6 +175,36 @@ void Leds::renderCardDetected()
     }
 }
 
+void Leds::renderBTConnected()
+{
+    long now = millis();
+    if (now - this->lastStateTime > 1000)
+    {
+        // After one second inactivity / animation we jump back to the regular status indication
+        this->state = PLAYER_STATUS;
+        INFO("Switching state to PLAYER_STATUS");
+    }
+    else
+    {
+        // Blue blinking
+        int framepos = this->framecounter % 10;
+        for (int i = 0; i < NUM_LEDS; i++)
+        {
+            this->leds[i] = CRGB::Black;
+        }
+        if (framepos > 5)
+        {
+            CHSV targetHSV = rgb2hsv_approximate(CRGB::Blue);
+            targetHSV.v = 80;
+            for (int i = 0; i < NUM_LEDS; i++)
+            {
+                this->leds[i] = targetHSV;
+            }
+        }
+        FastLED.show();
+    }
+}
+
 void Leds::renderVolumeChange()
 {
     long now = millis();
@@ -237,6 +268,10 @@ void Leds::loop()
         else if (this->state == CARD_DETECTED)
         {
             this->renderCardDetected();
+        }
+        else if (this->state == BTCONNECTED)
+        {
+            this->renderBTConnected();
         }
         else if (this->state == VOLUME_CHANGE)
         {

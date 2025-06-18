@@ -12,7 +12,6 @@ class MediaPlayer : public AudioPlayer
 {
 private:
     MediaPlayerSource *source;
-    AudioStream *output;
 
     MP3DecoderHelix *overrideHelix;
     FormatConverterStream *overrideFormatConverter;
@@ -24,7 +23,7 @@ private:
     int indexBeforeOverride;
 
 public:
-    MediaPlayer(MediaPlayerSource &source, AudioStream &output, AudioDecoder &decoder);
+    MediaPlayer(MediaPlayerSource &source, Print &output, AudioDecoder &decoder);
 
     virtual bool setVolume(float volume) override;
 

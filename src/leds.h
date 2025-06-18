@@ -11,7 +11,8 @@ enum LEDState
     PLAYER_STATUS,
     CARD_ERROR,
     CARD_DETECTED,
-    VOLUME_CHANGE
+    VOLUME_CHANGE,
+    BTCONNECTED
 };
 
 class Leds
@@ -23,15 +24,17 @@ private:
     long lastStateTime;
     long lastLoopTime;
     int framecounter;
+    bool btspeakermode;
 
     void renderPlayerStatusIdle();
     void renderPlayerStatusPlaying();
     void renderCardError();
     void renderCardDetected();
     void renderVolumeChange();
+    void renderBTConnected();
 
 public:
-    Leds(App *app);
+    Leds(App *app, bool btspeakermode);
 
     void begin();
 
