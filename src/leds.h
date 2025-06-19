@@ -24,7 +24,8 @@ private:
     long lastStateTime;
     long lastLoopTime;
     int framecounter;
-    bool btspeakermode;
+
+    bool btspeakerconnected;
 
     void renderPlayerStatusIdle();
     void renderPlayerStatusPlaying();
@@ -34,7 +35,7 @@ private:
     void renderBTConnected();
 
 public:
-    Leds(App *app, bool btspeakermode);
+    Leds(App *app);
 
     void begin();
 
@@ -43,6 +44,8 @@ public:
     void setBootProgress(int percent);
 
     void loop();
+
+    void setBluetoothSpeakerConnected(bool value = true);
 };
 
 #endif

@@ -24,6 +24,8 @@ App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player,
     this->settings = settings;
 
     this->volume = 1.0f;
+
+    this->btspeakerconnected = false;
 }
 
 App::~App()
@@ -529,4 +531,14 @@ void App::play(String path, int index)
 int App::playProgressInPercent()
 {
     return this->source->playProgressInPercent();
+}
+
+void App::setBluetoothSpeakerConnected(bool value)
+{
+    this->btspeakerconnected = value;
+}
+
+bool App::isBluetoothSpeakerConnected()
+{
+    return this->btspeakerconnected;
 }

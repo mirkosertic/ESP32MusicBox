@@ -26,10 +26,8 @@ private:
     int voice_port = VOICE_PORT;
     String voice_token = VOICE_TOKEN;
 
-    bool btmode;
-
 public:
-    Settings(FS *fs, String configurationfilename, bool btmode);
+    Settings(FS *fs, String configurationfilename);
 
     bool readFromConfig();
     bool writeToConfig();

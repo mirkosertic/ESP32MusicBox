@@ -9,10 +9,10 @@ DEFINE_GRADIENT_PALETTE(volume_heatmap){
     224, 0, 255, 0,
     224, 255, 0, 0};
 
-Leds::Leds(App *app, bool btspeakermode)
+Leds::Leds(App *app)
 {
     this->app = app;
-    this->btspeakermode = btspeakermode;
+    this->btspeakerconnected = false;
     for (int i = 0; i < NUM_LEDS; i++)
     {
         this->leds[i] = CRGB::Black;
@@ -60,7 +60,7 @@ void Leds::renderPlayerStatusIdle()
     CRGB color;
     if (this->app->isWifiConnected() || !this->app->isWifiEnabled())
     {
-        color = this->btspeakermode ? CRGB::Blue : CRGB::Green;
+        color = this->btspeakerconnected ? CRGB::Blue : CRGB::Green;
     }
     else
     {
@@ -105,7 +105,7 @@ void Leds::renderPlayerStatusPlaying()
     while (progress > 0)
     {
         int v = min(maxbrightness, progress);
-        CHSV targetHSV = rgb2hsv_approximate(CRGB::Green);
+        CHSV targetHSV = rgb2hsv_approximate(this->btspeakerconnected ? CRGB::Blue : CRGB::Green);
         targetHSV.v = v;
         this->leds[index++] = targetHSV;
         progress -= v;
@@ -178,7 +178,7 @@ void Leds::renderCardDetected()
 void Leds::renderBTConnected()
 {
     long now = millis();
-    if (now - this->lastStateTime > 1000)
+    if (now - this->lastStateTime > 2000)
     {
         // After one second inactivity / animation we jump back to the regular status indication
         this->state = PLAYER_STATUS;
@@ -289,4 +289,9 @@ void Leds::loop()
             }
         }
     }
+}
+
+void Leds::setBluetoothSpeakerConnected(bool value)
+{
+    this->btspeakerconnected = value;
 }

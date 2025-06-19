@@ -53,6 +53,8 @@ private:
 
     WiFiUDP *udp;
 
+    bool btspeakerconnected;
+
 public:
     App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport);
 
@@ -145,6 +147,10 @@ public:
     void next();
 
     void play(String path, int index);
+
+    void setBluetoothSpeakerConnected(bool value = true);
+
+    bool isBluetoothSpeakerConnected();
 };
 
 #endif
