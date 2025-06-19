@@ -306,8 +306,8 @@ void setup()
         INFO("bluetooth() - CONNECTED. Sending player output to Bluetooth device");
         leds->setState(BTCONNECTED);
         player->setOutput(out);
-        // Bluetooth Playback is always 100%
-        player->setVolume(1.0);
+        // Bluetooth Playback is always 70%
+        player->setVolume(0.7);
         app->setBluetoothSpeakerConnected();
         leds->setBluetoothSpeakerConnected();
         break;
