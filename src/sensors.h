@@ -24,7 +24,11 @@ public:
 
     bool isStartStopPressed();
 
-    int getBatteryVoltage();    
+    bool isPreviousPressed();
+
+    bool isNextPressed();
+
+    int getBatteryVoltage();
 };
 
 #endif

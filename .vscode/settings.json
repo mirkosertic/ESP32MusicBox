@@ -60,6 +60,7 @@
         "thread": "cpp",
         "cinttypes": "cpp",
         "set": "cpp",
-        "csignal": "cpp"
+        "csignal": "cpp",
+        "future": "cpp"
     }
 }

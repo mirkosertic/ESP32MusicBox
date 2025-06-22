@@ -19,7 +19,7 @@ Sensors::Sensors(App *app, Leds *leds)
     this->app = app;
     this->leds = leds;
 
-    pinMode(GPIO_VOLTAGE_MEASURE, INPUT);    
+    pinMode(GPIO_VOLTAGE_MEASURE, INPUT);
 
     this->startstop = new Button(GPIO_STARTSTOP, 300, [this](ButtonAction action)
                                  {
@@ -38,14 +38,10 @@ Sensors::Sensors(App *app, Leds *leds)
         }
         if (action == PRESSED_FOR_LONG_TIME)
         {   
-            float volume = this->app->getVolume();
-            if (volume >= 0.02) 
+            if (this->app->volumeDown())
             {
                 INFO("Decrementing volume");
                 this->leds->setState(VOLUME_CHANGE);
-                this->app->setVolume(volume - 0.02);
-            } else{
-                INFO("Minimum volume reached");
             }
         } });
 
@@ -58,14 +54,10 @@ Sensors::Sensors(App *app, Leds *leds)
         }
         if (action == PRESSED_FOR_LONG_TIME)
         {
-            float volume = this->app->getVolume();
-            if (volume <= 0.98) 
+            if (this->app->volumeUp())
             {
                 INFO("Incrementing volume");
                 this->leds->setState(VOLUME_CHANGE);
-                this->app->setVolume(volume + 0.02);
-            } else {
-                INFO("Maximum volume reached");
             }
         } });
 }
@@ -95,9 +87,19 @@ bool Sensors::isStartStopPressed()
     return this->startstop->isPressed();
 }
 
+bool Sensors::isPreviousPressed()
+{
+    return this->prev->isPressed();
+}
+
+bool Sensors::isNextPressed()
+{
+    return this->next->isPressed();
+}
+
 int Sensors::getBatteryVoltage()
 {
     int value = analogRead(GPIO_VOLTAGE_MEASURE);
     INFO("Battery voltage ADC is %d", value);
-    return (int)(value / 4096.0 * 7.445);
+    return (int)(value / 4096.0 * 7.445 * 1000.0);
 }

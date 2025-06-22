@@ -8,6 +8,7 @@
 #include <AudioTools.h>
 #include <AudioTools/AudioCodecs/CodecMP3Helix.h>
 #include <BluetoothA2DPSource.h>
+#include <BluetoothA2DPSink.h>
 #include <ArduinoJson.h>
 #include <Driver.h>
 #include <esp_idf_version.h>
@@ -47,6 +48,7 @@ BufferRTOS<uint8_t> buffer(0);
 QueueStream<uint8_t> out(buffer);
 
 BluetoothA2DPSource *a2dpsource;
+BluetoothA2DPSink *a2dpsink;
 Settings *settings;
 
 TagScanner *tagscanner;
@@ -140,8 +142,9 @@ void setup()
   INFO("Scan done, %d devices found", nDevices);
 
   INFO("Creating core components")
-  source = new MediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
   i2s = new I2SStream();
+
+  source = new MediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
   decoder = new MP3DecoderHelix();
 
   INFO("Using I2S for default sound output");
@@ -244,119 +247,156 @@ void setup()
 
   leds->setBootProgress(40);
 
-  INFO("WiFi configuration and creating networking components. Free HEAP is %d", ESP.getFreeHeap());
-  wifiClient = new WiFiClient();
-  frontend = new Frontend(&SD, app, HTTP_SERVER_PORT, MP3_FILE, settings);
-  if (settings->isVoiceAssistantEnabled())
+  if (!sensors->isPreviousPressed())
   {
-    INFO("Initializing voice assistant client. Free HEAP is %d", ESP.getFreeHeap());
-    assistant = new VoiceAssistant(i2s, settings);
-  }
-  mqtt = new MQTT(*wifiClient, app);
-
-  WiFi.persistent(false);
-  WiFi.mode(WIFI_STA);
-  WiFi.setHostname(app->computeTechnicalName().c_str());
-  WiFi.setAutoReconnect(true);
-
-  INFO("Networking initialized. Free HEAP is %d", ESP.getFreeHeap());
-
-  INFO("Bluetooth initializing buffers. Free HEAP is %d", ESP.getFreeHeap());
-
-  buffer.resize(5 * 1024);
-
-  INFO("Bluetooth configuration. Free HEAP is %d", ESP.getFreeHeap());
-
-  a2dpsource = new BluetoothA2DPSource();
-  a2dpsource->set_local_name(app->computeTechnicalName().c_str());
-  a2dpsource->clean_last_connection();
-  a2dpsource->set_reset_ble(true);
-  a2dpsource->set_auto_reconnect(false);
-  a2dpsource->set_ssid_callback([](const char *ssid, esp_bd_addr_t address, int rrsi)
-                                {
-    INFO("bluetooth() - Found SSID %s with RRSI %d", ssid, rrsi);
-    if (String(ssid).startsWith("iClever-")) {
-      INFO("bluetooth() - Candidate for pairing found!");
-      return true;
+    INFO("WiFi configuration and creating networking components. Free HEAP is %d", ESP.getFreeHeap());
+    wifiClient = new WiFiClient();
+    frontend = new Frontend(&SD, app, HTTP_SERVER_PORT, MP3_FILE, settings);
+    if (settings->isVoiceAssistantEnabled())
+    {
+      INFO("Initializing voice assistant client. Free HEAP is %d", ESP.getFreeHeap());
+      assistant = new VoiceAssistant(i2s, settings);
     }
-    return false; });
-  a2dpsource->set_discovery_mode_callback([](esp_bt_gap_discovery_state_t discoveryMode)
-                                          {
-    switch (discoveryMode)
-    {
-    case ESP_BT_GAP_DISCOVERY_STARTED:
-      INFO("bluetooth() - Discovery started");
-      break;
-    case ESP_BT_GAP_DISCOVERY_STOPPED:
-      INFO("bluetooth() - Discovery stopped");
-      break;
-    } });
-  a2dpsource->set_data_callback(callbackGetSoundData);
-  a2dpsource->set_on_connection_state_changed([](esp_a2d_connection_state_t state, void *obj)
-                                              {
-    switch (state)
-    {
-      case ESP_A2D_CONNECTION_STATE_DISCONNECTED:
-        INFO("bluetooth() - DISCONNECTED");
+    mqtt = new MQTT(*wifiClient, app);
+
+    WiFi.persistent(false);
+    WiFi.mode(WIFI_STA);
+    WiFi.setHostname(app->computeTechnicalName().c_str());
+    WiFi.setAutoReconnect(true);
+
+    INFO("Networking initialized. Free HEAP is %d", ESP.getFreeHeap());
+
+    INFO("Bluetooth initializing buffers. Free HEAP is %d", ESP.getFreeHeap());
+
+    buffer.resize(5 * 1024);
+
+    INFO("Bluetooth source configuration. Free HEAP is %d", ESP.getFreeHeap());
+
+    a2dpsource = new BluetoothA2DPSource();
+    a2dpsource->set_local_name(app->computeTechnicalName().c_str());
+    a2dpsource->clean_last_connection();
+    a2dpsource->set_reset_ble(true);
+    a2dpsource->set_auto_reconnect(false);
+    a2dpsource->set_ssid_callback([](const char *ssid, esp_bd_addr_t address, int rrsi)
+                                  {
+      INFO("bluetooth() - Found SSID %s with RRSI %d", ssid, rrsi);
+      if (String(ssid).startsWith("iClever-")) {
+        INFO("bluetooth() - Candidate for pairing found!");
+        return true;
+      }
+      return false; });
+    a2dpsource->set_discovery_mode_callback([](esp_bt_gap_discovery_state_t discoveryMode)
+                                            {
+      switch (discoveryMode)
+      {
+      case ESP_BT_GAP_DISCOVERY_STARTED:
+        INFO("bluetooth() - Discovery started");
         break;
-      case ESP_A2D_CONNECTION_STATE_CONNECTING:
-        INFO("bluetooth() - CONNECTING");
+      case ESP_BT_GAP_DISCOVERY_STOPPED:
+        INFO("bluetooth() - Discovery stopped");
         break;
-      case ESP_A2D_CONNECTION_STATE_CONNECTED:
-        INFO("bluetooth() - CONNECTED. Sending player output to Bluetooth device");
-        leds->setState(BTCONNECTED);
-        player->setOutput(out);
-        // Bluetooth Playback is always 70%
-        player->setVolume(0.7);
-        app->setBluetoothSpeakerConnected();
-        leds->setBluetoothSpeakerConnected();
-        break;
-      case ESP_A2D_CONNECTION_STATE_DISCONNECTING:
-        INFO("bluetooth() - DISCONNECTING. Sending player output to I2S");
-        player->setOutput(*i2s);
-        break;
-    } }, NULL);
-  a2dpsource->set_avrc_passthru_command_callback([](uint8_t key, bool isReleased)
-                                                 {
-    if (isReleased)
-    {
-        INFO("bluetooth() - AVRC button %d released!", key);
-    }
-    else
-    {
-        INFO("bluetooth() - AVRC button %d pressed!", key);
-        if (key == 0x44) // PLAY
-        {
-          INFO("bluetooth() - AVRC PLAY pressed");
-          app->toggleActiveState();
-        }
-        if (key == 0x45) // STOP
-        {
-          INFO("bluetooth() - AVRC STOP pressed");
-          app->toggleActiveState();
-        }
-        if (key == 0x46) // PAUSE
-        {
-          INFO("bluetooth() - AVRC PAUSE pressed");
-          app->toggleActiveState();
-        }
-        if (key == 0x4b) // NEXT
-        {
-          INFO("bluetooth() - AVRC NEXT pressed");
-          app->next();
-        }
-        if (key == 0x4c) // PREVIOUS
-        {
-          INFO("bluetooth() - AVRC PREVIOUS pressed");
-          app->previous();
-        }
       } });
-  a2dpsource->start();
+    a2dpsource->set_data_callback(callbackGetSoundData);
+    a2dpsource->set_on_connection_state_changed([](esp_a2d_connection_state_t state, void *obj)
+                                                {
+      switch (state)
+      {
+        case ESP_A2D_CONNECTION_STATE_DISCONNECTED:
+          INFO("bluetooth() - DISCONNECTED");
+          break;
+        case ESP_A2D_CONNECTION_STATE_CONNECTING:
+          INFO("bluetooth() - CONNECTING");
+          break;
+        case ESP_A2D_CONNECTION_STATE_CONNECTED:
+          INFO("bluetooth() - CONNECTED. Sending player output to Bluetooth device");
+          leds->setState(BTCONNECTED);
+          player->setOutput(out);
+          // Bluetooth Playback is always 70%
+          player->setVolume(0.7);
+          app->setBluetoothSpeakerConnected();
+          leds->setBluetoothSpeakerConnected();
+          break;
+        case ESP_A2D_CONNECTION_STATE_DISCONNECTING:
+          INFO("bluetooth() - DISCONNECTING. Sending player output to I2S");
+          player->setOutput(*i2s);
+          break;
+      } }, NULL);
+    a2dpsource->set_avrc_passthru_command_callback([](uint8_t key, bool isReleased)
+                                                   {
+      if (isReleased)
+      {
+          INFO("bluetooth() - AVRC button %d released!", key);
+      }
+      else
+      {
+          INFO("bluetooth() - AVRC button %d pressed!", key);
+          if (key == 0x44) // PLAY
+          {
+            INFO("bluetooth() - AVRC PLAY pressed");
+            app->toggleActiveState();
+          }
+          if (key == 0x45) // STOP
+          {
+            INFO("bluetooth() - AVRC STOP pressed");
+            app->toggleActiveState();
+          }
+          if (key == 0x46) // PAUSE
+          {
+            INFO("bluetooth() - AVRC PAUSE pressed");
+            app->toggleActiveState();
+          }
+          if (key == 0x4b) // NEXT
+          {
+            INFO("bluetooth() - AVRC NEXT pressed");
+            app->next();
+          }
+          if (key == 0x4c) // PREVIOUS
+          {
+            INFO("bluetooth() - AVRC PREVIOUS pressed");
+            app->previous();
+          }
+        } });
+    a2dpsource->start();
 
-  // Start output when buffer is 95% full
-  out.begin(95);
+    // Start output when buffer is 95% full
+    out.begin(95);
 
-  INFO("Bluetooth initialized. Free HEAP is %d", ESP.getFreeHeap());
+    INFO("Bluetooth source initialized. Free HEAP is %d", ESP.getFreeHeap());
+  }
+  else
+  {
+    INFO("Bluetooth sink configuration. Free HEAP is %d", ESP.getFreeHeap());
+
+    a2dpsink = new BluetoothA2DPSink(*i2s);
+    a2dpsink->clean_last_connection();
+    a2dpsink->set_auto_reconnect(false);
+    //    a2dpsink->activate_pin_code(true);
+    a2dpsink->set_on_connection_state_changed([](esp_a2d_connection_state_t state, void *obj)
+                                              {
+      switch (state)
+      {
+        case ESP_A2D_CONNECTION_STATE_DISCONNECTED:
+          INFO("bluetooth() - DISCONNECTED");
+          break;
+        case ESP_A2D_CONNECTION_STATE_CONNECTING:
+          INFO("bluetooth() - CONNECTING");
+          break;
+        case ESP_A2D_CONNECTION_STATE_CONNECTED:
+          INFO("bluetooth() - CONNECTED. Receiving data from Bluetooth source");
+          leds->setState(BTCONNECTED);
+          app->setBluetoothSpeakerConnected();
+          leds->setBluetoothSpeakerConnected();
+          break;
+        case ESP_A2D_CONNECTION_STATE_DISCONNECTING:
+          INFO("bluetooth() - DISCONNECTING");
+          break;
+      } }, NULL);
+    a2dpsink->start(app->computeTechnicalName().c_str());
+
+    app->actAsBluetoothSpeaker(a2dpsink);
+
+    INFO("Bluetooth sink initialized. Free HEAP is %d", ESP.getFreeHeap());
+  }
 
   // WiFi.softAP(app->computeTechnicalName().c_str());
 
@@ -370,81 +410,84 @@ void setup()
 
   leds->setBootProgress(60);
 
-  INFO("NFC reader init");
-  tagscanner->begin([](bool authenticated, bool knownTag, uint8_t *uid, String uidStr, uint8_t uidlength, String tagName, TagData tagdata)
-                    {
-    if (authenticated) 
-    {
-      // A tag was detected
-      if (mqtt != NULL) {
-        mqtt->publishTagScannerInfo(tagName);
-      }
-
-      app->setTagData(knownTag, tagName, uid, uidlength, tagdata);
-
-      if (knownTag) {
-        Serial.println("(tag) Tag debug data");
-        for (int i = 0; i < 44; i++) {
-            if (i == 16 || i == 32) {
-                Serial.println();
-            }
-            uint8_t b = tagdata.data[i];
-            if (b < 16) {
-                Serial.print("0");
-            }
-            Serial.print(b, HEX);
-            Serial.print(" ");
-        }
-        Serial.println();
-
-        CommandData command;
-        memcpy(&command, &tagdata.data[0], 44);
-
-        // Pass the command to the command queue
-        int ret = xQueueSend(commandsHandle, (void *)&command, 0);
-        if (ret == pdTRUE) {
-          // No problem here  
-        } else if (ret == errQUEUE_FULL) {
-          WARN("Unable to send data into the command queue");
-        } 
-
-        JsonDocument result;
-        result["UID"] = uidStr;
-
-        String target;
-        serializeJson(result, target);
-
-        if (mqtt != NULL) {
-          mqtt->publishScannedTag(target);
-        }
-
-        leds->setState(CARD_DETECTED);
-      }
-      else
+  if (!app->isActAsBluetoothSpeaker())
+  {
+    INFO("NFC reader init");
+    tagscanner->begin([](bool authenticated, bool knownTag, uint8_t *uid, String uidStr, uint8_t uidlength, String tagName, TagData tagdata)
+                      {
+      if (authenticated) 
       {
+        // A tag was detected
+        if (mqtt != NULL) {
+          mqtt->publishTagScannerInfo(tagName);
+        }
+
+        app->setTagData(knownTag, tagName, uid, uidlength, tagdata);
+
+        if (knownTag) {
+          Serial.println("(tag) Tag debug data");
+          for (int i = 0; i < 44; i++) {
+              if (i == 16 || i == 32) {
+                  Serial.println();
+              }
+              uint8_t b = tagdata.data[i];
+              if (b < 16) {
+                  Serial.print("0");
+              }
+              Serial.print(b, HEX);
+              Serial.print(" ");
+          }
+          Serial.println();
+
+          CommandData command;
+          memcpy(&command, &tagdata.data[0], 44);
+
+          // Pass the command to the command queue
+          int ret = xQueueSend(commandsHandle, (void *)&command, 0);
+          if (ret == pdTRUE) {
+            // No problem here  
+          } else if (ret == errQUEUE_FULL) {
+            WARN("Unable to send data into the command queue");
+          } 
+
+          JsonDocument result;
+          result["UID"] = uidStr;
+
+          String target;
+          serializeJson(result, target);
+
+          if (mqtt != NULL) {
+            mqtt->publishScannedTag(target);
+          }
+
+          leds->setState(CARD_DETECTED);
+        }
+        else
+        {
+          leds->setState(CARD_ERROR);
+        }
+      }
+      else {
+        // Authentication error
+        if (mqtt != NULL) {
+          mqtt->publishTagScannerInfo("Authentication error");
+        }
+
+        app->noTagPresent();
+
         leds->setState(CARD_ERROR);
+      } }, []()
+                      {
+      // No tag currently detected
+      if (mqtt != NULL)  {
+        mqtt->publishTagScannerInfo("");
       }
-    }
-    else {
-      // Authentication error
-      if (mqtt != NULL) {
-        mqtt->publishTagScannerInfo("Authentication error");
-      }
 
-      app->noTagPresent();
+      app->noTagPresent(); });
 
-      leds->setState(CARD_ERROR);
-    } }, []()
-                    {
-    // No tag currently detected
-    if (mqtt != NULL)  {
-      mqtt->publishTagScannerInfo("");
-    }
-
-    app->noTagPresent(); });
-
-  leds->setBootProgress(70);
-  INFO("NFC reader init finished");
+    leds->setBootProgress(70);
+    INFO("NFC reader init finished");
+  }
 
   source->setChangeIndexCallback([](Stream *next)
                                  { 

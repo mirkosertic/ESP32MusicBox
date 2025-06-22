@@ -26,6 +26,9 @@ App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player,
     this->volume = 1.0f;
 
     this->btspeakerconnected = false;
+    this->actasbluetoothspeaker = false;
+    this->bluetoothsink = NULL;
+    this->btpause = false;
 }
 
 App::~App()
@@ -343,7 +346,7 @@ void App::loop()
     if (wificonnected)
     {
         long now = millis();
-        if (now - lastStateReport > 1000)
+        if (now - lastStateReport > 5000)
         {
             DEBUG("Publishing app state");
             publishState();
@@ -461,12 +464,54 @@ const char *App::currentTitle()
 
 void App::publishState()
 {
-    this->changecallback(this->player->isActive(), this->volumeSupport->volume(), this->player->currentSong(), this->player->playProgressInPercent());
+    if (!this->actasbluetoothspeaker)
+    {
+        this->changecallback(this->player->isActive(), this->volumeSupport->volume(), this->player->currentSong(), this->player->playProgressInPercent());
+    }
+}
+
+bool App::volumeDown()
+{
+    if (this->actasbluetoothspeaker)
+    {
+        INFO("Sending volume down to Bluetooth device");
+        this->bluetoothsink->volume_down();
+        return true;
+    }
+
+    float volume = this->getVolume();
+    if (volume >= 0.02)
+    {
+        INFO("Decrementing volume");
+        this->setVolume(volume - 0.02);
+        return true;
+    }
+    return false;
+}
+
+bool App::volumeUp()
+{
+    if (this->actasbluetoothspeaker)
+    {
+        INFO("Sending volume up down to Bluetooth device");
+        this->bluetoothsink->volume_up();
+        return true;
+    }
+
+    float volume = this->getVolume();
+    if (volume <= 0.98)
+    {
+        INFO("Incrementing volume");
+        this->setVolume(volume + 0.02);
+        return true;
+    }
+    return false;
 }
 
 void App::setVolume(float volume)
 {
     const std::lock_guard<std::mutex> lock(this->loopmutex);
+
     INFO("Setting volume to %f", volume);
     this->volumeSupport->setVolume(volume);
     this->volume = volume;
@@ -477,6 +522,23 @@ void App::setVolume(float volume)
 void App::toggleActiveState()
 {
     const std::lock_guard<std::mutex> lock(this->loopmutex);
+
+    if (this->actasbluetoothspeaker)
+    {
+        if (!this->btpause)
+        {
+            INFO("Pausing Bluetooth device")
+            this->btpause = true;
+            this->bluetoothsink->pause();
+        }
+        else
+        {
+            INFO("Playing Bluetooth device");
+            this->btpause = false;
+            this->bluetoothsink->play();
+        }
+        return;
+    }
     INFO("Toggling player state");
     this->player->setActive(!this->player->isActive());
     this->publishState();
@@ -485,29 +547,45 @@ void App::toggleActiveState()
 void App::previous()
 {
     const std::lock_guard<std::mutex> lock(this->loopmutex);
-    if (this->source->index() > 0)
+    if (this->actasbluetoothspeaker)
     {
-        INFO("Previous title");
-        this->player->previous();
-
-        this->publishState();
+        INFO("Sending Previous command to Bluetooth device");
+        this->bluetoothsink->previous();
     }
     else
     {
-        WARN("Already at the beginning!");
+        if (this->source->index() > 0)
+        {
+            INFO("Previous title");
+            this->player->previous();
+
+            this->publishState();
+        }
+        else
+        {
+            WARN("Already at the beginning!");
+        }
     }
 }
 
 void App::next()
 {
     const std::lock_guard<std::mutex> lock(this->loopmutex);
-    if (!this->player->next())
+    if (this->actasbluetoothspeaker)
     {
-        WARN("No more next titles!");
+        INFO("Sending Next command to Bluetooth device");
+        this->bluetoothsink->next();
     }
     else
     {
-        this->publishState();
+        if (!this->player->next())
+        {
+            WARN("No more next titles!");
+        }
+        else
+        {
+            this->publishState();
+        }
     }
 }
 
@@ -541,4 +619,15 @@ void App::setBluetoothSpeakerConnected(bool value)
 bool App::isBluetoothSpeakerConnected()
 {
     return this->btspeakerconnected;
+}
+
+void App::actAsBluetoothSpeaker(BluetoothA2DPSink *bluetoothsink)
+{
+    this->bluetoothsink = bluetoothsink;
+    this->actasbluetoothspeaker = true;
+}
+
+bool App::isActAsBluetoothSpeaker()
+{
+    return this->actasbluetoothspeaker;
 }

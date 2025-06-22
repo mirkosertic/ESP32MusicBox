@@ -14,6 +14,8 @@
 #include "voiceassistant.h"
 #include "settings.h"
 
+#include <BluetoothA2DPSink.h>
+
 typedef std::function<void(bool active, float volume, const char *currentsong, int playprogressinpercent)> ChangeNotifierCallback;
 
 class App
@@ -54,6 +56,10 @@ private:
     WiFiUDP *udp;
 
     bool btspeakerconnected;
+
+    bool actasbluetoothspeaker;
+    bool btpause;
+    BluetoothA2DPSink *bluetoothsink;
 
 public:
     App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport);
@@ -140,6 +146,10 @@ public:
 
     void setVolume(float volume);
 
+    bool volumeUp();
+
+    bool volumeDown();
+
     void toggleActiveState();
 
     void previous();
@@ -151,6 +161,10 @@ public:
     void setBluetoothSpeakerConnected(bool value = true);
 
     bool isBluetoothSpeakerConnected();
+
+    void actAsBluetoothSpeaker(BluetoothA2DPSink *bluetoothsink);
+
+    bool isActAsBluetoothSpeaker();
 };
 
 #endif
