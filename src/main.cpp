@@ -230,25 +230,26 @@ void setup()
 
   leds->setBootProgress(30);
 
-  INFO("Retrieving system configuration");
-  if (!settings->readFromConfig())
-  {
-    // No configuration available.
-    settings->initializeWifiFromSettings();
-  }
-  else
-  {
-    if (sensors->isStartStopPressed())
-    {
-      settings->resetStoredBSSID();
-    }
-    settings->initializeWifiFromSettings();
-  }
-
   leds->setBootProgress(40);
 
   if (!sensors->isPreviousPressed())
   {
+    INFO("Retrieving system configuration");
+    if (!settings->readFromConfig())
+    {
+      WARN("Could not read configuration file from SDCard!");
+      while (true)
+        ;
+    }
+    else
+    {
+      if (sensors->isStartStopPressed())
+      {
+        settings->resetStoredBSSID();
+      }
+      settings->initializeWifiFromSettings();
+    }
+
     INFO("WiFi configuration and creating networking components. Free HEAP is %d", ESP.getFreeHeap());
     wifiClient = new WiFiClient();
     frontend = new Frontend(&SD, app, HTTP_SERVER_PORT, MP3_FILE, settings);
@@ -365,6 +366,14 @@ void setup()
   }
   else
   {
+    INFO("Retrieving system configuration");
+    if (!settings->readFromConfig())
+    {
+      WARN("Could not read configuration file from SDCard!");
+      while (true)
+        ;
+    }
+
     INFO("Bluetooth sink configuration. Free HEAP is %d", ESP.getFreeHeap());
 
     a2dpsink = new BluetoothA2DPSink(*i2s);
