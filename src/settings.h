@@ -26,11 +26,15 @@ private:
     int voice_port = VOICE_PORT;
     String voice_token = VOICE_TOKEN;
 
+    String deviceName = DEVICENAME;
+
 public:
     Settings(FS *fs, String configurationfilename);
 
     bool readFromConfig();
     bool writeToConfig();
+
+    String getDeviceName();
 
     bool isWiFiEnabled();
 

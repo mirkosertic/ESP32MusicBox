@@ -5,7 +5,7 @@
 	(uuid "f9f1d386-dc06-4e3c-9b35-bd6ccde6cec9")
 	(paper "A5")
 	(title_block
-		(title "ESP32 Musikbox Lolin D32 Pro")
+		(title "ESP32 Musicbox Lolin D32 Pro")
 		(rev "1.1")
 		(company "Mirko Sertic")
 	)
@@ -3841,7 +3841,7 @@
 		)
 		(uuid "7c853462-57b0-4828-8cab-5f5f4233ad95")
 	)
-	(label "3V3"
+	(label "VBAT"
 		(at 22.86 114.3 180)
 		(effects
 			(font

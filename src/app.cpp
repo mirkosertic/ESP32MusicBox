@@ -7,6 +7,7 @@
 #include <esp_mac.h>
 
 #include "logging.h"
+#include "bluetoothsink.h"
 #include "gitrevision.h"
 
 App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport)
@@ -474,8 +475,7 @@ bool App::volumeDown()
 {
     if (this->actasbluetoothspeaker)
     {
-        INFO("Sending volume down to Bluetooth device");
-        this->bluetoothsink->volume_down();
+        this->bluetoothsink->volumeDown();
         return true;
     }
 
@@ -493,8 +493,7 @@ bool App::volumeUp()
 {
     if (this->actasbluetoothspeaker)
     {
-        INFO("Sending volume up down to Bluetooth device");
-        this->bluetoothsink->volume_up();
+        this->bluetoothsink->volumeUp();
         return true;
     }
 
@@ -527,13 +526,11 @@ void App::toggleActiveState()
     {
         if (!this->btpause)
         {
-            INFO("Pausing Bluetooth device")
             this->btpause = true;
             this->bluetoothsink->pause();
         }
         else
         {
-            INFO("Playing Bluetooth device");
             this->btpause = false;
             this->bluetoothsink->play();
         }
@@ -549,7 +546,6 @@ void App::previous()
     const std::lock_guard<std::mutex> lock(this->loopmutex);
     if (this->actasbluetoothspeaker)
     {
-        INFO("Sending Previous command to Bluetooth device");
         this->bluetoothsink->previous();
     }
     else
@@ -573,7 +569,6 @@ void App::next()
     const std::lock_guard<std::mutex> lock(this->loopmutex);
     if (this->actasbluetoothspeaker)
     {
-        INFO("Sending Next command to Bluetooth device");
         this->bluetoothsink->next();
     }
     else
@@ -621,7 +616,7 @@ bool App::isBluetoothSpeakerConnected()
     return this->btspeakerconnected;
 }
 
-void App::actAsBluetoothSpeaker(BluetoothA2DPSink *bluetoothsink)
+void App::actAsBluetoothSpeaker(BluetoothSink *bluetoothsink)
 {
     this->bluetoothsink = bluetoothsink;
     this->actasbluetoothspeaker = true;

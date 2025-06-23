@@ -66,6 +66,9 @@ bool Settings::readFromConfig()
       this->voice_port = assistant["port"].as<int>();
       this->voice_token = String(assistant["accesstoken"].as<String>());
 
+      JsonObject device = document["device"].as<JsonObject>();
+      // this->deviceName = device["name"];
+
       return true;
     }
   }
@@ -104,6 +107,9 @@ bool Settings::writeToConfig()
   voiceassistant["port"] = this->voice_port;
   voiceassistant["accesstoken"] = this->voice_token;
 
+  JsonObject device = doc["device"].to<JsonObject>();
+  device["name"] = this->deviceName;
+
   File configFile = this->fs->open(configurationfilename, FILE_WRITE, true);
   if (!configFile)
   {
@@ -116,6 +122,11 @@ bool Settings::writeToConfig()
   }
 
   return true;
+}
+
+String Settings::getDeviceName()
+{
+  return deviceName;
 }
 
 void Settings::initializeWifiFromSettings()
@@ -238,6 +249,9 @@ String Settings::getSettingsAsJson()
   voiceassistant["port"] = this->voice_port;
   voiceassistant["accesstoken"] = this->voice_token;
 
+  JsonObject device = doc["device"].to<JsonObject>();
+  device["name"] = this->deviceName;
+
   String result;
   serializeJsonPretty(doc, result);
 
@@ -282,6 +296,9 @@ void Settings::setSettingsFromJson(String json)
     this->voice_server = String(assistant["host"].as<String>());
     this->voice_port = assistant["port"].as<int>();
     this->voice_token = String(assistant["accesstoken"].as<String>());
+
+    JsonObject device = document["device"].as<JsonObject>();
+    this->deviceName = String(device["name"].as<String>());
 
     this->writeToConfig();
   }

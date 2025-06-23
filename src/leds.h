@@ -3,8 +3,6 @@
 
 #include <FastLED.h>
 
-#include "app.h"
-
 enum LEDState
 {
     BOOT,
@@ -12,13 +10,13 @@ enum LEDState
     CARD_ERROR,
     CARD_DETECTED,
     VOLUME_CHANGE,
+    BTCONNECTING,
     BTCONNECTED
 };
 
 class Leds
 {
 private:
-    App *app;
     LEDState state;
     CRGB leds[NUM_LEDS];
     long lastStateTime;
@@ -27,15 +25,16 @@ private:
 
     bool btspeakerconnected;
 
-    void renderPlayerStatusIdle();
-    void renderPlayerStatusPlaying();
+    void renderPlayerStatusIdle(bool wifiEnabled, bool wifiConnected);
+    void renderPlayerStatusPlaying(int progressPercent);
     void renderCardError();
     void renderCardDetected();
-    void renderVolumeChange();
+    void renderVolumeChange(int volumePercent);
     void renderBTConnected();
+    void renderBTConnecting();
 
 public:
-    Leds(App *app);
+    Leds();
 
     void begin();
 
@@ -43,7 +42,7 @@ public:
 
     void setBootProgress(int percent);
 
-    void loop();
+    void loop(bool wifiEnabled, bool wifiConnected, bool playbackActive, int volumePercent, int progressPercent);
 
     void setBluetoothSpeakerConnected(bool value = true);
 };
