@@ -67,7 +67,7 @@ bool Settings::readFromConfig()
       this->voice_token = String(assistant["accesstoken"].as<String>());
 
       JsonObject device = document["device"].as<JsonObject>();
-      // this->deviceName = device["name"];
+      this->deviceName = String(device["name"].as<String>());
 
       return true;
     }
@@ -109,6 +109,13 @@ bool Settings::writeToConfig()
 
   JsonObject device = doc["device"].to<JsonObject>();
   device["name"] = this->deviceName;
+
+  JsonObject bluetooth = doc["bluetooth"].to<JsonObject>();
+  JsonArray prefixes = bluetooth["nameprefixes"].to<JsonArray>();
+  for (auto str : this->blueoothdeviceprefixes)
+  {
+    prefixes.add(str);
+  }
 
   File configFile = this->fs->open(configurationfilename, FILE_WRITE, true);
   if (!configFile)
@@ -252,6 +259,13 @@ String Settings::getSettingsAsJson()
   JsonObject device = doc["device"].to<JsonObject>();
   device["name"] = this->deviceName;
 
+  JsonObject bluetooth = doc["bluetooth"].to<JsonObject>();
+  JsonArray prefixes = bluetooth["nameprefixes"].to<JsonArray>();
+  for (auto str : this->blueoothdeviceprefixes)
+  {
+    prefixes.add(str);
+  }
+
   String result;
   serializeJsonPretty(doc, result);
 
@@ -299,6 +313,15 @@ void Settings::setSettingsFromJson(String json)
 
     JsonObject device = document["device"].as<JsonObject>();
     this->deviceName = String(device["name"].as<String>());
+
+    JsonObject bluetooth = document["bluetooth"].to<JsonObject>();
+    JsonArray prefixes = bluetooth["nameprefixes"].to<JsonArray>();
+
+    this->blueoothdeviceprefixes.clear();
+    for (auto str : prefixes)
+    {
+      this->blueoothdeviceprefixes.push_back(str);
+    }
 
     this->writeToConfig();
   }
@@ -405,4 +428,17 @@ void Settings::resetStoredBSSIDAndReconfigureWiFi()
 bool Settings::isWiFiEnabled()
 {
   return this->wlan_enabled;
+}
+
+bool Settings::isValidDeviceToPairForBluetooth(String ssid)
+{
+  for (auto prefix : this->blueoothdeviceprefixes)
+  {
+    if (ssid.startsWith(prefix))
+    {
+      INFO("Bluetooth device %s matches configured device prefix %s", ssid.c_str(), prefix.c_str());
+      return true;
+    }
+  }
+  return false;
 }

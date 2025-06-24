@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <FS.h>
+#include <vector>
 
 class Settings
 {
@@ -27,6 +28,7 @@ private:
     String voice_token = VOICE_TOKEN;
 
     String deviceName = DEVICENAME;
+    std::vector<String> blueoothdeviceprefixes = { BLUETOOTH_DEVICEPREFIX };
 
 public:
     Settings(FS *fs, String configurationfilename);
@@ -61,6 +63,8 @@ public:
 
     String getSettingsAsJson();
     void setSettingsFromJson(String json);
+
+    bool isValidDeviceToPairForBluetooth(String ssid);
 };
 
 #endif

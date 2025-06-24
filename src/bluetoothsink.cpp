@@ -61,7 +61,7 @@ void BluetoothSink::confirmPinCode()
     this->sink->debounce([]()
                          { 
         INFO("Confirming Bluetooth-Connection!"); 
-        globalSink->confirm_pin_code(); }, 5000);
+        globalSink->confirm_pin_code(); }, 2000);
 }
 
 void BluetoothSink::play()

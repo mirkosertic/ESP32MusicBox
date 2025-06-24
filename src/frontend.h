@@ -27,5 +27,4 @@ public:
 
   void loop();
 };
-
 #endif

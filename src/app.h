@@ -165,6 +165,8 @@ public:
     void actAsBluetoothSpeaker(BluetoothSink *bluetoothsink);
 
     bool isActAsBluetoothSpeaker();
+
+    bool isValidDeviceToPairForBluetooth(String ssid);    
 };
 
 #endif

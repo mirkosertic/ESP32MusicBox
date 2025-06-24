@@ -626,3 +626,8 @@ bool App::isActAsBluetoothSpeaker()
 {
     return this->actasbluetoothspeaker;
 }
+
+bool App::isValidDeviceToPairForBluetooth(String ssid)
+{
+    return this->settings->isValidDeviceToPairForBluetooth(ssid);
+}

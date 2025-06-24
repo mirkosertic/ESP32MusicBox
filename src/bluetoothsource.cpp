@@ -6,6 +6,7 @@
 #include "mediaplayer.h"
 
 BluetoothSource *globaSource = NULL;
+App *globalApp;
 
 int32_t readDataCallback(uint8_t *data, int32_t len)
 {
@@ -20,6 +21,7 @@ void avrccallback(uint8_t key, bool isReleased)
 BluetoothSource::BluetoothSource(I2SStream *output, Leds *leds, App *app, MediaPlayer *player)
 {
   globaSource = this;
+  globalApp = app;
 
   this->out = output;
   this->leds = leds;
@@ -39,12 +41,13 @@ BluetoothSource::BluetoothSource(I2SStream *output, Leds *leds, App *app, MediaP
   this->source->set_auto_reconnect(false);
   this->source->set_ssid_callback([](const char *ssid, esp_bd_addr_t address, int rrsi)
                                   {
-  INFO("bluetooth() - Found SSID %s with RRSI %d", ssid, rrsi);
-  if (String(ssid).startsWith("iClever-")) {
-    INFO("bluetooth() - Candidate for pairing found!");
-    return true;
-  }
-  return false; });
+    INFO("bluetooth() - Found SSID %s with RRSI %d", ssid, rrsi);
+    if (globalApp->isValidDeviceToPairForBluetooth(String(ssid))) 
+    {
+      INFO("bluetooth() - Candidate for pairing found!");
+      return true;
+    }
+    return false; });
 
   this->source->set_discovery_mode_callback([](esp_bt_gap_discovery_state_t discoveryMode)
                                             {

@@ -13,13 +13,14 @@ This project provides an ESP32 based music box with the following features:
 * Web-based user interface
 * Integrated into your local network with SSDP / mDNS protocol
 * WebDAV support for file / content management
-* Optional Bluetooth A2DP output
+* Optional Bluetooth A2DP output / Bluetooth Headphone output
+* Special mode to start in Bluetooth Speaker mode, so it works as a Boombox.
 
 ## Supported hardware
 
-* ESP32 (tested with ESP32 DevKit C, Lolin D32 Pro with PSRAM recommended)
+* ESP32 (tested with Lolin D32 Pro with a lot of PSRAM recommended (8 MB), 4MB flash RAM is required)
 * PN532 RFID Reader (i2c-Mode)
-* SDCard Reader (SPI-Mode)
+* SDCard Reader (SPI-Mode), is already mounted on a Lolin D32 Pro board
 * NeoPixel / WS2812 based LEDs for status visualization
 
 ## Schematics
@@ -40,3 +41,5 @@ Status visualization with LEDs:
 - Leds blinking red - Unknown RFID card detected
 - Leds blinking green - RFID card programmed / Known card detected
 - Leds green to red - While changing volume
+- Keep button 1 pressed during startup. Leds will turn blue to indicate Bluetooth Speaker mode.
+- Yellow flashing LEDs indicate a Bluetooth pairing request while in Speaker mode. Press button 1 again to confirm the pairing. LEDs will flash in blue to confirm pairing

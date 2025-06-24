@@ -206,6 +206,7 @@ void setup()
       {
         settings->resetStoredBSSID();
       }
+      app->setName(settings->getDeviceName());
       settings->initializeWifiFromSettings();
     }
 
