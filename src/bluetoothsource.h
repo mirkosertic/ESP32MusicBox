@@ -4,9 +4,10 @@
 #include <AudioTools.h>
 #include <BluetoothA2DPSource.h>
 
-class Leds;
+#include "leds.h"
+#include "mediaplayer.h"
+
 class App;
-class MediaPlayer;
 
 class BluetoothSource
 {

@@ -4,7 +4,6 @@
 #include <BluetoothA2DPSink.h>
 
 #include "logging.h"
-#include "leds.h"
 #include "app.h"
 
 BluetoothA2DPSink *globalSink;
@@ -58,6 +57,7 @@ int BluetoothSink::pinCode()
 
 void BluetoothSink::confirmPinCode()
 {
+    // This means that a confirmation is only sent every 2000mss
     this->sink->debounce([]()
                          { 
         INFO("Confirming Bluetooth-Connection!"); 

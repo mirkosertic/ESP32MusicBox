@@ -1,9 +1,7 @@
 #include "bluetoothsource.h"
 
 #include "logging.h"
-#include "leds.h"
 #include "app.h"
-#include "mediaplayer.h"
 
 BluetoothSource *globaSource = NULL;
 App *globalApp;

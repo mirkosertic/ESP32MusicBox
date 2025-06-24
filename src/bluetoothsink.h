@@ -4,7 +4,8 @@
 #include <AudioTools.h>
 #include <BluetoothA2DPSink.h>
 
-class Leds;
+#include "leds.h"
+
 class App;
 
 class BluetoothSink
