@@ -1,4 +1,4 @@
-#ifndef I2DDEBUG_H
+#ifndef I2CDEBUG_H
 #define I2CDEBUG_H
 
 #include <Wire.h>

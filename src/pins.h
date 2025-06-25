@@ -1,3 +1,6 @@
+#ifndef PINS_H
+#define PINS_H
+
 // Make sure the the buttons are assigned to IO pins with pullup/puppdown resistors configurable by software!
 #define GPIO_STARTSTOP GPIO_NUM_12
 #define GPIO_PREVIOUS GPIO_NUM_13
@@ -22,3 +25,5 @@
 
 // analogRead(GPIO_VOLTAGE_MEASURE) / 4096.0 * 7.445
 #define GPIO_VOLTAGE_MEASURE GPIO_NUM_35
+
+#endif

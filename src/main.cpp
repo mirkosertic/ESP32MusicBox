@@ -21,7 +21,7 @@
 #include "tagscanner.h"
 #include "app.h"
 #include "mqtt.h"
-#include "frontend.h"
+#include "webserver.h"
 #include "mediaplayer.h"
 #include "mediaplayersource.h"
 #include "commands.h"
@@ -44,6 +44,9 @@ I2SStream *i2s;
 MP3DecoderHelix *decoder;
 MediaPlayer *player;
 
+BufferRTOS<uint8_t> *buffer;
+QueueStream<uint8_t> *bluetoothout;
+
 BluetoothSource *bluetoothsource;
 BluetoothSink *bluetoothsink;
 Settings *settings;
@@ -55,7 +58,7 @@ Sensors *sensors = NULL;
 
 // Only relevant in case of WiFi enabled
 WiFiClient *wifiClient = NULL;
-Frontend *frontend = NULL;
+Webserver *webserver = NULL;
 VoiceAssistant *assistant = NULL;
 MQTT *mqtt = NULL;
 
@@ -90,6 +93,12 @@ void setup()
   INFO("Max  PSRAM is %d", ESP.getPsramSize());
   INFO("Free PSRAM is %d", ESP.getFreePsram());
 
+  INFO("Starting boot sequence");
+  leds = new Leds();
+  leds->begin();
+  leds->setBootProgress(0);
+  leds->setState(BOOT);
+
   INFO("I2C connection init");
   if (!Wire1.begin(GPIO_WIRE_SDA, GPIO_WIRE_SCL, 100000))
   {
@@ -102,29 +111,42 @@ void setup()
   I2CDebug debug(&Wire1);
   debug.printDevices();
 
-  INFO("Creating core components")
+  INFO("Initializing I2S sound system")
   i2s = new I2SStream();
 
+  // setup output
+  AudioInfo defaultAudioInfo(44100, 2, 16);
+
+  auto cfg = i2s->defaultConfig(TX_MODE);
+  cfg.pin_bck = GPIO_I2S_BCK;
+  cfg.pin_ws = GPIO_I2S_WS;
+  cfg.pin_data = GPIO_I2S_DATA;
+  cfg.i2s_format = I2S_STD_FORMAT; // default format
+  cfg.copyFrom(defaultAudioInfo);
+
+  if (!i2s->begin(cfg))
+  {
+    WARN("Could not start I2S sound system!");
+    while (true)
+      ;
+  }
+
+  leds->setBootProgress(5);
+
+  INFO("Initializing core components")
   source = new MediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
   decoder = new MP3DecoderHelix();
-
-  INFO("Using I2S for default sound output");
   player = new MediaPlayer(*source, *i2s, *decoder);
 
   // Inform the player what to output
-  AudioInfo info(44100, 2, 16);
-  player->setAudioInfo(info);
+  player->setAudioInfo(defaultAudioInfo);
 
   settings = new Settings(&SD, CONFIGURATION_FILE);
 
   tagscanner = new TagScanner(&Wire1, GPIO_PN532_IRQ, GPIO_PN532_RST);
   app = new App(tagscanner, source, player, settings, player);
-  leds = new Leds();
   sensors = new Sensors(app, leds);
   INFO("Core components created. Free HEAP is %d", ESP.getFreeHeap());
-
-  INFO("LED Status display init");
-  leds->begin();
 
   INFO("Free HEAP is %d", ESP.getFreeHeap());
 
@@ -149,24 +171,6 @@ void setup()
   app->setVersion("v1.0");
   app->setServerPort(HTTP_SERVER_PORT);
 
-  leds->setState(BOOT);
-  leds->setBootProgress(0);
-
-  // setup output
-  auto cfg = i2s->defaultConfig(TX_MODE);
-  cfg.pin_bck = GPIO_I2S_BCK;
-  cfg.pin_ws = GPIO_I2S_WS;
-  cfg.pin_data = GPIO_I2S_DATA;
-  cfg.i2s_format = I2S_STD_FORMAT; // default format
-  cfg.copyFrom(info);
-
-  INFO("I2S sound system init");
-  if (!i2s->begin(cfg))
-  {
-    WARN("Could not start I2S sound system!");
-    while (true)
-      ;
-  }
   leds->setBootProgress(10);
 
   // Setup SD-Card
@@ -212,7 +216,7 @@ void setup()
 
     INFO("WiFi configuration and creating networking components. Free HEAP is %d", ESP.getFreeHeap());
     wifiClient = new WiFiClient();
-    frontend = new Frontend(&SD, app, HTTP_SERVER_PORT, MP3_FILE, settings);
+    webserver = new Webserver(&SD, app, HTTP_SERVER_PORT, MP3_FILE, settings);
     if (settings->isVoiceAssistantEnabled())
     {
       INFO("Initializing voice assistant client. Free HEAP is %d", ESP.getFreeHeap());
@@ -225,9 +229,101 @@ void setup()
     WiFi.setHostname(app->computeTechnicalName().c_str());
     WiFi.setAutoReconnect(true);
 
+    INFO("Bluetooth initializing buffers. Free HEAP is %d", ESP.getFreeHeap());
+    buffer = new BufferRTOS<uint8_t>(0);
+    buffer->resize(5 * 1024);
+    bluetoothout = new QueueStream<uint8_t>(*buffer);
+
     INFO("Bluetooth source configuration. Free HEAP is %d", ESP.getFreeHeap());
-    bluetoothsource = new BluetoothSource(i2s, leds, app, player);
-    bluetoothsource->start();
+    bluetoothsource = new BluetoothSource( // Connection state callback
+        [](BluetoothSource *source, esp_a2d_connection_state_t state)
+        {
+      switch (state)
+      {
+      case ESP_A2D_CONNECTION_STATE_DISCONNECTED:
+        INFO("bluetooth() - DISCONNECTED");
+        break;
+      case ESP_A2D_CONNECTION_STATE_CONNECTING:
+        INFO("bluetooth() - CONNECTING");
+        break;
+      case ESP_A2D_CONNECTION_STATE_CONNECTED:
+        INFO("bluetooth() - CONNECTED. Sending player output to Bluetooth device");
+        leds->setState(BTCONNECTED);
+        player->setOutput(*bluetoothout);
+        // Bluetooth Playback is always 70%
+        player->setVolume(0.7);
+        app->setBluetoothSpeakerConnected();
+        leds->setBluetoothSpeakerConnected();
+        break;
+      case ESP_A2D_CONNECTION_STATE_DISCONNECTING:
+        INFO("bluetooth() - DI‚SCONNECTING. Sending player output to I2S");
+        player->setOutput(*i2s);
+        break;
+      } },
+        // SSID pairing callback
+        [](const char *ssid, esp_bd_addr_t address, int rrsi)
+        {
+          INFO("bluetooth() - Found SSID %s with RRSI %d", ssid, rrsi);
+          if (app->isValidDeviceToPairForBluetooth(String(ssid))) 
+          {
+            INFO("bluetooth() - Candidate for pairing found!");
+            return true;
+          }
+          return false; },
+        // AVRC callback
+        [](uint8_t key, bool isReleased)
+        {
+            if (isReleased)
+            {
+              INFO("bluetooth() - AVRC button %d released!", key);
+            }
+            else
+            {
+              INFO("bluetooth() - AVRC button %d pressed!", key);
+              if (key == 0x44) // PLAY
+              {
+                INFO("bluetooth() - AVRC PLAY pressed");
+                app->toggleActiveState();
+              }
+              if (key == 0x45) // STOP
+              {
+                INFO("bluetooth() - AVRC STOP pressed");
+                app->toggleActiveState();
+              }
+              if (key == 0x46) // PAUSE
+              {
+                INFO("bluetooth() - AVRC PAUSE pressed");
+                app->toggleActiveState();
+              }
+              if (key == 0x4b) // NEXT
+              {
+                INFO("bluetooth() - AVRC NEXT pressed");
+                app->next();
+              }
+              if (key == 0x4c) // PREVIOUS
+              {
+                INFO("bluetooth() - AVRC PREVIOUS pressed");
+                app->previous();
+              }
+            } },
+        // Read data callback
+        [](uint8_t *data, int32_t len)
+        {
+          if (buffer->available() < len)
+          {
+            // Need more data
+            return 0;
+          }
+          DEBUG("Requesting %d bytes for Bluetooth", len);
+          int32_t result_bytes = buffer->readArray(data, len);
+          DEBUG("Transfering %d bytes over Bluetooth, requested were %d", result_bytes, len);
+          return result_bytes;
+        });
+
+    // Start output when buffer is 95% full
+    bluetoothout->begin(95);
+
+    bluetoothsource->start(app->computeTechnicalName());
 
     INFO("Bluetooth source initialized. Free HEAP is %d", ESP.getFreeHeap());
   }
@@ -242,8 +338,30 @@ void setup()
     }
 
     INFO("Bluetooth sink configuration. Free HEAP is %d", ESP.getFreeHeap());
-    bluetoothsink = new BluetoothSink(i2s, leds, app);
-    bluetoothsink->start();
+    bluetoothsink = new BluetoothSink(i2s, [](BluetoothSink *sink, esp_a2d_connection_state_t state)
+                                      {
+      switch (state)
+      {
+      case ESP_A2D_CONNECTION_STATE_DISCONNECTED:
+        INFO("bluetooth() - DISCONNECTED");
+        break;
+      case ESP_A2D_CONNECTION_STATE_CONNECTING:
+        INFO("bluetooth() - CONNECTING. Wairing for Pairing to finish...");
+        leds->setState(BTCONNECTING);
+        break;
+      case ESP_A2D_CONNECTION_STATE_CONNECTED:
+        INFO("bluetooth() - CONNECTED. Receiving data from Bluetooth source");
+        leds->setState(BTCONNECTED);
+        app->setBluetoothSpeakerConnected();
+        leds->setBluetoothSpeakerConnected();
+        break;
+      case ESP_A2D_CONNECTION_STATE_DISCONNECTING:
+        INFO("bluetooth() - DISCONNECTING");
+        break;
+      }; });
+
+    bluetoothsink->start(app->computeTechnicalName());
+    app->actAsBluetoothSpeaker(bluetoothsink);
 
     INFO("Bluetooth sink initialized. Free HEAP is %d", ESP.getFreeHeap());
   }
@@ -340,48 +458,49 @@ void setup()
   }
 
   source->setChangeIndexCallback([](Stream *next)
-                                 { 
-                                  INFO("In info callback");
-                                  if (next != nullptr)
-                                  {
-                                    const char *songinfo = source->toStr();
-                                    if (songinfo && mqtt != NULL)
-                                    {
-                                      mqtt->publishCurrentSong(String(songinfo));
-                                    }
+                                 {
+      INFO("In info callback");
+      if (next != nullptr)
+      {
+        const char *songinfo = source->toStr();
+        if (songinfo && mqtt != NULL)
+        {
+          mqtt->publishCurrentSong(String(songinfo));
+        }
 
-                                    app->incrementStateVersion();
-                                  }
-                                  INFO("Done"); });
+        app->incrementStateVersion();
+      }
+      INFO("Done"); });
 
   // Init file browser
   strcpy(app->getCurrentPath(), "");
 
   app->begin([](bool active, float volume, const char *currentsong, int playProgressInPercent)
              {
-                  if (mqtt != NULL)  {
+      if (mqtt != NULL)
+      {
 
-                      if (active)
-                      {
-                        mqtt->publishPlaybackState(String("Playing"));
-                      }
-                      else
-                      {
-                        mqtt->publishPlaybackState(String("Stopped"));
-                      }
+        if (active)
+        {
+          mqtt->publishPlaybackState(String("Playing"));
+        }
+        else
+        {
+          mqtt->publishPlaybackState(String("Stopped"));
+        }
 
-                      mqtt->publishVolume(((int)(volume * 100)));
-                      if (currentsong)
-                      {
-                        mqtt->publishCurrentSong(String(currentsong));
-                      }
+        mqtt->publishVolume(((int)(volume * 100)));
+        if (currentsong)
+        {
+          mqtt->publishCurrentSong(String(currentsong));
+        }
 
-                      mqtt->publishPlayProgress(playProgressInPercent);
+        mqtt->publishPlayProgress(playProgressInPercent);
 
-                      mqtt->publishBatteryVoltage(sensors->getBatteryVoltage());
-                  }
-                            
-                  app->incrementStateVersion(); });
+        mqtt->publishBatteryVoltage(sensors->getBatteryVoltage());
+      }
+
+      app->incrementStateVersion(); });
 
   leds->setBootProgress(80);
 
@@ -422,12 +541,12 @@ void wifiConnected()
   }
 
   // Start webserver, as we now have a WiFi stack...
-  frontend->begin();
+  webserver->begin();
 
   app->announceMDNS();
   app->announceSSDP();
 
-  if (settings->isVoiceAssistantEnabled())
+  if (settings->isVoiceAssistantEnabled() && assistant != NULL)
   {
     INFO("Starting voice assistant integration");
     assistant->begin(settings->getVoiceAssistantServer(), settings->getVoiceAssistantPort(), settings->getVoiceAssistantAccessToken(), app->computeUUID(), [](HAState state)
@@ -459,11 +578,11 @@ void loop()
     int pincode = bluetoothsink->pinCode();
     if (pincode != 0 && !app->isBluetoothSpeakerConnected())
     {
-      INFO("Got PIN code %d for confirmation", pincode);
+      DEBUG("Got PIN code %d for confirmation", pincode);
       if (sensors->isPreviousPressed())
       {
         bluetoothsink->confirmPinCode();
-      } 
+      }
       else
       {
         leds->setState(BTCONNECTING);
@@ -501,21 +620,21 @@ void loop()
     {
       mqtt->loop();
 
-      frontend->loop();
+      webserver->loop();
+
+      // The hole thing here is that the audiolib and the audioplayer are not
+      // thread safe !!! So we perform everything related to audio processing
+      // sequentially here
+
+      // Record a time slice
+      if (settings->isVoiceAssistantEnabled() && assistant != NULL)
+      {
+        assistant->processAudioData();
+      }
     }
   }
 
   leds->loop(settings->isWiFiEnabled(), app->isWifiConnected(), app->isActive(), (int)(app->getVolume() * 100), app->playProgressInPercent());
-
-  // The hole thing here is that the audiolib and the audioplayer are not
-  // thread safe !!! So we perform everything related to audio processing
-  // sequentially here
-
-  // Record a time slice
-  if (settings->isVoiceAssistantEnabled() && assistant != NULL)
-  {
-    assistant->processAudioData();
-  }
 
   // The main app loop
   app->loop();

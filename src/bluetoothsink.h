@@ -3,23 +3,25 @@
 
 #include <AudioTools.h>
 #include <BluetoothA2DPSink.h>
+#include <functional>
 
 #include "leds.h"
 
-class App;
+class BluetoothSink;
+
+typedef std::function<void(BluetoothSink *sink, esp_a2d_connection_state_t state)> BluetoothSinkConnectCallback;
 
 class BluetoothSink
 {
 private:
     I2SStream *out;
     BluetoothA2DPSink *sink;
-    Leds *leds;
-    App *app;
+    BluetoothSinkConnectCallback connectCallback;
 
 public:
-    BluetoothSink(I2SStream *output, Leds *leds, App *app);
+    BluetoothSink(I2SStream *output, BluetoothSinkConnectCallback connectCallback);
 
-    void start();
+    void start(String bluetoothSSID);
 
     int pinCode();
     void confirmPinCode();

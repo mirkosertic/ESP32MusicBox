@@ -7,7 +7,6 @@
 #include <esp_mac.h>
 
 #include "logging.h"
-#include "bluetoothsink.h"
 #include "gitrevision.h"
 
 App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport)

@@ -1,4 +1,4 @@
-#include "frontend.h"
+#include "webserver.h"
 
 #include <SPIFFS.h>
 #include <WiFi.h>
@@ -246,7 +246,7 @@ String urlencode(String str)
   return encodedString;
 }
 
-Frontend::Frontend(FS *fs, App *app, uint16_t wsportnumber, const char *ext, Settings *settings)
+Webserver::Webserver(FS *fs, App *app, uint16_t wsportnumber, const char *ext, Settings *settings)
 {
   this->fs = fs;
   this->app = app;
@@ -256,12 +256,12 @@ Frontend::Frontend(FS *fs, App *app, uint16_t wsportnumber, const char *ext, Set
   this->settings = settings;
 }
 
-Frontend::~Frontend()
+Webserver::~Webserver()
 {
   delete this->server;
 }
 
-void Frontend::initialize()
+void Webserver::initialize()
 {
   this->server->on("/", HTTP_GET, [this](PsychicRequest *request)
                    {
@@ -1062,7 +1062,7 @@ void Frontend::initialize()
               return response.send(); });
 }
 
-void Frontend::begin()
+void Webserver::begin()
 {
   this->server->config.max_uri_handlers = 25;
   this->server->listen(80);
@@ -1070,7 +1070,7 @@ void Frontend::begin()
   this->initialize();
 }
 
-void Frontend::loop()
+void Webserver::loop()
 {
   // Server runs async...
 }

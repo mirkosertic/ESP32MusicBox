@@ -1,5 +1,5 @@
-#ifndef FRONTEND_H
-#define FRONTEND_H
+#ifndef WEBSERVER_H
+#define WEBSERVER_H
 
 #include <PsychicHttp.h>
 #include <FS.h>
@@ -7,7 +7,7 @@
 #include "app.h"
 #include "settings.h"
 
-class Frontend
+class Webserver
 {
 private:
   uint16_t wsport;
@@ -20,8 +20,8 @@ private:
   void initialize();
 
 public:
-  Frontend(FS *fs, App *app, uint16_t wsportnumber, const char *ext, Settings *settings);
-  ~Frontend();
+  Webserver(FS *fs, App *app, uint16_t wsportnumber, const char *ext, Settings *settings);
+  ~Webserver();
 
   void begin();
 

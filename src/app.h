@@ -13,10 +13,9 @@
 #include "mediaplayersource.h"
 #include "voiceassistant.h"
 #include "settings.h"
+#include "bluetoothsink.h"
 
 typedef std::function<void(bool active, float volume, const char *currentsong, int playprogressinpercent)> ChangeNotifierCallback;
-
-class BluetoothSink;
 
 class App
 {
@@ -63,7 +62,6 @@ private:
 
 public:
     App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport);
-
     ~App();
 
     void begin(ChangeNotifierCallback callback);
@@ -166,7 +164,7 @@ public:
 
     bool isActAsBluetoothSpeaker();
 
-    bool isValidDeviceToPairForBluetooth(String ssid);    
+    bool isValidDeviceToPairForBluetooth(String ssid);
 };
 
 #endif
