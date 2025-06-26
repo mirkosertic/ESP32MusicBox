@@ -17,9 +17,10 @@ MQTT::~MQTT()
     delete this->pubsubclient;
 }
 
-void MQTT::begin(String host, int port, String username, String password)
+void MQTT::begin(String host, int port, String username, String password, String configurationUrl)
 {
     this->clientid = app->computeTechnicalName();
+    this->configurationUrl = configurationUrl;
     INFO("Connecting to %s:%d as client %s", host.c_str(), port, this->clientid.c_str());
     this->host = host;
     this->port = port;
@@ -159,7 +160,7 @@ String MQTT::announceButton(String buttonId, String title, String icon, const st
     device["model_id"] = this->app->getVersion();
     device["sw_version"] = this->app->getSoftwareVersion();
     device["serial_number"] = this->app->computeSerialNumber();
-    device["configuration_url"] = this->app->getConfigurationURL();
+    device["configuration_url"] = configurationUrl;
 
     JsonArray identifiers = device["identifiers"].to<JsonArray>();
     identifiers.add(this->app->computeUUID());
@@ -209,7 +210,7 @@ String MQTT::announceNumber(String numberId, String title, String icon, String m
     device["model_id"] = this->app->getVersion();
     device["sw_version"] = this->app->getSoftwareVersion();
     device["serial_number"] = this->app->computeSerialNumber();
-    device["configuration_url"] = this->app->getConfigurationURL();
+    device["configuration_url"] = configurationUrl;
 
     JsonArray identifiers = device["identifiers"].to<JsonArray>();
     identifiers.add(this->app->computeUUID());
@@ -261,7 +262,7 @@ String MQTT::announceSensor(String notifyId, String title, String icon, String d
     device["model_id"] = this->app->getVersion();
     device["sw_version"] = this->app->getSoftwareVersion();
     device["serial_number"] = this->app->computeSerialNumber();
-    device["configuration_url"] = this->app->getConfigurationURL();
+    device["configuration_url"] = configurationUrl;
 
     JsonArray identifiers = device["identifiers"].to<JsonArray>();
     identifiers.add(this->app->computeUUID());
@@ -295,7 +296,7 @@ String MQTT::announceTagscanner(String notifyId)
     device["model_id"] = this->app->getVersion();
     device["sw_version"] = this->app->getSoftwareVersion();
     device["serial_number"] = this->app->computeSerialNumber();
-    device["configuration_url"] = this->app->getConfigurationURL();
+    device["configuration_url"] = configurationUrl;
 
     JsonArray identifiers = device["identifiers"].to<JsonArray>();
     identifiers.add(this->app->computeUUID());

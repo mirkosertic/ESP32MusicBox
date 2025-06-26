@@ -1,8 +1,10 @@
 #include "webserver.h"
 
+#include <Arduino.h>
 #include <SPIFFS.h>
 #include <WiFi.h>
 #include <ArduinoJson.h>
+#include <ESPmDNS.h>
 
 #include <esp_task_wdt.h>
 
@@ -211,7 +213,6 @@ String urlencode(String str)
   char c;
   char code0;
   char code1;
-  char code2;
   for (int i = 0; i < str.length(); i++)
   {
     c = str.charAt(i);
@@ -236,7 +237,6 @@ String urlencode(String str)
       {
         code0 = c - 10 + 'A';
       }
-      code2 = '\0';
       encodedString += '%';
       encodedString += code0;
       encodedString += code1;
@@ -586,7 +586,7 @@ void Webserver::initialize()
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
 
-    JsonObject result = response.getRoot();
+    // JsonObject result = response.getRoot();
 
     return response.send(); });
 
@@ -602,7 +602,7 @@ void Webserver::initialize()
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
 
-    JsonObject result = response.getRoot();
+    // JsonObject result = response.getRoot();
 
     return response.send(); });
 
@@ -618,7 +618,7 @@ void Webserver::initialize()
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
 
-    JsonObject result = response.getRoot();
+    // JsonObject result = response.getRoot();
 
     return response.send(); });
 
@@ -638,7 +638,7 @@ void Webserver::initialize()
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
 
-    JsonObject result = response.getRoot();
+    // JsonObject result = response.getRoot();
 
     return response.send(); });
 
@@ -657,7 +657,7 @@ void Webserver::initialize()
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
 
-    JsonObject result = response.getRoot();
+    // JsonObject result = response.getRoot();
 
     return response.send(); });
 
@@ -687,7 +687,7 @@ void Webserver::initialize()
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
 
-    JsonObject result = response.getRoot();
+    // JsonObject result = response.getRoot();
 
     return response.send(); });
 
@@ -703,7 +703,7 @@ void Webserver::initialize()
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
 
-    JsonObject result = response.getRoot();
+    // JsonObject result = response.getRoot();
 
     return response.send(); });
 
@@ -711,7 +711,7 @@ void Webserver::initialize()
                    {
                     INFO("webserver() - /description.xml received");
 
-                    String data = app->getSSDPDescription();
+                    String data = this->getSSDPDescription();
 
                     CustomPsychicStreamResponse response(request, "application/xml");
                     response.setContentType("application/xml");
@@ -1062,15 +1062,203 @@ void Webserver::initialize()
               return response.send(); });
 }
 
+String Webserver::getConfigurationURL()
+{
+  return "http://" + this->app->computeTechnicalName() + ".local:" + this->wsport + "/";
+}
+
+void Webserver::announceMDNS()
+{
+  String technicalName = this->app->computeTechnicalName();
+  if (MDNS.begin(technicalName))
+  {
+    INFO("Registered as mDNS-Name %s", technicalName.c_str());
+  }
+  else
+  {
+    WARN("Registered as mDNS-Name %s failed", technicalName.c_str());
+  }
+}
+
+void Webserver::ssdpNotify()
+{
+  INFO("Sent SSDP NOTIFY messages");
+
+  const IPAddress SSDP_MULTICAST_ADDR(239, 255, 255, 250);
+  const uint16_t SSDP_PORT = 1900;
+
+  String deviceUUID = this->app->computeUUID();
+
+  // Send initial NOTIFY messages
+  char notify[1024];
+
+  // Send NOTIFY for different device types
+  String deviceTypes[] = {
+      "upnp:rootdevice",
+      "urn:schemas-upnp-org:device:Basic:1",
+      String("uuid:") + deviceUUID};
+
+  const char *SSDP_NOTIFY_TEMPLATE =
+      "NOTIFY * HTTP/1.1\r\n"
+      "HOST: 239.255.255.250:1900\r\n"
+      "CACHE-CONTROL: max-age=1800\r\n"
+      "LOCATION: http://%s:%d/description.xml\r\n"
+      "SERVER: SSDPServer/1.0\r\n"
+      "NT: %s\r\n"
+      "USN: uuid:%s::%s\r\n"
+      "NTS: ssdp:alive\r\n"
+      "BOOTID.UPNP.ORG: 1\r\n"
+      "CONFIGID.UPNP.ORG: 1\r\n"
+      "\r\n";
+
+  for (int i = 0; i < 3; i++)
+  {
+    sprintf(notify, SSDP_NOTIFY_TEMPLATE,
+            WiFi.localIP().toString().c_str(),
+            this->wsport,
+            deviceTypes[i].c_str(),
+            deviceUUID.c_str(),
+            deviceTypes[i].c_str());
+
+    this->udp->beginPacket(SSDP_MULTICAST_ADDR, SSDP_PORT);
+    this->udp->write((uint8_t *)notify, strlen(notify));
+    this->udp->endPacket();
+  }
+}
+
+void Webserver::announceSSDP()
+{
+  INFO("Initializing SSDP...");
+
+  const IPAddress SSDP_MULTICAST_ADDR(239, 255, 255, 250);
+  const uint16_t SSDP_PORT = 1900;
+
+  this->udp = new WiFiUDP();
+
+  // Join multicast group for SSDP
+  if (this->udp->beginMulticast(SSDP_MULTICAST_ADDR, SSDP_PORT))
+  {
+    INFO("SSDP multicast joined successfully");
+  }
+  else
+  {
+    WARN("Failed to join SSDP multicast group");
+  }
+}
+
+String Webserver::getSSDPDescription()
+{
+  String deviceUUID = this->app->computeUUID();
+
+  String xml = "<?xml version='1.0'?>";
+  xml += "<root xmlns='urn:schemas-upnp-org:device-1-0'>";
+  xml += "<specVersion><major>1</major><minor>0</minor></specVersion>";
+  xml += "<device>";
+  xml += "<deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType>";
+  xml += "<friendlyName>" + this->app->getName() + "</friendlyName>";
+  xml += "<manufacturer>" + this->app->getManufacturer() + "</manufacturer>";
+  xml += "<modelName>" + this->app->getDeviceType() + "</modelName>";
+  xml += "<modelNumber>" + this->app->getVersion() + "</modelNumber>";
+  xml += "<serialNumber>" + this->app->computeSerialNumber() + "</serialNumber>";
+  xml += "<UDN>uuid:" + this->app->computeUUID() + "</UDN>";
+  xml += "<presentationURL>" + getConfigurationURL() + "</presentationURL>";
+  xml += "</device>";
+  xml += "</root>";
+  return xml;
+}
+
 void Webserver::begin()
 {
+  this->announceMDNS();
+  this->announceSSDP();
+
   this->server->config.max_uri_handlers = 25;
-  this->server->listen(80);
+  this->server->listen(wsport);
 
   this->initialize();
 }
 
 void Webserver::loop()
 {
+  static long lastSSDPNotify = millis();
+  long now = millis();
+  if (now - lastSSDPNotify > 5000)
+  {
+    this->ssdpNotify();
+    lastSSDPNotify = now;
+  }
+
+  // SSDP
+
+  // Incoming messages
+  int packetSize = this->udp->parsePacket();
+  if (packetSize)
+  {
+    char packetBuffer[512];
+    int len = this->udp->read(packetBuffer, sizeof(packetBuffer) - 1);
+    if (len > 0)
+    {
+      packetBuffer[len] = '\0';
+
+      // Check if it's an M-SEARCH request
+      if (strstr(packetBuffer, "M-SEARCH") && strstr(packetBuffer, "ssdp:discover"))
+      {
+        INFO("Received SSDP M-SEARCH request");
+
+        // Extract search target
+        char *stLine = strstr(packetBuffer, "ST:");
+        String searchTarget = "upnp:rootdevice"; // Default
+
+        if (stLine)
+        {
+          stLine += 3; // Skip "ST:"
+          while (*stLine == ' ')
+            stLine++; // Skip spaces
+          char *end = strstr(stLine, "\r");
+          if (end)
+          {
+            *end = '\0';
+            searchTarget = String(stLine);
+          }
+        }
+
+        char response[1024];
+        char dateStr[64];
+
+        // Simple date string (could be improved with real time)
+        sprintf(dateStr, "Mon, 01 Jan 1970 00:00:00 GMT");
+
+        String deviceUUID = this->app->computeUUID();
+
+        const char *SSDP_RESPONSE_TEMPLATE =
+            "HTTP/1.1 200 OK\r\n"
+            "CACHE-CONTROL: max-age=1800\r\n"
+            "DATE: %s\r\n"
+            "EXT:\r\n"
+            "LOCATION: http://%s:%d/description.xml\r\n"
+            "SERVER: SSDPServer/1.0\r\n"
+            "ST: %s\r\n"
+            "USN: uuid:%s::%s\r\n"
+            "BOOTID.UPNP.ORG: 1\r\n"
+            "CONFIGID.UPNP.ORG: 1\r\n"
+            "\r\n";
+
+        sprintf(response, SSDP_RESPONSE_TEMPLATE,
+                dateStr,
+                WiFi.localIP().toString().c_str(),
+                wsport,
+                searchTarget.c_str(),
+                deviceUUID.c_str(),
+                searchTarget.c_str());
+
+        // Send unicast response to requester
+        this->udp->beginPacket(this->udp->remoteIP(), this->udp->remotePort());
+        this->udp->write((uint8_t *)response, strlen(response));
+        this->udp->endPacket();
+
+        INFO("Sent SSDP response");
+      }
+    }
+  }
   // Server runs async...
 }

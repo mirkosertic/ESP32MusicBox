@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include <functional>
-#include <WiFiUdp.h>
+
 #include <PubSubClient.h>
 #include <mutex>
 
@@ -13,11 +13,11 @@
 #include "mediaplayersource.h"
 #include "voiceassistant.h"
 #include "settings.h"
-#include "bluetoothsink.h"
+#include "userfeedbackhandler.h"
 
 typedef std::function<void(bool active, float volume, const char *currentsong, int playprogressinpercent)> ChangeNotifierCallback;
 
-class App
+class App : public UserfeedbackHandler
 {
 private:
     String name;
@@ -52,13 +52,7 @@ private:
 
     ChangeNotifierCallback changecallback;
 
-    WiFiUDP *udp;
-
     bool btspeakerconnected;
-
-    bool actasbluetoothspeaker;
-    bool btpause;
-    BluetoothSink *bluetoothsink;
 
 public:
     App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport);
@@ -116,16 +110,6 @@ public:
 
     void setServerPort(int serverPort);
 
-    String getConfigurationURL();
-
-    void announceMDNS();
-
-    void announceSSDP();
-
-    void ssdpNotify();
-
-    String getSSDPDescription();
-
     void writeCommandToTag(CommandData command);
 
     void clearTag();
@@ -144,25 +128,21 @@ public:
 
     void setVolume(float volume);
 
-    bool volumeUp();
+    bool volumeUp() override;
 
-    bool volumeDown();
+    bool volumeDown() override;
 
-    void toggleActiveState();
+    void toggleActiveState() override;
 
-    void previous();
+    void previous() override;
 
-    void next();
+    void next() override;
 
     void play(String path, int index);
 
     void setBluetoothSpeakerConnected(bool value = true);
 
     bool isBluetoothSpeakerConnected();
-
-    void actAsBluetoothSpeaker(BluetoothSink *bluetoothsink);
-
-    bool isActAsBluetoothSpeaker();
 
     bool isValidDeviceToPairForBluetooth(String ssid);
 };

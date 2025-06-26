@@ -9,6 +9,7 @@ BluetoothSink::BluetoothSink(I2SStream *output, BluetoothSinkConnectCallback con
 {
     this->out = output;
     this->connectCallback = connectCallback;
+    this->pauseMode = false;
 
     this->sink = new BluetoothA2DPSink(*output);
     this->sink->clean_last_connection();
@@ -43,16 +44,20 @@ void BluetoothSink::confirmPinCode()
     }
 }
 
-void BluetoothSink::play()
+void BluetoothSink::toggleActiveState()
 {
-    INFO("Playing Bluetooth device");
-    this->sink->play();
-}
-
-void BluetoothSink::pause()
-{
-    INFO("Pausing Bluetooth device")
-    this->sink->pause();
+    if (this->pauseMode)
+    {
+        INFO("Playing Bluetooth device");
+        this->sink->play();
+        this->pauseMode = false;
+    }
+    else
+    {
+        INFO("Pausing Bluetooth device");
+        this->sink->pause();
+        this->pauseMode = true;
+    }
 }
 
 void BluetoothSink::previous()
@@ -67,14 +72,16 @@ void BluetoothSink::next()
     this->sink->next();
 }
 
-void BluetoothSink::volumeUp()
+bool BluetoothSink::volumeUp()
 {
     INFO("Sending volume up down to Bluetooth device");
     this->sink->volume_up();
+    return true;
 }
 
-void BluetoothSink::volumeDown()
+bool BluetoothSink::volumeDown()
 {
     INFO("Sending volume down to Bluetooth device");
     this->sink->volume_down();
+    return false;
 }

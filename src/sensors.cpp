@@ -14,9 +14,8 @@ void sensorsdelegate(void *arguments)
     }
 }
 
-Sensors::Sensors(App *app, Leds *leds)
+Sensors::Sensors(Leds *leds)
 {
-    this->app = app;
     this->leds = leds;
 
     pinMode(GPIO_VOLTAGE_MEASURE, INPUT);
@@ -26,7 +25,7 @@ Sensors::Sensors(App *app, Leds *leds)
         if (action == PRESSED)
         {
             INFO("Start / Stop button pressed");
-            this->app->toggleActiveState();
+            this->handler->toggleActiveState();
         } });
 
     this->prev = new Button(GPIO_PREVIOUS, 300, [this](ButtonAction action)
@@ -34,11 +33,11 @@ Sensors::Sensors(App *app, Leds *leds)
         if (action == RELEASED) 
         {
             INFO("Prev button released");            
-            this->app->previous();
+            this->handler->previous();
         }
         if (action == PRESSED_FOR_LONG_TIME)
         {   
-            if (this->app->volumeDown())
+            if (this->handler->volumeDown())
             {
                 INFO("Decrementing volume");
                 this->leds->setState(VOLUME_CHANGE);
@@ -50,11 +49,11 @@ Sensors::Sensors(App *app, Leds *leds)
         if (action == RELEASED)
         {
             INFO("Next button released");                        
-            this->app->next();
+            this->handler->next();
         }
         if (action == PRESSED_FOR_LONG_TIME)
         {
-            if (this->app->volumeUp())
+            if (this->handler->volumeUp())
             {
                 INFO("Incrementing volume");
                 this->leds->setState(VOLUME_CHANGE);
@@ -62,17 +61,19 @@ Sensors::Sensors(App *app, Leds *leds)
         } });
 }
 
+void Sensors::begin(UserfeedbackHandler *handler)
+{
+    this->handler = handler;
+
+    // Start the loop as a separate task running in the background
+    xTaskCreate(sensorsdelegate, "Sensors", 8192, this, 2, NULL);
+}
+
 Sensors::~Sensors()
 {
     delete this->prev;
     delete this->next;
     delete this->startstop;
-}
-
-void Sensors::begin()
-{
-    // Start the loop as a separate task running in the background
-    xTaskCreate(sensorsdelegate, "Sensors", 8192, this, 2, NULL);
 }
 
 void Sensors::loop()

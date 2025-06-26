@@ -1,6 +1,5 @@
 #include "app.h"
 
-#include <ESPmDNS.h>
 #include <ArduinoJson.h>
 
 #include <esp_system.h>
@@ -26,9 +25,6 @@ App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player,
     this->volume = 1.0f;
 
     this->btspeakerconnected = false;
-    this->actasbluetoothspeaker = false;
-    this->bluetoothsink = NULL;
-    this->btpause = false;
 }
 
 App::~App()
@@ -231,111 +227,6 @@ void App::setServerPort(int serverPort)
     this->serverPort = serverPort;
 }
 
-String App::getConfigurationURL()
-{
-    return "http://" + this->computeTechnicalName() + ".local:" + this->serverPort + "/";
-}
-
-void App::announceMDNS()
-{
-    String technicalName = this->computeTechnicalName();
-    if (MDNS.begin(technicalName))
-    {
-        INFO("Registered as mDNS-Name %s", technicalName.c_str());
-    }
-    else
-    {
-        WARN("Registered as mDNS-Name %s failed", technicalName.c_str());
-    }
-}
-
-void App::ssdpNotify()
-{
-    INFO("Sent SSDP NOTIFY messages");
-
-    const IPAddress SSDP_MULTICAST_ADDR(239, 255, 255, 250);
-    const uint16_t SSDP_PORT = 1900;
-
-    String deviceUUID = computeUUID();
-
-    // Send initial NOTIFY messages
-    char notify[1024];
-
-    // Send NOTIFY for different device types
-    String deviceTypes[] = {
-        "upnp:rootdevice",
-        "urn:schemas-upnp-org:device:Basic:1",
-        String("uuid:") + deviceUUID};
-
-    const char *SSDP_NOTIFY_TEMPLATE =
-        "NOTIFY * HTTP/1.1\r\n"
-        "HOST: 239.255.255.250:1900\r\n"
-        "CACHE-CONTROL: max-age=1800\r\n"
-        "LOCATION: http://%s:%d/description.xml\r\n"
-        "SERVER: SSDPServer/1.0\r\n"
-        "NT: %s\r\n"
-        "USN: uuid:%s::%s\r\n"
-        "NTS: ssdp:alive\r\n"
-        "BOOTID.UPNP.ORG: 1\r\n"
-        "CONFIGID.UPNP.ORG: 1\r\n"
-        "\r\n";
-
-    for (int i = 0; i < 3; i++)
-    {
-        sprintf(notify, SSDP_NOTIFY_TEMPLATE,
-                WiFi.localIP().toString().c_str(),
-                this->serverPort,
-                deviceTypes[i].c_str(),
-                deviceUUID.c_str(),
-                deviceTypes[i].c_str());
-
-        this->udp->beginPacket(SSDP_MULTICAST_ADDR, SSDP_PORT);
-        this->udp->write((uint8_t *)notify, strlen(notify));
-        this->udp->endPacket();
-    }
-}
-
-void App::announceSSDP()
-{
-    INFO("Initializing SSDP...");
-
-    const IPAddress SSDP_MULTICAST_ADDR(239, 255, 255, 250);
-    const uint16_t SSDP_PORT = 1900;
-
-    this->udp = new WiFiUDP();
-
-    // Join multicast group for SSDP
-    if (this->udp->beginMulticast(SSDP_MULTICAST_ADDR, SSDP_PORT))
-    {
-        INFO("SSDP multicast joined successfully");
-    }
-    else
-    {
-        WARN("Failed to join SSDP multicast group");
-    }
-}
-
-String App::getSSDPDescription()
-{
-    String deviceUUID = computeUUID();
-
-    String xml = "<?xml version='1.0'?>";
-    xml += "<root xmlns='urn:schemas-upnp-org:device-1-0'>";
-    xml += "<specVersion><major>1</major><minor>0</minor></specVersion>";
-    xml += "<device>";
-    xml += "<deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType>";
-    xml += "<friendlyName>" + this->name + "</friendlyName>";
-    xml += "<manufacturer>" + this->manufacturer + "</manufacturer>";
-    xml += "<modelName>" + this->devicetype + "</modelName>";
-    xml += "<modelNumber>" + this->version + "</modelNumber>";
-    xml += "<serialNumber>" + computeSerialNumber() + "</serialNumber>";
-    xml += "<UDN>uuid:" + computeUUID() + "</UDN>";
-    xml += "<presentationURL>" + getConfigurationURL() + "</presentationURL>";
-    xml += "</device>";
-    xml += "</root>";
-    return xml;
-}
-
 void App::loop()
 {
     const std::lock_guard<std::mutex> lock(this->loopmutex);
@@ -356,81 +247,6 @@ void App::loop()
             INFO("loop() - Free HEAP is %d, stackHighWatermark is %d", ESP.getFreeHeap(), stackHighWatermark);
 
             lastStateReport = now;
-
-            ssdpNotify();
-        }
-
-        // SSDP
-
-        // Incoming messages
-        int packetSize = this->udp->parsePacket();
-        if (packetSize)
-        {
-            char packetBuffer[512];
-            int len = this->udp->read(packetBuffer, sizeof(packetBuffer) - 1);
-            if (len > 0)
-            {
-                packetBuffer[len] = '\0';
-
-                // Check if it's an M-SEARCH request
-                if (strstr(packetBuffer, "M-SEARCH") && strstr(packetBuffer, "ssdp:discover"))
-                {
-                    INFO("Received SSDP M-SEARCH request");
-
-                    // Extract search target
-                    char *stLine = strstr(packetBuffer, "ST:");
-                    String searchTarget = "upnp:rootdevice"; // Default
-
-                    if (stLine)
-                    {
-                        stLine += 3; // Skip "ST:"
-                        while (*stLine == ' ')
-                            stLine++; // Skip spaces
-                        char *end = strstr(stLine, "\r");
-                        if (end)
-                        {
-                            *end = '\0';
-                            searchTarget = String(stLine);
-                        }
-                    }
-
-                    char response[1024];
-                    char dateStr[64];
-
-                    // Simple date string (could be improved with real time)
-                    sprintf(dateStr, "Mon, 01 Jan 1970 00:00:00 GMT");
-
-                    String deviceUUID = computeUUID();
-
-                    const char *SSDP_RESPONSE_TEMPLATE =
-                        "HTTP/1.1 200 OK\r\n"
-                        "CACHE-CONTROL: max-age=1800\r\n"
-                        "DATE: %s\r\n"
-                        "EXT:\r\n"
-                        "LOCATION: http://%s:%d/description.xml\r\n"
-                        "SERVER: SSDPServer/1.0\r\n"
-                        "ST: %s\r\n"
-                        "USN: uuid:%s::%s\r\n"
-                        "BOOTID.UPNP.ORG: 1\r\n"
-                        "CONFIGID.UPNP.ORG: 1\r\n"
-                        "\r\n";
-
-                    sprintf(response, SSDP_RESPONSE_TEMPLATE,
-                            dateStr,
-                            WiFi.localIP().toString().c_str(),
-                            this->serverPort,
-                            searchTarget.c_str(),
-                            deviceUUID.c_str(),
-                            searchTarget.c_str());
-
-                    // Send unicast response to requester
-                    this->udp->beginPacket(this->udp->remoteIP(), this->udp->remotePort());
-                    this->udp->write((uint8_t *)response, strlen(response));
-                    this->udp->endPacket();
-
-                    INFO("Sent SSDP response");
-                }
-            }
         }
     }
 }
@@ -464,20 +280,11 @@ const char *App::currentTitle()
 
 void App::publishState()
 {
-    if (!this->actasbluetoothspeaker)
-    {
-        this->changecallback(this->player->isActive(), this->volumeSupport->volume(), this->player->currentSong(), this->player->playProgressInPercent());
-    }
+    this->changecallback(this->player->isActive(), this->volumeSupport->volume(), this->player->currentSong(), this->player->playProgressInPercent());
 }
 
 bool App::volumeDown()
 {
-    if (this->actasbluetoothspeaker)
-    {
-        this->bluetoothsink->volumeDown();
-        return true;
-    }
-
     float volume = this->getVolume();
     if (volume >= 0.02)
     {
@@ -490,12 +297,6 @@ bool App::volumeDown()
 
 bool App::volumeUp()
 {
-    if (this->actasbluetoothspeaker)
-    {
-        this->bluetoothsink->volumeUp();
-        return true;
-    }
-
     float volume = this->getVolume();
     if (volume <= 0.98)
     {
@@ -521,20 +322,6 @@ void App::toggleActiveState()
 {
     const std::lock_guard<std::mutex> lock(this->loopmutex);
 
-    if (this->actasbluetoothspeaker)
-    {
-        if (!this->btpause)
-        {
-            this->btpause = true;
-            this->bluetoothsink->pause();
-        }
-        else
-        {
-            this->btpause = false;
-            this->bluetoothsink->play();
-        }
-        return;
-    }
     INFO("Toggling player state");
     this->player->setActive(!this->player->isActive());
     this->publishState();
@@ -543,43 +330,29 @@ void App::toggleActiveState()
 void App::previous()
 {
     const std::lock_guard<std::mutex> lock(this->loopmutex);
-    if (this->actasbluetoothspeaker)
+    if (this->source->index() > 0)
     {
-        this->bluetoothsink->previous();
+        INFO("Previous title");
+        this->player->previous();
+
+        this->publishState();
     }
     else
     {
-        if (this->source->index() > 0)
-        {
-            INFO("Previous title");
-            this->player->previous();
-
-            this->publishState();
-        }
-        else
-        {
-            WARN("Already at the beginning!");
-        }
+        WARN("Already at the beginning!");
     }
 }
 
 void App::next()
 {
     const std::lock_guard<std::mutex> lock(this->loopmutex);
-    if (this->actasbluetoothspeaker)
+    if (!this->player->next())
     {
-        this->bluetoothsink->next();
+        WARN("No more next titles!");
     }
     else
     {
-        if (!this->player->next())
-        {
-            WARN("No more next titles!");
-        }
-        else
-        {
-            this->publishState();
-        }
+        this->publishState();
     }
 }
 
@@ -613,17 +386,6 @@ void App::setBluetoothSpeakerConnected(bool value)
 bool App::isBluetoothSpeakerConnected()
 {
     return this->btspeakerconnected;
-}
-
-void App::actAsBluetoothSpeaker(BluetoothSink *bluetoothsink)
-{
-    this->bluetoothsink = bluetoothsink;
-    this->actasbluetoothspeaker = true;
-}
-
-bool App::isActAsBluetoothSpeaker()
-{
-    return this->actasbluetoothspeaker;
 }
 
 bool App::isValidDeviceToPairForBluetooth(String ssid)

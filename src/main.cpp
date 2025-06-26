@@ -48,7 +48,7 @@ BufferRTOS<uint8_t> *buffer;
 QueueStream<uint8_t> *bluetoothout;
 
 BluetoothSource *bluetoothsource;
-BluetoothSink *bluetoothsink;
+BluetoothSink *bluetoothsink = NULL;
 Settings *settings;
 
 TagScanner *tagscanner;
@@ -145,7 +145,7 @@ void setup()
 
   tagscanner = new TagScanner(&Wire1, GPIO_PN532_IRQ, GPIO_PN532_RST);
   app = new App(tagscanner, source, player, settings, player);
-  sensors = new Sensors(app, leds);
+  sensors = new Sensors(leds);
   INFO("Core components created. Free HEAP is %d", ESP.getFreeHeap());
 
   INFO("Free HEAP is %d", ESP.getFreeHeap());
@@ -213,6 +213,9 @@ void setup()
       app->setName(settings->getDeviceName());
       settings->initializeWifiFromSettings();
     }
+
+    // Button-Feedback goes to the app
+    sensors->begin(app);
 
     INFO("WiFi configuration and creating networking components. Free HEAP is %d", ESP.getFreeHeap());
     wifiClient = new WiFiClient();
@@ -361,7 +364,8 @@ void setup()
       }; });
 
     bluetoothsink->start(app->computeTechnicalName());
-    app->actAsBluetoothSpeaker(bluetoothsink);
+
+    sensors->begin(bluetoothsink);
 
     INFO("Bluetooth sink initialized. Free HEAP is %d", ESP.getFreeHeap());
   }
@@ -378,8 +382,9 @@ void setup()
 
   leds->setBootProgress(60);
 
-  if (!app->isActAsBluetoothSpeaker())
+  if (bluetoothsink == NULL)
   {
+    // We are running in RFID box mode
     INFO("NFC reader init");
     tagscanner->begin([](bool authenticated, bool knownTag, uint8_t *uid, String uidStr, uint8_t uidlength, String tagName, TagData tagdata)
                       {
@@ -513,7 +518,14 @@ void setup()
   player->setVolume(0.6);
 
   // Start the physical button controller logic
-  sensors->begin();
+  if (bluetoothsink != NULL)
+  {
+    sensors->begin(bluetoothsink);
+  }
+  else
+  {
+    sensors->begin(app);
+  }
 
   // Boot complete
   leds->setBootProgress(100);
@@ -535,16 +547,14 @@ void wifiConnected()
 
   INFO("Connected to WiFi network. Local IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 
-  if (settings->isMQTTEnabled())
-  {
-    mqtt->begin(settings->getMQTTServer(), settings->getMQTTPort(), settings->getMQTTUsername(), settings->getMQTTPassword());
-  }
-
   // Start webserver, as we now have a WiFi stack...
   webserver->begin();
 
-  app->announceMDNS();
-  app->announceSSDP();
+  if (settings->isMQTTEnabled())
+  {
+    // Bootstrap MQTT logic...
+    mqtt->begin(settings->getMQTTServer(), settings->getMQTTPort(), settings->getMQTTUsername(), settings->getMQTTPassword(), webserver->getConfigurationURL());
+  }
 
   if (settings->isVoiceAssistantEnabled() && assistant != NULL)
   {
