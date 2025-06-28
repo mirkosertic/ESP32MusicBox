@@ -12,18 +12,17 @@ typedef bool (*SSIDFilterCallback)(const char *ssid, esp_bd_addr_t address, int 
 typedef void (*AVRCCallback)(uint8_t key, bool isReleased);
 typedef int32_t (*ReadDataCallback)(uint8_t *data, int32_t len);
 
-class BluetoothSource
-{
+class BluetoothSource {
 private:
-    BluetoothA2DPSource *source;
-    BluetoothSourceConnectCallback connectCallback;
+	BluetoothA2DPSource *source;
+	BluetoothSourceConnectCallback connectCallback;
 
 public:
-    BluetoothSource(BluetoothSourceConnectCallback connectCallback,
-                    SSIDFilterCallback ssidFilterCallback,
-                    AVRCCallback avrcCallback,
-                    ReadDataCallback readDataCallback);
-    void start(String name);
+	BluetoothSource(BluetoothSourceConnectCallback connectCallback,
+		SSIDFilterCallback ssidFilterCallback,
+		AVRCCallback avrcCallback,
+		ReadDataCallback readDataCallback);
+	void start(String name);
 };
 
 #endif

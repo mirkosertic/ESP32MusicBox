@@ -3,15 +3,14 @@
 
 #include <Wire.h>
 
-class I2CDebug
-{
+class I2CDebug {
 private:
-    TwoWire *wire;
+	TwoWire *wire;
 
 public:
-    I2CDebug(TwoWire *wire);
+	I2CDebug(TwoWire *wire);
 
-    void printDevices();
+	void printDevices();
 };
 
 #endif

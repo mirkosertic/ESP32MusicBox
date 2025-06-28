@@ -1,34 +1,33 @@
 #ifndef SENSORS_H
 #define SENSORS_H
 
-#include "userfeedbackhandler.h"
 #include "button.h"
 #include "leds.h"
+#include "userfeedbackhandler.h"
 
-class Sensors
-{
+class Sensors {
 private:
-    UserfeedbackHandler *handler;
-    Leds *leds;
-    Button *prev;
-    Button *next;
-    Button *startstop;
+	UserfeedbackHandler *handler;
+	Leds *leds;
+	Button *prev;
+	Button *next;
+	Button *startstop;
 
 public:
-    Sensors(Leds *leds);
-    ~Sensors();
+	Sensors(Leds *leds);
+	~Sensors();
 
-    void begin(UserfeedbackHandler *handler);
+	void begin(UserfeedbackHandler *handler);
 
-    void loop();
+	void loop();
 
-    bool isStartStopPressed();
+	bool isStartStopPressed();
 
-    bool isPreviousPressed();
+	bool isPreviousPressed();
 
-    bool isNextPressed();
+	bool isNextPressed();
 
-    int getBatteryVoltage();
+	int getBatteryVoltage();
 };
 
 #endif

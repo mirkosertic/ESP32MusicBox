@@ -2,25 +2,24 @@
 #define VOICEASSISTANT_H
 
 #include <Arduino.h>
+#include "settings.h"
+
 #include <AudioTools.h>
 #include <WebSocketsClient.h>
 #include <mutex>
 
-#include "settings.h"
-
-enum HAState
-{
-    DISCONNECTED,
-    CONNECTED,
-    AUTHREQUESTED,
-    AUTHENTICATED,
-    AUTHENTICATIONERROR,
-    STARTED,
-    FINISHED,
-    RECORDING,
-    WAKEWORDFINISHED,
-    STTFINISHED,
-    TTSFINISHED
+enum HAState {
+	DISCONNECTED,
+	CONNECTED,
+	AUTHREQUESTED,
+	AUTHENTICATED,
+	AUTHENTICATIONERROR,
+	STARTED,
+	FINISHED,
+	RECORDING,
+	WAKEWORDFINISHED,
+	STTFINISHED,
+	TTSFINISHED
 };
 
 typedef std::function<void(HAState)> StateNotifierCallback;
@@ -31,75 +30,74 @@ typedef std::function<void(String)> PlayAudioFeedbackCallback;
 
 typedef struct
 {
-    size_t size;
-    uint8_t data[AUDIO_BUFFER_SIZE];
+	size_t size;
+	uint8_t data[AUDIO_BUFFER_SIZE];
 } AudioBuffer;
 
-class VoiceAssistant
-{
+class VoiceAssistant {
 private:
-    WebSocketsClient *webSocket;
-    HAState state;
-    uint8_t binaryHandler;
-    String urlToSpeak;
-    int commandid;
+	WebSocketsClient *webSocket;
+	HAState state;
+	uint8_t binaryHandler;
+	String urlToSpeak;
+	int commandid;
 
-    String host;
-    int port;
-    String token;
-    String deviceId;
-    String baseUrl;
+	String host;
+	int port;
+	String token;
+	String deviceId;
+	String baseUrl;
 
-    bool started;
+	bool started;
 
-    TaskHandle_t wsloop;
+	TaskHandle_t wsloop;
 
-    StateNotifierCallback stateNotifier;
-    PlayAudioFeedbackCallback playAudioFeedbackCallback;
+	StateNotifierCallback stateNotifier;
+	PlayAudioFeedbackCallback playAudioFeedbackCallback;
 
-    AudioInfo recordingQuality;
+	AudioInfo recordingQuality;
 
-    Settings *settings;
-    AudioStream *source;
-    AudioStream *outputdelegate;
-    BufferedStream *buffer;
-    FormatConverterStream *converterStream;
+	Settings *settings;
+	AudioStream *source;
+	AudioStream *outputdelegate;
+	BufferedStream *buffer;
+	FormatConverterStream *converterStream;
 
-    bool recordingerror;
+	bool recordingerror;
 
-    QueueHandle_t audioBuffersHandle;
+	QueueHandle_t audioBuffersHandle;
 
-    void connectOrReconnect();
+	void connectOrReconnect();
 
-    void finishAudioStream();
+	void finishAudioStream();
 
-    void stateIs(HAState state);
+	void stateIs(HAState state);
 
-    std::mutex loopmutex;
+	std::mutex loopmutex;
 
 public:
-    VoiceAssistant(AudioStream *source, Settings *settings);
-    ~VoiceAssistant();
+	VoiceAssistant(AudioStream *source, Settings *settings);
+	~VoiceAssistant();
 
-    void webSocketEvent(WStype_t type, uint8_t *payload, size_t length);
+	void webSocketEvent(WStype_t type, uint8_t *payload, size_t length);
 
-    void begin(String host, int port, String token, String deviceId, StateNotifierCallback stateNotifier, PlayAudioFeedbackCallback playFeedbackCallback);
+	void begin(String host, int port, String token, String deviceId, StateNotifierCallback stateNotifier, PlayAudioFeedbackCallback playFeedbackCallback);
 
-    void sendAuthentication();
+	void sendAuthentication();
 
-    bool startPipeline(bool includeWakeWordDetection);
+	bool startPipeline(bool includeWakeWordDetection);
 
-    void loop();
+	void loop();
 
-    void reset();
+	void reset();
 
-    void pollQueue();
+	void pollQueue();
 
-    void sendAudioData(const uint8_t *data, size_t length);
+	void sendAudioData(const uint8_t *data, size_t length);
 
-    void processAudioData();
+	void processAudioData();
 
-    HAState currentState();
+	HAState currentState();
 };
 
 #endif

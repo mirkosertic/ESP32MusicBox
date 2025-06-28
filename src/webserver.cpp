@@ -1,270 +1,225 @@
+#include <Arduino.h>
+
 #include "webserver.h"
 
-#include <Arduino.h>
-#include <SPIFFS.h>
-#include <WiFi.h>
+#include "generated_html_templates.h"
+#include "logging.h"
+
 #include <ArduinoJson.h>
 #include <ESPmDNS.h>
-
+#include <SPIFFS.h>
+#include <WiFi.h>
 #include <esp_task_wdt.h>
 
-#include "logging.h"
-#include "generated_html_templates.h"
+bool createDirectoryRecursive(FS *fs, const String &path) {
+	if (fs->exists(path)) {
+		return true;
+	}
 
-bool createDirectoryRecursive(FS *fs, const String &path)
-{
-  if (fs->exists(path))
-  {
-    return true;
-  }
+	int lastSlash = path.lastIndexOf('/');
 
-  int lastSlash = path.lastIndexOf('/');
+	if (lastSlash <= 0) {
+		return fs->mkdir(path);
+	}
 
-  if (lastSlash <= 0)
-  {
-    return fs->mkdir(path);
-  }
+	String parentPath = path.substring(0, lastSlash);
 
-  String parentPath = path.substring(0, lastSlash);
+	if (!createDirectoryRecursive(fs, parentPath)) {
+		return false;
+	}
 
-  if (!createDirectoryRecursive(fs, parentPath))
-  {
-    return false;
-  }
-
-  return fs->mkdir(path);
+	return fs->mkdir(path);
 }
 
-class CustomPsychicStreamResponse : public PsychicResponse, public Print
-{
+class CustomPsychicStreamResponse : public PsychicResponse, public Print {
 private:
-  ChunkPrinter *_printer;
-  uint8_t *_buffer;
+	ChunkPrinter *_printer;
+	uint8_t *_buffer;
 
 public:
-  CustomPsychicStreamResponse(PsychicRequest *request, const String &contentType)
-      : PsychicResponse(request), _buffer(NULL)
-  {
+	CustomPsychicStreamResponse(PsychicRequest *request, const String &contentType)
+		: PsychicResponse(request)
+		, _buffer(NULL) {
 
-    setContentType(contentType.c_str());
-    addHeader("Content-Disposition", "inline");
-  }
+		setContentType(contentType.c_str());
+		addHeader("Content-Disposition", "inline");
+	}
 
-  ~CustomPsychicStreamResponse()
-  {
-    endSend();
-  }
+	~CustomPsychicStreamResponse() {
+		endSend();
+	}
 
-  esp_err_t beginSend()
-  {
-    if (_buffer)
-      return ESP_OK;
+	esp_err_t beginSend() {
+		if (_buffer) {
+			return ESP_OK;
+		}
 
-    // Buffer to hold ChunkPrinter and stream buffer. Using placement new will keep us at a single allocation.
-    _buffer = (uint8_t *)malloc(STREAM_CHUNK_SIZE + sizeof(ChunkPrinter));
+		// Buffer to hold ChunkPrinter and stream buffer. Using placement new will keep us at a single allocation.
+		_buffer = (uint8_t *) malloc(STREAM_CHUNK_SIZE + sizeof(ChunkPrinter));
 
-    if (!_buffer)
-    {
-      /* Respond with 500 Internal Server Error */
-      httpd_resp_send_err(_request->request(), HTTPD_500_INTERNAL_SERVER_ERROR, "Unable to allocate memory.");
-      return ESP_FAIL;
-    }
+		if (!_buffer) {
+			/* Respond with 500 Internal Server Error */
+			httpd_resp_send_err(_request->request(), HTTPD_500_INTERNAL_SERVER_ERROR, "Unable to allocate memory.");
+			return ESP_FAIL;
+		}
 
-    // esp-idf makes you set the whole status.
-    sprintf(_status, "%u %s", _code, http_status_reason(_code));
-    httpd_resp_set_status(_request->request(), _status);
+		// esp-idf makes you set the whole status.
+		sprintf(_status, "%u %s", _code, http_status_reason(_code));
+		httpd_resp_set_status(_request->request(), _status);
 
-    _printer = new (_buffer) ChunkPrinter(this, _buffer + sizeof(ChunkPrinter), STREAM_CHUNK_SIZE);
+		_printer = new (_buffer) ChunkPrinter(this, _buffer + sizeof(ChunkPrinter), STREAM_CHUNK_SIZE);
 
-    sendHeaders();
-    return ESP_OK;
-  }
+		sendHeaders();
+		return ESP_OK;
+	}
 
-  esp_err_t endSend()
-  {
-    esp_err_t err = ESP_OK;
+	esp_err_t endSend() {
+		esp_err_t err = ESP_OK;
 
-    if (!_buffer)
-      err = ESP_FAIL;
-    else
-    {
-      _printer->~ChunkPrinter(); // flushed on destruct
-      err = finishChunking();
-      free(_buffer);
-      _buffer = NULL;
-    }
-    return err;
-  }
+		if (!_buffer) {
+			err = ESP_FAIL;
+		} else {
+			_printer->~ChunkPrinter(); // flushed on destruct
+			err = finishChunking();
+			free(_buffer);
+			_buffer = NULL;
+		}
+		return err;
+	}
 
-  void flush() override
-  {
-    if (_buffer)
-      _printer->flush();
-  }
+	void flush() override {
+		if (_buffer) {
+			_printer->flush();
+		}
+	}
 
-  size_t write(uint8_t data) override
-  {
-    return _buffer ? _printer->write(data) : 0;
-  }
+	size_t write(uint8_t data) override {
+		return _buffer ? _printer->write(data) : 0;
+	}
 
-  size_t write(const uint8_t *buffer, size_t size) override
-  {
-    return _buffer ? _printer->write(buffer, size) : 0;
-  }
+	size_t write(const uint8_t *buffer, size_t size) override {
+		return _buffer ? _printer->write(buffer, size) : 0;
+	}
 
-  size_t copyFrom(Stream &stream)
-  {
-    if (_buffer)
-      return _printer->copyFrom(stream);
+	size_t copyFrom(Stream &stream) {
+		if (_buffer) {
+			return _printer->copyFrom(stream);
+		}
 
-    return 0;
-  }
+		return 0;
+	}
 
-  using Print::write;
+	using Print::write;
 };
 
-String categorizeRSSI(int rssi)
-{
-  if (rssi >= -50)
-  {
-    return "Good";
-  }
-  else if (rssi >= -60)
-  {
-    return "Okay";
-  }
-  else if (rssi >= -70)
-  {
-    return "Poor";
-  }
-  else
-  {
-    return "Bad";
-  }
+String categorizeRSSI(int rssi) {
+	if (rssi >= -50) {
+		return "Good";
+	} else if (rssi >= -60) {
+		return "Okay";
+	} else if (rssi >= -70) {
+		return "Poor";
+	} else {
+		return "Bad";
+	}
 }
 
-String urlDecode(String input)
-{
-  String decoded = "";
-  char temp[] = "0x00";
-  unsigned int len = input.length();
-  unsigned int i = 0;
+String urlDecode(String input) {
+	String decoded = "";
+	char temp[] = "0x00";
+	unsigned int len = input.length();
+	unsigned int i = 0;
 
-  while (i < len)
-  {
-    char decodedChar;
-    char actualChar = input.charAt(i);
+	while (i < len) {
+		char decodedChar;
+		char actualChar = input.charAt(i);
 
-    if (actualChar == '%')
-    {
-      // Check if we have enough characters for hex decoding
-      if (i + 2 < len)
-      {
-        temp[2] = input.charAt(i + 1);
-        temp[3] = input.charAt(i + 2);
-        decodedChar = strtol(temp, NULL, 16);
-        i += 3;
-      }
-      else
-      {
-        // Invalid encoding, just add the % character
-        decodedChar = actualChar;
-        i++;
-      }
-    }
-    else if (actualChar == '+')
-    {
-      // Convert + to space
-      decodedChar = ' ';
-      i++;
-    }
-    else
-    {
-      // Regular character
-      decodedChar = actualChar;
-      i++;
-    }
+		if (actualChar == '%') {
+			// Check if we have enough characters for hex decoding
+			if (i + 2 < len) {
+				temp[2] = input.charAt(i + 1);
+				temp[3] = input.charAt(i + 2);
+				decodedChar = strtol(temp, NULL, 16);
+				i += 3;
+			} else {
+				// Invalid encoding, just add the % character
+				decodedChar = actualChar;
+				i++;
+			}
+		} else if (actualChar == '+') {
+			// Convert + to space
+			decodedChar = ' ';
+			i++;
+		} else {
+			// Regular character
+			decodedChar = actualChar;
+			i++;
+		}
 
-    decoded += decodedChar;
-  }
+		decoded += decodedChar;
+	}
 
-  return decoded;
+	return decoded;
 }
 
-String extractWebDAVPath(PsychicRequest *request)
-{
-  String uri = request->uri().c_str();
-  if (uri.startsWith("/webdav/"))
-  {
-    String p = uri.substring(7);
-    int len = p.length();
-    if (len > 1 && p.endsWith("/"))
-    {
-      return urlDecode(p.substring(0, len - 1));
-    }
-    return urlDecode(p);
-  }
-  return urlDecode(uri);
+String extractWebDAVPath(PsychicRequest *request) {
+	String uri = request->uri().c_str();
+	if (uri.startsWith("/webdav/")) {
+		String p = uri.substring(7);
+		int len = p.length();
+		if (len > 1 && p.endsWith("/")) {
+			return urlDecode(p.substring(0, len - 1));
+		}
+		return urlDecode(p);
+	}
+	return urlDecode(uri);
 }
 
-String urlencode(String str)
-{
-  String encodedString = "";
-  char c;
-  char code0;
-  char code1;
-  for (int i = 0; i < str.length(); i++)
-  {
-    c = str.charAt(i);
-    if (c == ' ')
-    {
-      encodedString += '+';
-    }
-    else if (isalnum(c))
-    {
-      encodedString += c;
-    }
-    else
-    {
-      code1 = (c & 0xf) + '0';
-      if ((c & 0xf) > 9)
-      {
-        code1 = (c & 0xf) - 10 + 'A';
-      }
-      c = (c >> 4) & 0xf;
-      code0 = c + '0';
-      if (c > 9)
-      {
-        code0 = c - 10 + 'A';
-      }
-      encodedString += '%';
-      encodedString += code0;
-      encodedString += code1;
-      // encodedString+=code2;
-    }
-  }
-  return encodedString;
+String urlencode(String str) {
+	String encodedString = "";
+	char c;
+	char code0;
+	char code1;
+	for (int i = 0; i < str.length(); i++) {
+		c = str.charAt(i);
+		if (c == ' ') {
+			encodedString += '+';
+		} else if (isalnum(c)) {
+			encodedString += c;
+		} else {
+			code1 = (c & 0xf) + '0';
+			if ((c & 0xf) > 9) {
+				code1 = (c & 0xf) - 10 + 'A';
+			}
+			c = (c >> 4) & 0xf;
+			code0 = c + '0';
+			if (c > 9) {
+				code0 = c - 10 + 'A';
+			}
+			encodedString += '%';
+			encodedString += code0;
+			encodedString += code1;
+			// encodedString+=code2;
+		}
+	}
+	return encodedString;
 }
 
-Webserver::Webserver(FS *fs, App *app, uint16_t wsportnumber, const char *ext, Settings *settings)
-{
-  this->fs = fs;
-  this->app = app;
-  this->wsport = wsportnumber;
-  this->server = new PsychicHttpServer();
-  this->ext = ext;
-  this->settings = settings;
+Webserver::Webserver(FS *fs, App *app, uint16_t wsportnumber, const char *ext, Settings *settings) {
+	this->fs = fs;
+	this->app = app;
+	this->wsport = wsportnumber;
+	this->server = new PsychicHttpServer();
+	this->ext = ext;
+	this->settings = settings;
 }
 
-Webserver::~Webserver()
-{
-  delete this->server;
+Webserver::~Webserver() {
+	delete this->server;
 }
 
-void Webserver::initialize()
-{
-  this->server->on("/", HTTP_GET, [this](PsychicRequest *request)
-                   {
+void Webserver::initialize() {
+	this->server->on("/", HTTP_GET, [this](PsychicRequest *request) {
 
       INFO("webserver() - Rendering / page");
       IPAddress remote = request->client()->remoteIP();
@@ -301,8 +256,7 @@ void Webserver::initialize()
       response.print(INDEX_TEMPLATE);
       return response.endSend(); });
 
-  this->server->on("/status.json", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	this->server->on("/status.json", HTTP_GET, [this](PsychicRequest *request) {
 
       INFO("webserver() - Rendering /status.json");
 
@@ -346,8 +300,7 @@ void Webserver::initialize()
 
       return response.send(); });
 
-  this->server->on("/files.json", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	this->server->on("/files.json", HTTP_GET, [this](PsychicRequest *request) {
 
       INFO("webserver() - Rendering /files.json");
 
@@ -430,8 +383,7 @@ void Webserver::initialize()
 
       return response.send(); });
 
-  this->server->on("/networks.html", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	this->server->on("/networks.html", HTTP_GET, [this](PsychicRequest *request) {
 
       INFO("webserver() - Rendering /networks.html");
 
@@ -448,8 +400,7 @@ void Webserver::initialize()
 
       return response.endSend(); });
 
-  this->server->on("/networks.json", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	this->server->on("/networks.json", HTTP_GET, [this](PsychicRequest *request) {
 
       INFO("webserver() - Rendering /networks.json");
 
@@ -521,8 +472,7 @@ void Webserver::initialize()
 
       return response.send(); });
 
-  this->server->on("/settings.html", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	this->server->on("/settings.html", HTTP_GET, [this](PsychicRequest *request) {
 
       INFO("webserver() - Rendering /settings.html");
 
@@ -539,8 +489,7 @@ void Webserver::initialize()
 
       return response.endSend(); });
 
-  this->server->on("/settings.json", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	this->server->on("/settings.json", HTTP_GET, [this](PsychicRequest *request) {
 
       INFO("webserver() - Rendering /settings.json");
 
@@ -557,8 +506,7 @@ void Webserver::initialize()
 
       return response.send(); });
 
-  this->server->on("/updateconfig", HTTP_POST, [this](PsychicRequest *request)
-                   {
+	this->server->on("/updateconfig", HTTP_POST, [this](PsychicRequest *request) {
 
       INFO("webserver() - /updateconfig received");
 
@@ -574,9 +522,8 @@ void Webserver::initialize()
 
       return response.send(); });
 
-  // Toggle start stop
-  this->server->on("/startstop", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	// Toggle start stop
+	this->server->on("/startstop", HTTP_GET, [this](PsychicRequest *request) {
 
     INFO("webserver() - /startstop received");
     this->app->toggleActiveState();
@@ -590,9 +537,8 @@ void Webserver::initialize()
 
     return response.send(); });
 
-  // Next
-  this->server->on("/next", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	// Next
+	this->server->on("/next", HTTP_GET, [this](PsychicRequest *request) {
 
     INFO("webserver() - /next received");
     this->app->next();
@@ -606,9 +552,8 @@ void Webserver::initialize()
 
     return response.send(); });
 
-  // Previous
-  this->server->on("/previous", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	// Previous
+	this->server->on("/previous", HTTP_GET, [this](PsychicRequest *request) {
     
     INFO("webserver() - /previous received");
     this->app->previous();
@@ -622,9 +567,8 @@ void Webserver::initialize()
 
     return response.send(); });
 
-  // play
-  this->server->on("/play", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	// play
+	this->server->on("/play", HTTP_GET, [this](PsychicRequest *request) {
     
     INFO("webserver() - /play received");
 
@@ -642,9 +586,8 @@ void Webserver::initialize()
 
     return response.send(); });
 
-  // volume
-  this->server->on("/volume", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	// volume
+	this->server->on("/volume", HTTP_GET, [this](PsychicRequest *request) {
     
     INFO("webserver() - /volume received");
 
@@ -661,9 +604,8 @@ void Webserver::initialize()
 
     return response.send(); });
 
-  // assign
-  this->server->on("/assign", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	// assign
+	this->server->on("/assign", HTTP_GET, [this](PsychicRequest *request) {
     
     INFO("webserver() - /assign received");
 
@@ -691,9 +633,8 @@ void Webserver::initialize()
 
     return response.send(); });
 
-  // delete
-  this->server->on("/delete", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	// delete
+	this->server->on("/delete", HTTP_GET, [this](PsychicRequest *request) {
     INFO("webserver() - /delete received");
 
     this->app->clearTag();
@@ -707,8 +648,7 @@ void Webserver::initialize()
 
     return response.send(); });
 
-  this->server->on("/description.xml", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	this->server->on("/description.xml", HTTP_GET, [this](PsychicRequest *request) {
                     INFO("webserver() - /description.xml received");
 
                     String data = this->getSSDPDescription();
@@ -722,9 +662,8 @@ void Webserver::initialize()
                     response.print(data);
                     return response.endSend(); });
 
-  // WebDav Minimal Level 1 compliance
-  this->server->on("/webdav", HTTP_OPTIONS, [this](PsychicRequest *request)
-                   {
+	// WebDav Minimal Level 1 compliance
+	this->server->on("/webdav", HTTP_OPTIONS, [this](PsychicRequest *request) {
                     INFO("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
                     PsychicResponse response(request);
@@ -737,8 +676,7 @@ void Webserver::initialize()
 
                     return response.send(); });
 
-  this->server->on("/webdav/*", HTTP_OPTIONS, [this](PsychicRequest *request)
-                   {
+	this->server->on("/webdav/*", HTTP_OPTIONS, [this](PsychicRequest *request) {
                     INFO("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
                     String path = extractWebDAVPath(request);
@@ -778,8 +716,7 @@ void Webserver::initialize()
 
                     return response.send(); });
 
-  this->server->on("/webdav/*", HTTP_PROPFIND, [this](PsychicRequest *request)
-                   {
+	this->server->on("/webdav/*", HTTP_PROPFIND, [this](PsychicRequest *request) {
                     INFO("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
                     String path = extractWebDAVPath(request);
@@ -883,8 +820,7 @@ void Webserver::initialize()
 
                     return response.endSend(); });
 
-  this->server->on("/webdav/*", HTTP_MKCOL, [this](PsychicRequest *request)
-                   {
+	this->server->on("/webdav/*", HTTP_MKCOL, [this](PsychicRequest *request) {
                     INFO("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
                     String path = extractWebDAVPath(request);
@@ -912,9 +848,8 @@ void Webserver::initialize()
 
                     return response.send(); });
 
-  PsychicUploadHandler *puthandler = new PsychicUploadHandler();
-  puthandler->onUpload([this](PsychicRequest *request, const String &filename, uint64_t position, uint8_t *data, size_t length, bool final)
-                       {
+	PsychicUploadHandler *puthandler = new PsychicUploadHandler();
+	puthandler->onUpload([this](PsychicRequest *request, const String &filename, uint64_t position, uint8_t *data, size_t length, bool final) {
       INFO("webserver() - got data chunk with position %llu and length %u", position, length);
 
       String path = extractWebDAVPath(request);
@@ -941,8 +876,7 @@ void Webserver::initialize()
       close(content);
 
       return ESP_OK; });
-  puthandler->onRequest([this](PsychicRequest *request)
-                        {
+	puthandler->onRequest([this](PsychicRequest *request) {
       CustomPsychicStreamResponse response(request, "application/xml");                    
 
       String path = extractWebDAVPath(request);      
@@ -956,10 +890,9 @@ void Webserver::initialize()
       response.setContentLength(0);
 
       return response.send(); });
-  this->server->on("/webdav/*", HTTP_PUT, puthandler);
+	this->server->on("/webdav/*", HTTP_PUT, puthandler);
 
-  this->server->on("/webdav/*", HTTP_GET, [this](PsychicRequest *request)
-                   {
+	this->server->on("/webdav/*", HTTP_GET, [this](PsychicRequest *request) {
                     INFO("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
                     String path = extractWebDAVPath(request);
@@ -989,8 +922,7 @@ void Webserver::initialize()
 
                     return response.endSend(); });
 
-  this->server->on("/webdav/*", HTTP_DELETE, [this](PsychicRequest *request)
-                   {
+	this->server->on("/webdav/*", HTTP_DELETE, [this](PsychicRequest *request) {
                     INFO("webserver() - /webdav %s %s received", request->uri().c_str(), request->methodStr().c_str());
 
                     String path = extractWebDAVPath(request);
@@ -1048,9 +980,8 @@ void Webserver::initialize()
 
                     return response.send(); });
 
-  // Default Handler
-  this->server->onNotFound([this](PsychicRequest *request)
-                           {
+	// Default Handler
+	this->server->onNotFound([this](PsychicRequest *request) {
               WARN("webserver() - Not Found %s %s", request->methodStr().c_str(), request->uri().c_str());
 
               PsychicResponse response(request);
@@ -1062,203 +993,182 @@ void Webserver::initialize()
               return response.send(); });
 }
 
-String Webserver::getConfigurationURL()
-{
-  return "http://" + this->app->computeTechnicalName() + ".local:" + this->wsport + "/";
+String Webserver::getConfigurationURL() {
+	return "http://" + this->app->computeTechnicalName() + ".local:" + this->wsport + "/";
 }
 
-void Webserver::announceMDNS()
-{
-  String technicalName = this->app->computeTechnicalName();
-  if (MDNS.begin(technicalName))
-  {
-    INFO("Registered as mDNS-Name %s", technicalName.c_str());
-  }
-  else
-  {
-    WARN("Registered as mDNS-Name %s failed", technicalName.c_str());
-  }
+void Webserver::announceMDNS() {
+	String technicalName = this->app->computeTechnicalName();
+	if (MDNS.begin(technicalName)) {
+		INFO("Registered as mDNS-Name %s", technicalName.c_str());
+	} else {
+		WARN("Registered as mDNS-Name %s failed", technicalName.c_str());
+	}
 }
 
-void Webserver::ssdpNotify()
-{
-  INFO("Sent SSDP NOTIFY messages");
+void Webserver::ssdpNotify() {
+	INFO("Sent SSDP NOTIFY messages");
 
-  const IPAddress SSDP_MULTICAST_ADDR(239, 255, 255, 250);
-  const uint16_t SSDP_PORT = 1900;
+	const IPAddress SSDP_MULTICAST_ADDR(239, 255, 255, 250);
+	const uint16_t SSDP_PORT = 1900;
 
-  String deviceUUID = this->app->computeUUID();
+	String deviceUUID = this->app->computeUUID();
 
-  // Send initial NOTIFY messages
-  char notify[1024];
+	// Send initial NOTIFY messages
+	char notify[1024];
 
-  // Send NOTIFY for different device types
-  String deviceTypes[] = {
-      "upnp:rootdevice",
-      "urn:schemas-upnp-org:device:Basic:1",
-      String("uuid:") + deviceUUID};
+	// Send NOTIFY for different device types
+	String deviceTypes[] = {
+		"upnp:rootdevice",
+		"urn:schemas-upnp-org:device:Basic:1",
+		String("uuid:") + deviceUUID};
 
-  const char *SSDP_NOTIFY_TEMPLATE =
-      "NOTIFY * HTTP/1.1\r\n"
-      "HOST: 239.255.255.250:1900\r\n"
-      "CACHE-CONTROL: max-age=1800\r\n"
-      "LOCATION: http://%s:%d/description.xml\r\n"
-      "SERVER: SSDPServer/1.0\r\n"
-      "NT: %s\r\n"
-      "USN: uuid:%s::%s\r\n"
-      "NTS: ssdp:alive\r\n"
-      "BOOTID.UPNP.ORG: 1\r\n"
-      "CONFIGID.UPNP.ORG: 1\r\n"
-      "\r\n";
+	const char *SSDP_NOTIFY_TEMPLATE = "NOTIFY * HTTP/1.1\r\n"
+									   "HOST: 239.255.255.250:1900\r\n"
+									   "CACHE-CONTROL: max-age=1800\r\n"
+									   "LOCATION: http://%s:%d/description.xml\r\n"
+									   "SERVER: SSDPServer/1.0\r\n"
+									   "NT: %s\r\n"
+									   "USN: uuid:%s::%s\r\n"
+									   "NTS: ssdp:alive\r\n"
+									   "BOOTID.UPNP.ORG: 1\r\n"
+									   "CONFIGID.UPNP.ORG: 1\r\n"
+									   "\r\n";
 
-  for (int i = 0; i < 3; i++)
-  {
-    sprintf(notify, SSDP_NOTIFY_TEMPLATE,
-            WiFi.localIP().toString().c_str(),
-            this->wsport,
-            deviceTypes[i].c_str(),
-            deviceUUID.c_str(),
-            deviceTypes[i].c_str());
+	for (int i = 0; i < 3; i++) {
+		sprintf(notify, SSDP_NOTIFY_TEMPLATE,
+			WiFi.localIP().toString().c_str(),
+			this->wsport,
+			deviceTypes[i].c_str(),
+			deviceUUID.c_str(),
+			deviceTypes[i].c_str());
 
-    this->udp->beginPacket(SSDP_MULTICAST_ADDR, SSDP_PORT);
-    this->udp->write((uint8_t *)notify, strlen(notify));
-    this->udp->endPacket();
-  }
+		this->udp->beginPacket(SSDP_MULTICAST_ADDR, SSDP_PORT);
+		this->udp->write((uint8_t *) notify, strlen(notify));
+		this->udp->endPacket();
+	}
 }
 
-void Webserver::announceSSDP()
-{
-  INFO("Initializing SSDP...");
+void Webserver::announceSSDP() {
+	INFO("Initializing SSDP...");
 
-  const IPAddress SSDP_MULTICAST_ADDR(239, 255, 255, 250);
-  const uint16_t SSDP_PORT = 1900;
+	const IPAddress SSDP_MULTICAST_ADDR(239, 255, 255, 250);
+	const uint16_t SSDP_PORT = 1900;
 
-  this->udp = new WiFiUDP();
+	this->udp = new WiFiUDP();
 
-  // Join multicast group for SSDP
-  if (this->udp->beginMulticast(SSDP_MULTICAST_ADDR, SSDP_PORT))
-  {
-    INFO("SSDP multicast joined successfully");
-  }
-  else
-  {
-    WARN("Failed to join SSDP multicast group");
-  }
+	// Join multicast group for SSDP
+	if (this->udp->beginMulticast(SSDP_MULTICAST_ADDR, SSDP_PORT)) {
+		INFO("SSDP multicast joined successfully");
+	} else {
+		WARN("Failed to join SSDP multicast group");
+	}
 }
 
-String Webserver::getSSDPDescription()
-{
-  String deviceUUID = this->app->computeUUID();
+String Webserver::getSSDPDescription() {
+	String deviceUUID = this->app->computeUUID();
 
-  String xml = "<?xml version='1.0'?>";
-  xml += "<root xmlns='urn:schemas-upnp-org:device-1-0'>";
-  xml += "<specVersion><major>1</major><minor>0</minor></specVersion>";
-  xml += "<device>";
-  xml += "<deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType>";
-  xml += "<friendlyName>" + this->app->getName() + "</friendlyName>";
-  xml += "<manufacturer>" + this->app->getManufacturer() + "</manufacturer>";
-  xml += "<modelName>" + this->app->getDeviceType() + "</modelName>";
-  xml += "<modelNumber>" + this->app->getVersion() + "</modelNumber>";
-  xml += "<serialNumber>" + this->app->computeSerialNumber() + "</serialNumber>";
-  xml += "<UDN>uuid:" + this->app->computeUUID() + "</UDN>";
-  xml += "<presentationURL>" + getConfigurationURL() + "</presentationURL>";
-  xml += "</device>";
-  xml += "</root>";
-  return xml;
+	String xml = "<?xml version='1.0'?>";
+	xml += "<root xmlns='urn:schemas-upnp-org:device-1-0'>";
+	xml += "<specVersion><major>1</major><minor>0</minor></specVersion>";
+	xml += "<device>";
+	xml += "<deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType>";
+	xml += "<friendlyName>" + this->app->getName() + "</friendlyName>";
+	xml += "<manufacturer>" + this->app->getManufacturer() + "</manufacturer>";
+	xml += "<modelName>" + this->app->getDeviceType() + "</modelName>";
+	xml += "<modelNumber>" + this->app->getVersion() + "</modelNumber>";
+	xml += "<serialNumber>" + this->app->computeSerialNumber() + "</serialNumber>";
+	xml += "<UDN>uuid:" + this->app->computeUUID() + "</UDN>";
+	xml += "<presentationURL>" + getConfigurationURL() + "</presentationURL>";
+	xml += "</device>";
+	xml += "</root>";
+	return xml;
 }
 
-void Webserver::begin()
-{
-  this->announceMDNS();
-  this->announceSSDP();
+void Webserver::begin() {
+	this->announceMDNS();
+	this->announceSSDP();
 
-  this->server->config.max_uri_handlers = 25;
-  this->server->listen(wsport);
+	this->server->config.max_uri_handlers = 25;
+	this->server->listen(wsport);
 
-  this->initialize();
+	this->initialize();
 }
 
-void Webserver::loop()
-{
-  static long lastSSDPNotify = millis();
-  long now = millis();
-  if (now - lastSSDPNotify > 5000)
-  {
-    this->ssdpNotify();
-    lastSSDPNotify = now;
-  }
+void Webserver::loop() {
+	static long lastSSDPNotify = millis();
+	long now = millis();
+	if (now - lastSSDPNotify > 5000) {
+		this->ssdpNotify();
+		lastSSDPNotify = now;
+	}
 
-  // SSDP
+	// SSDP
 
-  // Incoming messages
-  int packetSize = this->udp->parsePacket();
-  if (packetSize)
-  {
-    char packetBuffer[512];
-    int len = this->udp->read(packetBuffer, sizeof(packetBuffer) - 1);
-    if (len > 0)
-    {
-      packetBuffer[len] = '\0';
+	// Incoming messages
+	int packetSize = this->udp->parsePacket();
+	if (packetSize) {
+		char packetBuffer[512];
+		int len = this->udp->read(packetBuffer, sizeof(packetBuffer) - 1);
+		if (len > 0) {
+			packetBuffer[len] = '\0';
 
-      // Check if it's an M-SEARCH request
-      if (strstr(packetBuffer, "M-SEARCH") && strstr(packetBuffer, "ssdp:discover"))
-      {
-        INFO("Received SSDP M-SEARCH request");
+			// Check if it's an M-SEARCH request
+			if (strstr(packetBuffer, "M-SEARCH") && strstr(packetBuffer, "ssdp:discover")) {
+				INFO("Received SSDP M-SEARCH request");
 
-        // Extract search target
-        char *stLine = strstr(packetBuffer, "ST:");
-        String searchTarget = "upnp:rootdevice"; // Default
+				// Extract search target
+				char *stLine = strstr(packetBuffer, "ST:");
+				String searchTarget = "upnp:rootdevice"; // Default
 
-        if (stLine)
-        {
-          stLine += 3; // Skip "ST:"
-          while (*stLine == ' ')
-            stLine++; // Skip spaces
-          char *end = strstr(stLine, "\r");
-          if (end)
-          {
-            *end = '\0';
-            searchTarget = String(stLine);
-          }
-        }
+				if (stLine) {
+					stLine += 3; // Skip "ST:"
+					while (*stLine == ' ') {
+						stLine++; // Skip spaces
+					}
+					char *end = strstr(stLine, "\r");
+					if (end) {
+						*end = '\0';
+						searchTarget = String(stLine);
+					}
+				}
 
-        char response[1024];
-        char dateStr[64];
+				char response[1024];
+				char dateStr[64];
 
-        // Simple date string (could be improved with real time)
-        sprintf(dateStr, "Mon, 01 Jan 1970 00:00:00 GMT");
+				// Simple date string (could be improved with real time)
+				sprintf(dateStr, "Mon, 01 Jan 1970 00:00:00 GMT");
 
-        String deviceUUID = this->app->computeUUID();
+				String deviceUUID = this->app->computeUUID();
 
-        const char *SSDP_RESPONSE_TEMPLATE =
-            "HTTP/1.1 200 OK\r\n"
-            "CACHE-CONTROL: max-age=1800\r\n"
-            "DATE: %s\r\n"
-            "EXT:\r\n"
-            "LOCATION: http://%s:%d/description.xml\r\n"
-            "SERVER: SSDPServer/1.0\r\n"
-            "ST: %s\r\n"
-            "USN: uuid:%s::%s\r\n"
-            "BOOTID.UPNP.ORG: 1\r\n"
-            "CONFIGID.UPNP.ORG: 1\r\n"
-            "\r\n";
+				const char *SSDP_RESPONSE_TEMPLATE = "HTTP/1.1 200 OK\r\n"
+													 "CACHE-CONTROL: max-age=1800\r\n"
+													 "DATE: %s\r\n"
+													 "EXT:\r\n"
+													 "LOCATION: http://%s:%d/description.xml\r\n"
+													 "SERVER: SSDPServer/1.0\r\n"
+													 "ST: %s\r\n"
+													 "USN: uuid:%s::%s\r\n"
+													 "BOOTID.UPNP.ORG: 1\r\n"
+													 "CONFIGID.UPNP.ORG: 1\r\n"
+													 "\r\n";
 
-        sprintf(response, SSDP_RESPONSE_TEMPLATE,
-                dateStr,
-                WiFi.localIP().toString().c_str(),
-                wsport,
-                searchTarget.c_str(),
-                deviceUUID.c_str(),
-                searchTarget.c_str());
+				sprintf(response, SSDP_RESPONSE_TEMPLATE,
+					dateStr,
+					WiFi.localIP().toString().c_str(),
+					wsport,
+					searchTarget.c_str(),
+					deviceUUID.c_str(),
+					searchTarget.c_str());
 
-        // Send unicast response to requester
-        this->udp->beginPacket(this->udp->remoteIP(), this->udp->remotePort());
-        this->udp->write((uint8_t *)response, strlen(response));
-        this->udp->endPacket();
+				// Send unicast response to requester
+				this->udp->beginPacket(this->udp->remoteIP(), this->udp->remotePort());
+				this->udp->write((uint8_t *) response, strlen(response));
+				this->udp->endPacket();
 
-        INFO("Sent SSDP response");
-      }
-    }
-  }
-  // Server runs async...
+				INFO("Sent SSDP response");
+			}
+		}
+	}
+	// Server runs async...
 }

@@ -1,24 +1,31 @@
 #ifndef MODE_H
 #define MODE_H
 
-#include "led.h"
+#include "settings.h"
+
+#include "leds.h"
 #include "sensors.h"
 
-class Mode 
-{
-    protected:
-        Led *led;
-        Sensors *sensors;
+#include <AudioTools.h>
 
-    public:
-        Mode(Led *led, Sensors *sensors)
-        {
-            this->led = led;
-            this->sensors = sensors;  
-        }
+class Mode {
+private:
+	void i2cinit();
+	void i2sinit();
+	void sdinit();
 
-        virtual void setup() = 0;
-        virtual void run() = 0;
+protected:
+	Leds *leds;
+	Sensors *sensors;
+	AudioInfo defaultAudioInfo;
+	I2SStream *i2sstream;
+	Settings *settings;
+
+public:
+	Mode(Leds *leds, Sensors *sensors);
+
+	virtual void setup();
+	virtual void loop();
 };
 
 #endif

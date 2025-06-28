@@ -3,18 +3,17 @@
 
 #include <Arduino.h>
 
-class UserfeedbackHandler
-{
+class UserfeedbackHandler {
 public:
-    virtual bool volumeUp() = 0;
+	virtual bool volumeUp() = 0;
 
-    virtual bool volumeDown() = 0;
+	virtual bool volumeDown() = 0;
 
-    virtual void toggleActiveState() = 0;
+	virtual void toggleActiveState() = 0;
 
-    virtual void previous() = 0;
+	virtual void previous() = 0;
 
-    virtual void next() = 0;
+	virtual void next() = 0;
 };
 
 #endif

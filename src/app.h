@@ -2,149 +2,148 @@
 #define APP_H
 
 #include <Arduino.h>
-#include <functional>
+#include "settings.h"
 
-#include <PubSubClient.h>
-#include <mutex>
-
-#include "tagscanner.h"
 #include "commands.h"
 #include "mediaplayer.h"
 #include "mediaplayersource.h"
-#include "voiceassistant.h"
-#include "settings.h"
+#include "tagscanner.h"
 #include "userfeedbackhandler.h"
+#include "voiceassistant.h"
+
+#include <PubSubClient.h>
+#include <functional>
+#include <mutex>
 
 typedef std::function<void(bool active, float volume, const char *currentsong, int playprogressinpercent)> ChangeNotifierCallback;
 
-class App : public UserfeedbackHandler
-{
+class App : public UserfeedbackHandler {
 private:
-    String name;
-    String version;
-    String manufacturer;
-    String devicetype;
-    int serverPort;
-    long stateversion;
-    char *currentpath;
+	String name;
+	String version;
+	String manufacturer;
+	String devicetype;
+	int serverPort;
+	long stateversion;
+	char *currentpath;
 
-    bool tagPresent;
-    bool knownTag;
-    TagData tagData;
-    String tagName;
-    uint8_t tagUid[8];
-    uint8_t tagUidlength;
+	bool tagPresent;
+	bool knownTag;
+	TagData tagData;
+	String tagName;
+	uint8_t tagUid[8];
+	uint8_t tagUidlength;
 
-    float volume;
+	float volume;
 
-    TagScanner *tagscanner;
+	TagScanner *tagscanner;
 
-    bool wificonnected;
+	bool wificonnected;
 
-    MediaPlayerSource *source;
-    MediaPlayer *player;
-    VoiceAssistant *assistant;
-    Settings *settings;
+	MediaPlayerSource *source;
+	MediaPlayer *player;
+	VoiceAssistant *assistant;
+	Settings *settings;
 
-    VolumeSupport *volumeSupport;
+	VolumeSupport *volumeSupport;
 
-    std::mutex loopmutex;
+	std::mutex loopmutex;
 
-    ChangeNotifierCallback changecallback;
+	ChangeNotifierCallback changecallback;
 
-    bool btspeakerconnected;
+	bool btspeakerconnected;
 
 public:
-    App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport);
-    ~App();
+	App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport);
+	~App();
 
-    void begin(ChangeNotifierCallback callback);
+	void begin(ChangeNotifierCallback callback);
 
-    void setWifiConnected();
+	void setWifiConnected();
 
-    bool isWifiEnabled();
+	bool isWifiEnabled();
 
-    bool isWifiConnected();
+	bool isWifiConnected();
 
-    void noTagPresent();
+	void noTagPresent();
 
-    void setTagData(bool knownTag, String tagName, uint8_t *uid, uint8_t uidLength, TagData tagData);
+	void setTagData(bool knownTag, String tagName, uint8_t *uid, uint8_t uidLength, TagData tagData);
 
-    bool getTagPresent();
+	bool getTagPresent();
 
-    String getTagName();
+	String getTagName();
 
-    String getTagInfoText();
+	String getTagInfoText();
 
-    bool getIsKnownTag();
+	bool getIsKnownTag();
 
-    char *getCurrentPath();
+	char *getCurrentPath();
 
-    void incrementStateVersion();
+	void incrementStateVersion();
 
-    long getStateVersion();
+	long getStateVersion();
 
-    String computeUUID();
+	String computeUUID();
 
-    String computeSerialNumber();
+	String computeSerialNumber();
 
-    void setName(String name);
+	void setName(String name);
 
-    String getName();
+	String getName();
 
-    void setDeviceType(String devicetype);
+	void setDeviceType(String devicetype);
 
-    String getDeviceType();
+	String getDeviceType();
 
-    String computeTechnicalName();
+	String computeTechnicalName();
 
-    void setVersion(String version);
+	void setVersion(String version);
 
-    String getVersion();
+	String getVersion();
 
-    String getSoftwareVersion();
+	String getSoftwareVersion();
 
-    void setManufacturer(String manufacturer);
+	void setManufacturer(String manufacturer);
 
-    String getManufacturer();
+	String getManufacturer();
 
-    void setServerPort(int serverPort);
+	void setServerPort(int serverPort);
 
-    void writeCommandToTag(CommandData command);
+	void writeCommandToTag(CommandData command);
 
-    void clearTag();
+	void clearTag();
 
-    void loop();
+	void loop();
 
-    float getVolume();
+	float getVolume();
 
-    void publishState();
+	void publishState();
 
-    bool isActive();
+	bool isActive();
 
-    const char *currentTitle();
+	const char *currentTitle();
 
-    int playProgressInPercent();
+	int playProgressInPercent();
 
-    void setVolume(float volume);
+	void setVolume(float volume);
 
-    bool volumeUp() override;
+	bool volumeUp() override;
 
-    bool volumeDown() override;
+	bool volumeDown() override;
 
-    void toggleActiveState() override;
+	void toggleActiveState() override;
 
-    void previous() override;
+	void previous() override;
 
-    void next() override;
+	void next() override;
 
-    void play(String path, int index);
+	void play(String path, int index);
 
-    void setBluetoothSpeakerConnected(bool value = true);
+	void setBluetoothSpeakerConnected(bool value = true);
 
-    bool isBluetoothSpeakerConnected();
+	bool isBluetoothSpeakerConnected();
 
-    bool isValidDeviceToPairForBluetooth(String ssid);
+	bool isValidDeviceToPairForBluetooth(String ssid);
 };
 
 #endif

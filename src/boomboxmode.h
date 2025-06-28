@@ -1,12 +1,19 @@
 #ifndef BOOMBOXMODE_H
 #define BOOMBOXMODE_H
 
+#include "bluetoothsink.h"
 #include "mode.h"
 
-class BoomboxMode : public Mode 
-{
-    public:
-        BoomboxMode(Led *led, Sensors *sensors);
+class BoomboxMode : public Mode {
+protected:
+	BluetoothSink *bluetoothsink;
+	bool connected;
+
+public:
+	BoomboxMode(Leds *leds, Sensors *sensors);
+
+	void setup() override;
+	void loop() override;
 };
 
 #endif
