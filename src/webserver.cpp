@@ -183,7 +183,7 @@ String urlencode(String str) {
 	for (int i = 0; i < str.length(); i++) {
 		c = str.charAt(i);
 		if (c == ' ') {
-			encodedString += '+';
+			encodedString += "%20";
 		} else if (isalnum(c)) {
 			encodedString += c;
 		} else {
@@ -743,7 +743,7 @@ void Webserver::initialize() {
 
                     CustomPsychicStreamResponse response(request, "application/xml");
                     response.setCode(207);
-                    response.setContentType("application/xml");
+                    response.setContentType("application/xml; charset=utf-8");
                     response.addHeader("Cache-Control","no-cache, must-revalidate");      
 
                     response.beginSend();
@@ -763,54 +763,62 @@ void Webserver::initialize() {
 
                       INFO("webserver() - Found file path %s name %s", path.c_str(), name.c_str());
 
+                      response.println("  <D:response>");
+                      if (path.startsWith("/")) {
+                        response.print("    <D:href>/webdav");
+                        response.print(urlencode(path));
+                      } else {
+                        response.print("    <D:href>/webdav/");
+                        response.print(urlencode(path));
+                      }
+
+                      if (path.endsWith("/"))
+                      {
+                        response.print(urlencode(name));
+                        if (entry.isDirectory()) {
+                          response.print("/");
+                        }
+                        response.println("</D:href>");                        
+                      }
+                      else
+                      {
+                        response.print("/");
+                        response.print(urlencode(name));
+                        if (entry.isDirectory()) {
+                          response.print("/");
+                        }
+                        response.println("</D:href>");                        
+                      }
+
+
                       if (entry.isDirectory())
                       {
-                        response.println("  <D:response>");
-                        response.print("    <D:href>");
-                        //response.print(path);
-                        response.print(urlencode(name));
-                        //response.print(name);
-                        response.println("</D:href>");
 
                         response.println("    <D:propstat>");
                         response.println("      <D:prop>");
-                        response.print("        <D:displayname>");
-                        response.print(name);
-                        response.println("</D:displayname>");                        
                         response.println("        <D:resourcetype><D:collection/></D:resourcetype>");
                         response.println("      </D:prop>");
                         response.println("      <D:status>HTTP/1.1 200 OK</D:status>");
                         response.println("    </D:propstat>");
 
-                        response.println("  </D:response>");
                       }
                       else
                       {
-                        response.println("  <D:response>");
-                        response.print("    <D:href>");
-                        //response.print(path);
-                        response.print(urlencode(name));
-                        //response.print(name);
-                        response.println("</D:href>");
-
-
                         response.println("    <D:propstat>");
                         response.println("      <D:prop>");
-                        response.print("        <D:displayname>");
-                        response.print(name);
-                        response.println("</D:displayname>");                        
-                        response.println("        <D:resourcetype/>");
                         response.print("        <D:getcontentlength>");
                         response.print(entry.size());
                         response.println("</D:getcontentlength>");
+                        response.println("        <D:resourcetype/>");
                         //response->println("        <D:getcontenttype>application/octet-stream</D:getcontenttype>");
                         //response->println("        <D:getlastmodified>Fri, 30 Sep 2016 23:28:31 +0000</D:getlastmodified>");
                         response.println("      </D:prop>");
                         response.println("      <D:status>HTTP/1.1 200 OK</D:status>");
                         response.println("    </D:propstat>");
 
-                        response.println("  </D:response>");
                       }
+
+                      response.println("  </D:response>");                      
 
                       entry.close();
                     }
