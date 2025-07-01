@@ -30,6 +30,8 @@ private:
 	BluetoothSource *bluetoothsource;
 	QueueHandle_t commandsHandle;
 
+	bool bluetoothSpeakerConnected;
+
 	void wifiConnected();
 
 public:

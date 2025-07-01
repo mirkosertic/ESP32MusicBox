@@ -29,7 +29,7 @@ void setup() {
 	leds->setBootProgress(0);
 	leds->setState(BOOT);
 
-	sensors = new Sensors(leds);
+	sensors = new Sensors();
 	if (!sensors->isPreviousPressed()) {
 		INFO("Booting into RFID player mode");
 		mode = new RfidPlayerMode(leds, sensors);

@@ -28,7 +28,7 @@ void Mode::setup() {
 
 void Mode::i2cinit() {
 	INFO("I2C connection init");
-	if (!Wire1.begin(GPIO_WIRE_SDA, GPIO_WIRE_SCL, 100000)) {
+	if (!Wire1.begin(GPIO_WIRE_SDA, GPIO_WIRE_SCL)) {
 		WARN("I2C initialization failed!");
 		while (true)
 			;

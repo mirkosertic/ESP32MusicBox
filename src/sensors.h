@@ -8,13 +8,12 @@
 class Sensors {
 private:
 	UserfeedbackHandler *handler;
-	Leds *leds;
 	Button *prev;
 	Button *next;
 	Button *startstop;
 
 public:
-	Sensors(Leds *leds);
+	Sensors();
 	~Sensors();
 
 	void begin(UserfeedbackHandler *handler);

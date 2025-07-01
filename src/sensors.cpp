@@ -12,9 +12,7 @@ void sensorsdelegate(void *arguments) {
 	}
 }
 
-Sensors::Sensors(Leds *leds) {
-	this->leds = leds;
-
+Sensors::Sensors() {
 	pinMode(GPIO_VOLTAGE_MEASURE, INPUT);
 
 	this->startstop = new Button(GPIO_STARTSTOP, 300, [this](ButtonAction action) {
@@ -35,7 +33,6 @@ Sensors::Sensors(Leds *leds) {
             if (this->handler->volumeDown())
             {
                 INFO("Decrementing volume");
-                this->leds->setState(VOLUME_CHANGE);
             }
         } });
 
@@ -50,7 +47,6 @@ Sensors::Sensors(Leds *leds) {
             if (this->handler->volumeUp())
             {
                 INFO("Incrementing volume");
-                this->leds->setState(VOLUME_CHANGE);
             }
         } });
 }

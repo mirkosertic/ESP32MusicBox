@@ -9,6 +9,7 @@ RfidPlayerMode *globalRfidPlayerMode = NULL;
 RfidPlayerMode::RfidPlayerMode(Leds *leds, Sensors *sensors)
 	: Mode(leds, sensors) {
 	globalRfidPlayerMode = this;
+	this->bluetoothSpeakerConnected = false;
 }
 
 void RfidPlayerMode::setup() {
@@ -23,7 +24,7 @@ void RfidPlayerMode::setup() {
 	this->player->setAudioInfo(defaultAudioInfo);
 
 	this->tagscanner = new TagScanner(&Wire1, GPIO_PN532_IRQ, GPIO_PN532_RST);
-	this->app = new App(this->tagscanner, this->source, this->player, this->settings, this->player);
+	this->app = new App(this->leds, this->tagscanner, this->source, this->player, this->settings, this->player);
 	INFO("Core components created. Free HEAP is %d", ESP.getFreeHeap());
 
 	INFO("Free HEAP is %d", ESP.getFreeHeap());
@@ -38,7 +39,7 @@ void RfidPlayerMode::setup() {
 	// esp_task_wdt_init(30, true); // 30 Sekunden Timeout
 	// esp_task_wdt_add(NULL);
 	this->app->setDeviceType("ESP32 Musikbox");
-	this->app->setName(DEVICENAME);
+	this->app->setName(this->settings->getDeviceName());
 	this->app->setManufacturer("Mirko Sertic");
 	this->app->setVersion("v1.0");
 	this->app->setServerPort(HTTP_SERVER_PORT);
@@ -55,7 +56,6 @@ void RfidPlayerMode::setup() {
 	if (this->sensors->isStartStopPressed()) {
 		this->settings->resetStoredBSSID();
 	}
-	this->app->setName(this->settings->getDeviceName());
 
 	// Button-Feedback goes to the app
 	this->sensors->begin(this->app);
@@ -74,7 +74,7 @@ void RfidPlayerMode::setup() {
 	WiFi.setHostname(app->computeTechnicalName().c_str());
 	WiFi.setAutoReconnect(true);
 
-	this->settings->initializeWifiFromSettings();	
+	this->settings->initializeWifiFromSettings();
 
 	INFO("Bluetooth initializing buffers. Free HEAP is %d", ESP.getFreeHeap());
 	this->buffer = new BufferRTOS<uint8_t>(0);
@@ -98,7 +98,7 @@ void RfidPlayerMode::setup() {
             this->player->setOutput(*this->bluetoothout);
             // Bluetooth Playback is always 70%
             this->player->setVolume(0.7);
-            this->app->setBluetoothSpeakerConnected();
+			this->bluetoothSpeakerConnected = true;
             this->leds->setBluetoothSpeakerConnected();
             break;
         case ESP_A2D_CONNECTION_STATE_DISCONNECTING:
@@ -410,7 +410,7 @@ void RfidPlayerMode::loop() {
 			if (command.command == COMMAND_PLAY_DIRECTORY) {
 				String path(String((char *) &command.path[0]));
 				// In BT Mode we always play with 100% volume, as the volume is controlled by the headphones
-				int volume = this->app->isBluetoothSpeakerConnected() ? 100 : (int) command.volume;
+				int volume = this->bluetoothSpeakerConnected ? 100 : (int) command.volume;
 				INFO("Playing %s from index %d with volume %d", path.c_str(), (int) command.index, volume);
 
 				this->app->setVolume(volume / 100.0);

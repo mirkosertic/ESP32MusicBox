@@ -5,6 +5,7 @@
 #include "settings.h"
 
 #include "commands.h"
+#include "leds.h"
 #include "mediaplayer.h"
 #include "mediaplayersource.h"
 #include "tagscanner.h"
@@ -34,12 +35,11 @@ private:
 	uint8_t tagUid[8];
 	uint8_t tagUidlength;
 
-	float volume;
-
 	TagScanner *tagscanner;
 
 	bool wificonnected;
 
+	Leds *leds;
 	MediaPlayerSource *source;
 	MediaPlayer *player;
 	VoiceAssistant *assistant;
@@ -51,10 +51,8 @@ private:
 
 	ChangeNotifierCallback changecallback;
 
-	bool btspeakerconnected;
-
 public:
-	App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport);
+	App(Leds *leds, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport);
 	~App();
 
 	void begin(ChangeNotifierCallback callback);
@@ -138,10 +136,6 @@ public:
 	void next() override;
 
 	void play(String path, int index);
-
-	void setBluetoothSpeakerConnected(bool value = true);
-
-	bool isBluetoothSpeakerConnected();
 
 	bool isValidDeviceToPairForBluetooth(String ssid);
 };

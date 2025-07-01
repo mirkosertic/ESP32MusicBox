@@ -7,7 +7,8 @@
 #include <esp_mac.h>
 #include <esp_system.h>
 
-App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport) {
+App::App(Leds *leds, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport) {
+	this->leds = leds;
 	this->volumeSupport = volumeSupport;
 	this->tagscanner = tagscanner;
 	this->stateversion = 0;
@@ -19,10 +20,6 @@ App::App(TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player,
 	this->source = source;
 	this->player = player;
 	this->settings = settings;
-
-	this->volume = 1.0f;
-
-	this->btspeakerconnected = false;
 }
 
 App::~App() {
@@ -212,6 +209,8 @@ void App::writeCommandToTag(CommandData command) {
 	uint8_t userdata[44];
 	memcpy(&userdata[0], &command, 44);
 	this->tagscanner->write(&userdata[0], 44);
+
+	this->leds->setState(CARD_DETECTED);
 }
 
 void App::clearTag() {
@@ -219,7 +218,7 @@ void App::clearTag() {
 }
 
 float App::getVolume() {
-	return volume;
+	return this->volumeSupport->volume();
 }
 
 bool App::isActive() {
@@ -235,9 +234,11 @@ void App::publishState() {
 }
 
 bool App::volumeDown() {
+
 	float volume = this->getVolume();
 	if (volume >= 0.02) {
 		INFO("Decrementing volume");
+		this->leds->setState(VOLUME_CHANGE);
 		this->setVolume(volume - 0.02);
 		return true;
 	}
@@ -248,6 +249,7 @@ bool App::volumeUp() {
 	float volume = this->getVolume();
 	if (volume <= 0.98) {
 		INFO("Incrementing volume");
+		this->leds->setState(VOLUME_CHANGE);
 		this->setVolume(volume + 0.02);
 		return true;
 	}
@@ -259,7 +261,6 @@ void App::setVolume(float volume) {
 
 	INFO("Setting volume to %f", volume);
 	this->volumeSupport->setVolume(volume);
-	this->volume = volume;
 
 	this->publishState();
 }
@@ -311,14 +312,6 @@ void App::play(String path, int index) {
 
 int App::playProgressInPercent() {
 	return this->source->playProgressInPercent();
-}
-
-void App::setBluetoothSpeakerConnected(bool value) {
-	this->btspeakerconnected = value;
-}
-
-bool App::isBluetoothSpeakerConnected() {
-	return this->btspeakerconnected;
 }
 
 bool App::isValidDeviceToPairForBluetooth(String ssid) {
