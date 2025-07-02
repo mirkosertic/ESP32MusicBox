@@ -136,8 +136,6 @@ public:
 	void next() override;
 
 	void play(String path, int index);
-
-	bool isValidDeviceToPairForBluetooth(String ssid);
 };
 
 #endif

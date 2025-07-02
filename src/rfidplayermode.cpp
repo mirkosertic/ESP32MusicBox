@@ -109,7 +109,7 @@ void RfidPlayerMode::setup() {
 		// SSID pairing callback
 		[](const char *ssid, esp_bd_addr_t address, int rrsi) {
             INFO("bluetooth() - Found SSID %s with RRSI %d", ssid, rrsi);
-            if (globalRfidPlayerMode->app->isValidDeviceToPairForBluetooth(String(ssid))) 
+            if (globalRfidPlayerMode->settings->isValidDeviceToPairForBluetooth(String(ssid))) 
             {
                 INFO("bluetooth() - Candidate for pairing found!");
                 return true;

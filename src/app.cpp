@@ -313,7 +313,3 @@ void App::play(String path, int index) {
 int App::playProgressInPercent() {
 	return this->source->playProgressInPercent();
 }
-
-bool App::isValidDeviceToPairForBluetooth(String ssid) {
-	return this->settings->isValidDeviceToPairForBluetooth(ssid);
-}
