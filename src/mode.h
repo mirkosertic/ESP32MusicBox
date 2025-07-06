@@ -8,6 +8,11 @@
 
 #include <AudioTools.h>
 
+typedef enum {
+	MODE_IDLE,
+	MODE_NOT_IDLE
+} ModeStatus;
+
 class Mode {
 private:
 	void i2cinit();
@@ -25,7 +30,7 @@ public:
 	Mode(Leds *leds, Sensors *sensors);
 
 	virtual void setup();
-	virtual void loop();
+	virtual ModeStatus loop();
 };
 
 #endif

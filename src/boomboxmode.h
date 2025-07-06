@@ -13,7 +13,7 @@ public:
 	BoomboxMode(Leds *leds, Sensors *sensors);
 
 	void setup() override;
-	void loop() override;
+	ModeStatus loop() override;
 };
 
 #endif

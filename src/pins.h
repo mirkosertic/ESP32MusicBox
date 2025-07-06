@@ -2,6 +2,7 @@
 #define PINS_H
 
 // Make sure the the buttons are assigned to IO pins with pullup/puppdown resistors configurable by software!
+// RTC GPIO for Deepsleep Wakeup
 #define GPIO_STARTSTOP GPIO_NUM_12
 #define GPIO_PREVIOUS  GPIO_NUM_13
 #define GPIO_NEXT	   GPIO_NUM_15
@@ -9,6 +10,7 @@
 #define GPIO_WIRE_SDA GPIO_NUM_21
 #define GPIO_WIRE_SCL GPIO_NUM_22
 
+// RTC GPIO for Deepsleep Wakeup
 #define GPIO_PN532_IRQ GPIO_NUM_33
 #define GPIO_PN532_RST GPIO_NUM_32
 

@@ -38,7 +38,7 @@ public:
 	RfidPlayerMode(Leds *leds, Sensors *sensors);
 
 	virtual void setup() override;
-	virtual void loop() override;
+	virtual ModeStatus loop() override;
 };
 
 #endif

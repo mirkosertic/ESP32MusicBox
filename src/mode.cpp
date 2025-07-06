@@ -85,6 +85,7 @@ void Mode::sdinit() {
 	}
 }
 
-void Mode::loop() {
+ModeStatus Mode::loop() {
 	this->sensors->loop();
+	return MODE_NOT_IDLE;
 }

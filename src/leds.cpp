@@ -254,3 +254,7 @@ void Leds::loop(bool wifiEnabled, bool wifiConnected, bool playbackActive, int v
 void Leds::setBluetoothSpeakerConnected(bool value) {
 	this->btspeakerconnected = value;
 }
+
+void Leds::end() {
+	FastLED.clear(true);
+}

@@ -52,7 +52,7 @@ void BoomboxMode::setup() {
 	this->leds->setBluetoothSpeakerConnected();
 }
 
-void BoomboxMode::loop() {
+ModeStatus BoomboxMode::loop() {
 	Mode::loop();
 
 	this->leds->loop(false, false, false, 100, 100);
@@ -70,4 +70,9 @@ void BoomboxMode::loop() {
 			}
 		}
 	}
+
+	if (this->connected) {
+		return MODE_NOT_IDLE;
+	}
+	return MODE_IDLE;
 }

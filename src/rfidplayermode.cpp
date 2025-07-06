@@ -353,7 +353,7 @@ void RfidPlayerMode::wifiConnected() {
 	INFO("Free PSRAM is %d", ESP.getFreePsram());
 }
 
-void RfidPlayerMode::loop() {
+ModeStatus RfidPlayerMode::loop() {
 	Mode::loop();
 
 	// dnsServer.processNextRequest();
@@ -425,4 +425,10 @@ void RfidPlayerMode::loop() {
 	}
 
 	esp_task_wdt_reset();
+
+	if (this->player->isActive()) {
+		return MODE_NOT_IDLE;
+	}
+
+	return MODE_IDLE;
 }

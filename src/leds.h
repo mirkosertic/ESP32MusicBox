@@ -10,7 +10,7 @@ enum LEDState {
 	CARD_DETECTED,
 	VOLUME_CHANGE,
 	BTCONNECTING,
-	BTCONNECTED
+	BTCONNECTED,
 };
 
 class Leds {
@@ -43,6 +43,8 @@ public:
 	void loop(bool wifiEnabled, bool wifiConnected, bool playbackActive, int volumePercent, int progressPercent);
 
 	void setBluetoothSpeakerConnected(bool value = true);
+
+	void end();
 };
 
 #endif
