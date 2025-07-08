@@ -78,6 +78,8 @@ TagScanner::TagScanner(TwoWire *wire, uint8_t irq, uint8_t reset) {
 	this->pn532 = new Adafruit_PN532(irq, reset, wire);
 	this->tagPresent = false;
 	this->currentTagName = "";
+	this->irqPin = irq;
+	this->lastIrq = 0;
 
 	this->dataToWrite = xQueueCreate(10, sizeof(TagData));
 	if (this->dataToWrite == NULL) {
@@ -99,6 +101,7 @@ void TagScanner::scan() {
 	// Wait for an ISO14443A type cards (Mifare, etc.).  When one is found
 	// 'uid' will be populated with the UID, and uidLength will indicate
 	// if the uid is 4 bytes (Mifare Classic) or 7 bytes (Mifare Ultralight)
+	INFO("Trying to read a card");
 	bool tagscannersuccess = this->pn532->readPassiveTargetID(PN532_MIFARE_ISO14443A, &tagscanneruid[0], &tagscanneruidLength, 200);
 
 	if (tagscannersuccess) {
@@ -256,6 +259,12 @@ void TagScanner::scan() {
 void TagScanner::begin(TagDetectedCallback callback, NoTagCallback noTagCallback) {
 	this->tagDetectedCallback = callback;
 	this->noTagCallback = noTagCallback;
+	int counter = 0;
+	while (digitalRead(irqPin) != 1 && counter++ < 100) {
+		INFO("Waiting for board to become ready!");
+		delay(10);
+	}
+	this->pn532->begin();
 	unsigned long versiondata = this->pn532->getFirmwareVersion();
 	if (!versiondata) {
 		WARN("Could not find a board!");
@@ -290,4 +299,16 @@ void TagScanner::clearTag() {
 	} else if (ret == errQUEUE_FULL) {
 		WARN("Unable to send data into the Queue");
 	}
+}
+
+void TagScanner::loop() {
+	int currIrq = digitalRead(this->irqPin);
+	if (currIrq != lastIrq) {
+		INFO("IRQ status change to %d", currIrq);
+		lastIrq = currIrq;
+	}
+}
+
+void TagScanner::prepareDeepSleep() {
+	// TODO: How to disable red led on board in deepsleep?
 }

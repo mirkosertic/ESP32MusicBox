@@ -13,7 +13,8 @@ public:
 	BoomboxMode(Leds *leds, Sensors *sensors);
 
 	void setup() override;
-	ModeStatus loop() override;
+	virtual ModeStatus loop() override;
+	virtual void prepareDeepSleep() override;
 };
 
 #endif

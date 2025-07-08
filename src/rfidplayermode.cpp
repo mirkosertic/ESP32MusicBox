@@ -432,3 +432,7 @@ ModeStatus RfidPlayerMode::loop() {
 
 	return MODE_IDLE;
 }
+
+void RfidPlayerMode::prepareDeepSleep() {
+	this->tagscanner->prepareDeepSleep();
+}

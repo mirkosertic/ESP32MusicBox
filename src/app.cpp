@@ -198,11 +198,13 @@ void App::loop() {
 
 			unsigned int stackHighWatermark = uxTaskGetStackHighWaterMark(nullptr);
 
-			INFO("loop() - Free HEAP is %d, stackHighWatermark is %d", ESP.getFreeHeap(), stackHighWatermark);
+			INFO("Free HEAP is %d, stackHighWatermark is %d", ESP.getFreeHeap(), stackHighWatermark);
 
 			lastStateReport = now;
 		}
 	}
+
+	this->tagscanner->loop();
 }
 
 void App::writeCommandToTag(CommandData command) {

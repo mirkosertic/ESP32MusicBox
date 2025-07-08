@@ -70,6 +70,7 @@ void setup() {
 	// TODO: Wakeup on RFID IRQ??? Will only work after RFIDReaderMode is active...
 	INFO("Configuring Deepsleep wakeup");
 	if (esp_sleep_enable_ext0_wakeup(GPIO_STARTSTOP, 1)) {
+		// if (esp_sleep_enable_ext0_wakeup(GPIO_PN532_IRQ, 0)) {
 		WARN("Failed to configure deepsleep!")
 		while (true)
 			;
@@ -95,9 +96,11 @@ void loop() {
 		if (lastIdleTime == -1) {
 			lastIdleTime = now;
 		} else if (now - lastIdleTime > (AUTO_SHUTDOWN_IN_MINUTES * 60 * 1000)) {
+		//} else if (now - lastIdleTime > 5000) {
 			// Deep sleep
 			INFO("Beeing idle for too long, going to deepsleep");
 			leds->end();
+			mode->prepareDeepSleep();
 			esp_deep_sleep_start();
 		}
 	} else {

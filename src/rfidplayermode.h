@@ -39,6 +39,7 @@ public:
 
 	virtual void setup() override;
 	virtual ModeStatus loop() override;
+	virtual void prepareDeepSleep() override;
 };
 
 #endif

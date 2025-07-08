@@ -76,3 +76,6 @@ ModeStatus BoomboxMode::loop() {
 	}
 	return MODE_IDLE;
 }
+
+void BoomboxMode::prepareDeepSleep() {
+}

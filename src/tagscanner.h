@@ -3,6 +3,7 @@
 
 #include <Adafruit_PN532.h>
 #include <Wire.h>
+#include <functional>
 
 // Magic number (2 bytes)
 #define MAGIC_NUMBER 0xA55A
@@ -33,6 +34,9 @@ private:
 
 	QueueHandle_t dataToWrite;
 
+	int irqPin;
+	int lastIrq;
+
 public:
 	TagScanner(TwoWire *wire, uint8_t irq, uint8_t reset);
 
@@ -45,6 +49,10 @@ public:
 	void begin(TagDetectedCallback callback, NoTagCallback noTagCallback);
 
 	void clearTag();
+
+	void loop();
+
+	void prepareDeepSleep();
 };
 
 #endif
