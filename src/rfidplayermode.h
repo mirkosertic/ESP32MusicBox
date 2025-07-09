@@ -31,6 +31,7 @@ private:
 	QueueHandle_t commandsHandle;
 
 	bool bluetoothSpeakerConnected;
+	bool wifienabled;
 
 	void wifiConnected();
 

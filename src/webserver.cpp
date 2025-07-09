@@ -7,7 +7,6 @@
 
 #include <ArduinoJson.h>
 #include <ESPmDNS.h>
-#include <SPIFFS.h>
 #include <WiFi.h>
 #include <esp_task_wdt.h>
 

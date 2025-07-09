@@ -53,10 +53,6 @@ void RfidPlayerMode::setup() {
 
 	leds->setBootProgress(40);
 
-	if (this->sensors->isStartStopPressed()) {
-		this->settings->resetStoredBSSID();
-	}
-
 	// Button-Feedback goes to the app
 	this->sensors->begin(this->app);
 
@@ -75,6 +71,7 @@ void RfidPlayerMode::setup() {
 	WiFi.setAutoReconnect(true);
 
 	this->settings->initializeWifiFromSettings();
+	this->wifienabled = this->settings->isWiFiEnabled();
 
 	INFO("Bluetooth initializing buffers. Free HEAP is %d", ESP.getFreeHeap());
 	this->buffer = new BufferRTOS<uint8_t>(0);
@@ -320,9 +317,14 @@ void RfidPlayerMode::setup() {
 }
 
 void RfidPlayerMode::wifiConnected() {
-	IPAddress ip = WiFi.localIP();
 
-	INFO("Connected to WiFi network. Local IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+	INFO("Connected to WiFi network.");
+	INFO(" + Local IP : %s ", WiFi.localIP().toString().c_str());
+	INFO(" + Gateway  : %s", WiFi.gatewayIP().toString().c_str());
+	INFO(" + Subnet   : %s", WiFi.subnetMask().toString().c_str());
+	INFO(" + BSSID    : %s", WiFi.BSSIDstr().c_str());
+	INFO(" + Channel  : %d", WiFi.channel());
+	INFO(" + RSSI     : %d", WiFi.RSSI());
 
 	// Start webserver, as we now have a WiFi stack...
 	this->webserver->begin();
@@ -357,8 +359,10 @@ ModeStatus RfidPlayerMode::loop() {
 	Mode::loop();
 
 	// dnsServer.processNextRequest();
-	if (this->settings->isWiFiEnabled() && this->wifiClient != NULL) {
+	if (this->wifienabled && this->wifiClient != NULL) {
 		if (WiFi.isConnected() && !this->app->isWifiConnected()) {
+			INFO("WiFi connection established");
+
 			this->settings->writeToConfig();
 
 			this->wifiConnected();
@@ -371,9 +375,11 @@ ModeStatus RfidPlayerMode::loop() {
 
 		if (!WiFi.isConnected()) {
 			if (now - lastchecktime > 30000) {
-				INFO("WiFi is not connected, so reinit the connection");
+				INFO("WiFi connection timeout. Disabling WiFi for now.");
 				// More than 30 seconds no WiFi connect, we reset the stored bssid
-				settings->resetStoredBSSIDAndReconfigureWiFi();
+				WiFi.disconnect();
+				WiFi.setSleep(true);
+				this->wifienabled = false;
 
 				// Start timeout again
 				lastchecktime = now;
@@ -394,7 +400,7 @@ ModeStatus RfidPlayerMode::loop() {
 		}
 	}
 
-	this->leds->loop(settings->isWiFiEnabled(), app->isWifiConnected(), app->isActive(), (int) (app->getVolume() * 100), app->playProgressInPercent());
+	this->leds->loop(this->wifienabled, app->isWifiConnected(), app->isActive(), (int) (app->getVolume() * 100), app->playProgressInPercent());
 
 	// The main app loop
 	this->app->loop();
@@ -426,7 +432,7 @@ ModeStatus RfidPlayerMode::loop() {
 
 	esp_task_wdt_reset();
 
-	if (this->player->isActive()) {
+	if (this->app->isActive()) {
 		return MODE_NOT_IDLE;
 	}
 
@@ -435,4 +441,7 @@ ModeStatus RfidPlayerMode::loop() {
 
 void RfidPlayerMode::prepareDeepSleep() {
 	this->tagscanner->prepareDeepSleep();
+	if (WiFi.isConnected()) {
+		WiFi.disconnect();
+	}
 }

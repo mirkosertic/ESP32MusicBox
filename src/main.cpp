@@ -91,17 +91,20 @@ long lastIdleTime = -1;
 
 void loop() {
 
-	if (mode->loop() == MODE_IDLE) {
+	ModeStatus status = mode->loop();
+	if (status == MODE_IDLE) {
 		long now = millis();
 		if (lastIdleTime == -1) {
 			lastIdleTime = now;
 		} else if (now - lastIdleTime > (AUTO_SHUTDOWN_IN_MINUTES * 60 * 1000)) {
-		//} else if (now - lastIdleTime > 5000) {
+			//} else if (now - lastIdleTime > 5000) {
 			// Deep sleep
 			INFO("Beeing idle for too long, going to deepsleep");
 			leds->end();
 			mode->prepareDeepSleep();
+
 			esp_deep_sleep_start();
+			INFO("This will not be logged...");
 		}
 	} else {
 		lastIdleTime = -1;

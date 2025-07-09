@@ -35,15 +35,6 @@ bool Settings::readFromConfig() {
 			this->wlan_enabled = network["enabled"].as<bool>();
 			this->wlan_sid = String(network["sid"].as<String>());
 			this->wlan_pwd = String(network["pwd"].as<String>());
-			this->wlan_channel = network["channel"].as<int32_t>();
-
-			JsonArray bssid = network["bssid"].as<JsonArray>();
-			this->wlan_bssid[0] = bssid[0].as<uint8_t>();
-			this->wlan_bssid[1] = bssid[1].as<uint8_t>();
-			this->wlan_bssid[2] = bssid[2].as<uint8_t>();
-			this->wlan_bssid[3] = bssid[3].as<uint8_t>();
-			this->wlan_bssid[4] = bssid[4].as<uint8_t>();
-			this->wlan_bssid[5] = bssid[5].as<uint8_t>();
 
 			JsonObject mqtt = document["mqtt"].as<JsonObject>();
 			this->mqtt_enabled = mqtt["enabled"].as<bool>();
@@ -74,16 +65,6 @@ bool Settings::writeToConfig() {
 	network["enabled"] = this->wlan_enabled;
 	network["sid"] = this->wlan_sid;
 	network["pwd"] = this->wlan_pwd;
-	network["channel"] = WiFi.channel();
-
-	uint8_t *bssid = WiFi.BSSID();
-	JsonArray bs = network["bssid"].to<JsonArray>();
-	bs.add(bssid[0]);
-	bs.add(bssid[1]);
-	bs.add(bssid[2]);
-	bs.add(bssid[3]);
-	bs.add(bssid[4]);
-	bs.add(bssid[5]);
 
 	JsonObject mqtt = doc["mqtt"].to<JsonObject>();
 	mqtt["enabled"] = this->mqtt_enabled;
@@ -125,13 +106,8 @@ String Settings::getDeviceName() {
 void Settings::initializeWifiFromSettings() {
 	if (this->wlan_enabled) {
 		WiFi.disconnect();
-		if (this->wlan_bssid[0] == 0 && this->wlan_bssid[1] == 0 && this->wlan_bssid[2] == 0 && this->wlan_bssid[3] == 0 && this->wlan_bssid[4] == 0 && this->wlan_bssid[5] == 0) {
-			INFO("Connecting to Wifi with SID...");
-			WiFi.begin(this->wlan_sid, this->wlan_pwd);
-		} else {
-			INFO("Connecting to Wifi with last known AP...");
-			WiFi.begin(this->wlan_sid, this->wlan_pwd, this->wlan_channel, this->wlan_bssid);
-		}
+		INFO("Connecting to WiFi with SID...");
+		WiFi.begin(this->wlan_sid, this->wlan_pwd);
 	} else {
 		WARN("WiFi is disabled!");
 	}
@@ -198,15 +174,6 @@ String Settings::getSettingsAsJson() {
 	network["enabled"] = this->wlan_enabled;
 	network["sid"] = this->wlan_sid;
 	network["pwd"] = this->wlan_pwd;
-	network["channel"] = WiFi.channel();
-
-	JsonArray bs = network["bssid"].to<JsonArray>();
-	bs.add(this->wlan_bssid[0]);
-	bs.add(this->wlan_bssid[1]);
-	bs.add(this->wlan_bssid[2]);
-	bs.add(this->wlan_bssid[3]);
-	bs.add(this->wlan_bssid[4]);
-	bs.add(this->wlan_bssid[5]);
 
 	JsonObject mqtt = doc["mqtt"].to<JsonObject>();
 	mqtt["enabled"] = this->mqtt_enabled;
@@ -248,15 +215,6 @@ void Settings::setSettingsFromJson(String json) {
 		this->wlan_enabled = network["enabled"].as<bool>();
 		this->wlan_sid = String(network["sid"].as<String>());
 		this->wlan_pwd = String(network["pwd"].as<String>());
-		this->wlan_channel = network["channel"].as<int32_t>();
-
-		JsonArray bssid = network["bssid"].as<JsonArray>();
-		this->wlan_bssid[0] = bssid[0].as<uint8_t>();
-		this->wlan_bssid[1] = bssid[1].as<uint8_t>();
-		this->wlan_bssid[2] = bssid[2].as<uint8_t>();
-		this->wlan_bssid[3] = bssid[3].as<uint8_t>();
-		this->wlan_bssid[4] = bssid[4].as<uint8_t>();
-		this->wlan_bssid[5] = bssid[5].as<uint8_t>();
 
 		JsonObject mqtt = document["mqtt"].as<JsonObject>();
 		this->mqtt_enabled = mqtt["enabled"].as<bool>();
@@ -288,6 +246,9 @@ void Settings::setSettingsFromJson(String json) {
 
 void Settings::rescanForBetterNetworksAndReconfigure() {
 	INFO("Scanning for WiFi networks...");
+
+	uint8_t *bssidconnect = WiFi.BSSID();
+
 	int numNetworks = WiFi.scanComplete();
 	if (numNetworks == WIFI_SCAN_FAILED) {
 		WiFi.scanNetworks(true);
@@ -326,20 +287,11 @@ void Settings::rescanForBetterNetworksAndReconfigure() {
 	if (bestIndex >= 0) {
 		uint8_t *bssid = WiFi.BSSID(bestIndex);
 
-		if (bssid[0] != this->wlan_bssid[0] && bssid[1] != this->wlan_bssid[1] && bssid[2] != this->wlan_bssid[2] && bssid[3] != this->wlan_bssid[3] && bssid[4] != this->wlan_bssid[4] && bssid[5] != this->wlan_bssid[5]) {
+		if (bssid[0] != bssidconnect[0] || bssid[1] != bssidconnect[1] || bssid[2] != bssidconnect[2] || bssid[3] != bssidconnect[3] || bssid[4] != bssidconnect[4] || bssid[5] != bssidconnect[5]) {
 			INFO("Better AP found. Reconnecting...");
 
-			uint8_t *bssid = WiFi.BSSID(bestIndex);
-			this->wlan_channel = WiFi.channel(bestIndex);
-			this->wlan_bssid[0] = bssid[0];
-			this->wlan_bssid[1] = bssid[1];
-			this->wlan_bssid[2] = bssid[2];
-			this->wlan_bssid[3] = bssid[3];
-			this->wlan_bssid[4] = bssid[4];
-			this->wlan_bssid[5] = bssid[5];
-
 			WiFi.disconnect();
-			WiFi.begin(this->wlan_sid, this->wlan_pwd, this->wlan_channel, this->wlan_bssid);
+			WiFi.begin(this->wlan_sid, this->wlan_pwd, WiFi.channel(bestIndex), bssid);
 
 			this->writeToConfig();
 		} else {
@@ -350,23 +302,6 @@ void Settings::rescanForBetterNetworksAndReconfigure() {
 	}
 
 	WiFi.scanDelete();
-}
-
-void Settings::resetStoredBSSID() {
-	INFO("Reset of stored BSSID");
-	this->wlan_bssid[0] = 0;
-	this->wlan_bssid[1] = 0;
-	this->wlan_bssid[2] = 0;
-	this->wlan_bssid[3] = 0;
-	this->wlan_bssid[4] = 0;
-	this->wlan_bssid[5] = 0;
-}
-
-void Settings::resetStoredBSSIDAndReconfigureWiFi() {
-	this->resetStoredBSSID();
-
-	this->writeToConfig();
-	this->initializeWifiFromSettings();
 }
 
 bool Settings::isWiFiEnabled() {

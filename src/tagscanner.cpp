@@ -304,7 +304,7 @@ void TagScanner::clearTag() {
 void TagScanner::loop() {
 	int currIrq = digitalRead(this->irqPin);
 	if (currIrq != lastIrq) {
-		INFO("IRQ status change to %d", currIrq);
+		DEBUG("IRQ status change to %d", currIrq);
 		lastIrq = currIrq;
 	}
 }
