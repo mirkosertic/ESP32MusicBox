@@ -107,6 +107,8 @@ void Settings::initializeWifiFromSettings() {
 	if (this->wlan_enabled) {
 		WiFi.disconnect();
 		INFO("Connecting to WiFi with SID...");
+		WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
+		WiFi.setHostname(computeTechnicalName().c_str());
 		WiFi.begin(this->wlan_sid, this->wlan_pwd);
 	} else {
 		WARN("WiFi is disabled!");
