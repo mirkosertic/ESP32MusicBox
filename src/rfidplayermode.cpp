@@ -10,13 +10,14 @@ RfidPlayerMode::RfidPlayerMode(Leds *leds, Sensors *sensors)
 	: Mode(leds, sensors) {
 	globalRfidPlayerMode = this;
 	this->bluetoothSpeakerConnected = false;
+	this->wifiinitialized = false;
 }
 
 void RfidPlayerMode::setup() {
 	Mode::setup();
 
 	INFO("Initializing core components")
-	this->source = new MediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
+	this->source = new SDMediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
 	this->decoder = new MP3DecoderHelix();
 	this->player = new MediaPlayer(*this->source, *this->i2sstream, *this->decoder);
 
@@ -24,7 +25,7 @@ void RfidPlayerMode::setup() {
 	this->player->setAudioInfo(defaultAudioInfo);
 
 	this->tagscanner = new TagScanner(&Wire1, GPIO_PN532_IRQ, GPIO_PN532_RST);
-	this->app = new App(this->leds, this->tagscanner, this->source, this->player, this->settings, this->player);
+	this->app = new App(this->leds, this->tagscanner, this->player, this->settings);
 	INFO("Core components created. Free HEAP is %d", ESP.getFreeHeap());
 
 	INFO("Free HEAP is %d", ESP.getFreeHeap());
@@ -269,7 +270,7 @@ void RfidPlayerMode::setup() {
         INFO("Done"); });
 
 	// Init file browser
-	strcpy(this->app->getCurrentPath(), "");
+	strcpy(this->player->getCurrentPath(), "");
 
 	this->app->begin([this](bool active, float volume, const char *currentsong, int playProgressInPercent) {
         if (this->mqtt != NULL)
@@ -348,6 +349,8 @@ void RfidPlayerMode::wifiConnected() {
 
 	this->leds->setState(PLAYER_STATUS);
 
+	this->wifiinitialized = true;
+
 	INFO("WiFi connected");
 	INFO("Max  HEAP  is %d", ESP.getHeapSize());
 	INFO("Free HEAP  is %d", ESP.getFreeHeap());
@@ -360,14 +363,12 @@ ModeStatus RfidPlayerMode::loop() {
 
 	// dnsServer.processNextRequest();
 	if (this->wifienabled && this->wifiClient != NULL) {
-		if (WiFi.isConnected() && !this->app->isWifiConnected()) {
+		if (WiFi.isConnected() && !this->wifiinitialized) {
 			INFO("WiFi connection established");
 
 			this->settings->writeToConfig();
 
 			this->wifiConnected();
-
-			this->app->setWifiConnected();
 		}
 
 		long now = millis();
@@ -400,7 +401,7 @@ ModeStatus RfidPlayerMode::loop() {
 		}
 	}
 
-	this->leds->loop(this->wifienabled, app->isWifiConnected(), app->isActive(), (int) (app->getVolume() * 100), app->playProgressInPercent());
+	this->leds->loop(this->wifienabled, WiFi.isConnected(), app->isActive(), (int) (app->getVolume() * 100), app->playProgressInPercent());
 
 	// The main app loop
 	this->app->loop();

@@ -2,9 +2,10 @@
 
 #include "logging.h"
 
-MediaPlayer::MediaPlayer(MediaPlayerSource &source, Print &output, AudioDecoder &decoder)
+MediaPlayer::MediaPlayer(SDMediaPlayerSource &source, Print &output, AudioDecoder &decoder)
 	: AudioPlayer(source, output, decoder) {
 	this->source = &source;
+	this->currentpath = new char[512];
 
 	this->overrideHelix = new MP3DecoderHelix();
 	this->overrideHelix->driver()->setInfoCallback([](MP3FrameInfo &info, void *ref) { INFO("Got libHelix Info %d bitrate %d bits per sample %d channels", info.bitrate, info.bitsPerSample, info.nChans); }, nullptr);
@@ -19,6 +20,26 @@ MediaPlayer::MediaPlayer(MediaPlayerSource &source, Print &output, AudioDecoder 
 
 bool MediaPlayer::setVolume(float volume) {
 	return AudioPlayer::setVolume(volume);
+}
+
+bool MediaPlayer::hasPrevious() {
+	return this->source->index() > 0;
+}
+
+void MediaPlayer::playFromSD(String path, int index) {
+	INFO("Playing song in path %s with index %d", path.c_str(), index);
+	strcpy(this->currentpath, path.c_str());
+
+	INFO("Player active=false");
+	this->setActive(false);
+	INFO("Setting path");
+	this->source->setPath(currentpath);
+	INFO("Playing index %d", index);
+	this->begin(index, true);
+}
+
+char *MediaPlayer::getCurrentPath() {
+	return this->currentpath;
 }
 
 void MediaPlayer::playURL(String url, bool forceMono) {

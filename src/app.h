@@ -7,7 +7,6 @@
 #include "commands.h"
 #include "leds.h"
 #include "mediaplayer.h"
-#include "mediaplayersource.h"
 #include "tagscanner.h"
 #include "userfeedbackhandler.h"
 #include "voiceassistant.h"
@@ -26,7 +25,6 @@ private:
 	String devicetype;
 	int serverPort;
 	long stateversion;
-	char *currentpath;
 
 	bool tagPresent;
 	bool knownTag;
@@ -37,31 +35,22 @@ private:
 
 	TagScanner *tagscanner;
 
-	bool wificonnected;
-
 	Leds *leds;
-	MediaPlayerSource *source;
 	MediaPlayer *player;
 	VoiceAssistant *assistant;
 	Settings *settings;
-
-	VolumeSupport *volumeSupport;
 
 	std::mutex loopmutex;
 
 	ChangeNotifierCallback changecallback;
 
 public:
-	App(Leds *leds, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport);
+	App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *settings);
 	~App();
 
 	void begin(ChangeNotifierCallback callback);
 
-	void setWifiConnected();
-
 	bool isWifiEnabled();
-
-	bool isWifiConnected();
 
 	void noTagPresent();
 
@@ -74,8 +63,6 @@ public:
 	String getTagInfoText();
 
 	bool getIsKnownTag();
-
-	char *getCurrentPath();
 
 	void incrementStateVersion();
 

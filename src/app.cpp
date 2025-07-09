@@ -7,17 +7,13 @@
 #include <esp_mac.h>
 #include <esp_system.h>
 
-App::App(Leds *leds, TagScanner *tagscanner, MediaPlayerSource *source, MediaPlayer *player, Settings *settings, VolumeSupport *volumeSupport) {
+App::App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *settings) {
 	this->leds = leds;
-	this->volumeSupport = volumeSupport;
 	this->tagscanner = tagscanner;
 	this->stateversion = 0;
-	this->currentpath = new char[512];
 	this->tagPresent = false;
 	this->tagName = "";
-	this->wificonnected = false;
 
-	this->source = source;
 	this->player = player;
 	this->settings = settings;
 }
@@ -29,16 +25,8 @@ void App::begin(ChangeNotifierCallback callback) {
 	this->changecallback = callback;
 }
 
-void App::setWifiConnected() {
-	this->wificonnected = true;
-}
-
 bool App::isWifiEnabled() {
 	return this->settings->isWiFiEnabled();
-}
-
-bool App::isWifiConnected() {
-	return this->wificonnected;
 }
 
 void App::noTagPresent() {
@@ -94,10 +82,6 @@ String App::getTagInfoText() {
 	} else {
 		return "";
 	}
-}
-
-char *App::getCurrentPath() {
-	return this->currentpath;
 }
 
 void App::incrementStateVersion() {
@@ -190,7 +174,7 @@ void App::loop() {
 
 	static long lastStateReport = 0;
 
-	if (wificonnected) {
+	if (WiFi.isConnected()) {
 		long now = millis();
 		if (now - lastStateReport > 5000) {
 			DEBUG("Publishing app state");
@@ -220,7 +204,7 @@ void App::clearTag() {
 }
 
 float App::getVolume() {
-	return this->volumeSupport->volume();
+	return this->player->volume();
 }
 
 bool App::isActive() {
@@ -228,11 +212,11 @@ bool App::isActive() {
 }
 
 const char *App::currentTitle() {
-	return this->source->currentPlayFile();
+	return this->player->currentSong();
 }
 
 void App::publishState() {
-	this->changecallback(this->player->isActive(), this->volumeSupport->volume(), this->player->currentSong(), this->player->playProgressInPercent());
+	this->changecallback(this->player->isActive(), this->player->volume(), this->player->currentSong(), this->player->playProgressInPercent());
 }
 
 bool App::volumeDown() {
@@ -262,7 +246,7 @@ void App::setVolume(float volume) {
 	const std::lock_guard<std::mutex> lock(this->loopmutex);
 
 	INFO("Setting volume to %f", volume);
-	this->volumeSupport->setVolume(volume);
+	this->player->setVolume(volume);
 
 	this->publishState();
 }
@@ -277,7 +261,7 @@ void App::toggleActiveState() {
 
 void App::previous() {
 	const std::lock_guard<std::mutex> lock(this->loopmutex);
-	if (this->source->index() > 0) {
+	if (this->player->hasPrevious()) {
 		INFO("Previous title");
 		this->player->previous();
 
@@ -299,19 +283,11 @@ void App::next() {
 void App::play(String path, int index) {
 	const std::lock_guard<std::mutex> lock(this->loopmutex);
 
-	INFO("Playing song in path %s with index %d", path.c_str(), index);
-	strcpy(this->currentpath, path.c_str());
-
-	INFO("Player active=false");
-	this->player->setActive(false);
-	INFO("Setting path");
-	this->source->setPath(currentpath);
-	INFO("Playing index %d", index);
-	this->player->begin(index, true);
+	this->player->playFromSD(path, index);
 
 	this->publishState();
 }
 
 int App::playProgressInPercent() {
-	return this->source->playProgressInPercent();
+	return this->player->playProgressInPercent();
 }

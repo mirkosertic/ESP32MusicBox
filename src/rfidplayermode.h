@@ -5,9 +5,9 @@
 #include "app.h"
 #include "bluetoothsource.h"
 #include "mediaplayer.h"
-#include "mediaplayersource.h"
 #include "mode.h"
 #include "mqtt.h"
+#include "sdmediaplayersource.h"
 #include "tagscanner.h"
 #include "voiceassistant.h"
 #include "webserver.h"
@@ -16,7 +16,7 @@
 
 class RfidPlayerMode : public Mode {
 private:
-	MediaPlayerSource *source;
+	SDMediaPlayerSource *source;
 	MP3DecoderHelix *decoder;
 	MediaPlayer *player;
 	TagScanner *tagscanner;
@@ -32,6 +32,7 @@ private:
 
 	bool bluetoothSpeakerConnected;
 	bool wifienabled;
+	bool wifiinitialized;
 
 	void wifiConnected();
 

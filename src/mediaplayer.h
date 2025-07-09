@@ -1,7 +1,7 @@
 #ifndef MEDIAPLAYER_H
 #define MEDIAPLAYER_H
 
-#include "mediaplayersource.h"
+#include "sdmediaplayersource.h"
 
 #include <AudioTools.h>
 #include <AudioTools/AudioCodecs/CodecMP3Helix.h>
@@ -9,7 +9,7 @@
 
 class MediaPlayer : public AudioPlayer {
 private:
-	MediaPlayerSource *source;
+	SDMediaPlayerSource *source;
 
 	MP3DecoderHelix *overrideHelix;
 	FormatConverterStream *overrideFormatConverter;
@@ -20,8 +20,10 @@ private:
 	long lastoverridecopytime;
 	int indexBeforeOverride;
 
+	char *currentpath;
+
 public:
-	MediaPlayer(MediaPlayerSource &source, Print &output, AudioDecoder &decoder);
+	MediaPlayer(SDMediaPlayerSource &source, Print &output, AudioDecoder &decoder);
 
 	virtual bool setVolume(float volume) override;
 
@@ -32,6 +34,12 @@ public:
 	void playURL(String url, bool forceMono);
 
 	virtual size_t copy();
+
+	bool hasPrevious();
+
+	void playFromSD(String path, int index);
+
+	char *getCurrentPath();
 };
 
 #endif
