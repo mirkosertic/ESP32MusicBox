@@ -2,6 +2,7 @@
 #define MEDIAPLAYER_H
 
 #include "sdmediaplayersource.h"
+#include "urlmediaplayersource.h"
 
 #include <AudioTools.h>
 #include <AudioTools/AudioCodecs/CodecMP3Helix.h>
@@ -9,7 +10,8 @@
 
 class MediaPlayer : public AudioPlayer {
 private:
-	SDMediaPlayerSource *source;
+	SDMediaPlayerSource *sourceSD;
+	URLMediaPlayerSource *sourceURL;
 
 	MP3DecoderHelix *overrideHelix;
 	FormatConverterStream *overrideFormatConverter;
@@ -23,7 +25,7 @@ private:
 	char *currentpath;
 
 public:
-	MediaPlayer(SDMediaPlayerSource &source, Print &output, AudioDecoder &decoder);
+	MediaPlayer(SDMediaPlayerSource &sourceSD, URLMediaPlayerSource &sourceURL, Print &output, AudioDecoder &decoder);
 
 	virtual bool setVolume(float volume) override;
 
@@ -32,8 +34,6 @@ public:
 	int playProgressInPercent();
 
 	void playURL(String url, bool forceMono);
-
-	virtual size_t copy();
 
 	bool hasPrevious();
 

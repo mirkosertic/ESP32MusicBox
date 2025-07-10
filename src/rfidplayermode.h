@@ -9,6 +9,7 @@
 #include "mqtt.h"
 #include "sdmediaplayersource.h"
 #include "tagscanner.h"
+#include "urlmediaplayersource.h"
 #include "voiceassistant.h"
 #include "webserver.h"
 
@@ -16,7 +17,8 @@
 
 class RfidPlayerMode : public Mode {
 private:
-	SDMediaPlayerSource *source;
+	SDMediaPlayerSource *sourceSD;
+	URLMediaPlayerSource *sourceURL;
 	MP3DecoderHelix *decoder;
 	MediaPlayer *player;
 	TagScanner *tagscanner;

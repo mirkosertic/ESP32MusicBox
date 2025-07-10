@@ -2,9 +2,10 @@
 
 #include "logging.h"
 
-MediaPlayer::MediaPlayer(SDMediaPlayerSource &source, Print &output, AudioDecoder &decoder)
-	: AudioPlayer(source, output, decoder) {
-	this->source = &source;
+MediaPlayer::MediaPlayer(SDMediaPlayerSource &sourceSD, URLMediaPlayerSource &sourceURL, Print &output, AudioDecoder &decoder)
+	: AudioPlayer(sourceSD, output, decoder) {
+	this->sourceSD = &sourceSD;
+	this->sourceURL = &sourceURL;
 	this->currentpath = new char[512];
 
 	this->overrideHelix = new MP3DecoderHelix();
@@ -23,7 +24,7 @@ bool MediaPlayer::setVolume(float volume) {
 }
 
 bool MediaPlayer::hasPrevious() {
-	return this->source->index() > 0;
+	return this->sourceSD->index() > 0;
 }
 
 void MediaPlayer::playFromSD(String path, int index) {
@@ -33,7 +34,7 @@ void MediaPlayer::playFromSD(String path, int index) {
 	INFO("Player active=false");
 	this->setActive(false);
 	INFO("Setting path");
-	this->source->setPath(currentpath);
+	this->sourceSD->setPath(currentpath);
 	INFO("Playing index %d", index);
 	this->begin(index, true);
 }
@@ -76,59 +77,10 @@ void MediaPlayer::playURL(String url, bool forceMono) {
 		this->lastoverridecopytime = -1;*/
 }
 
-size_t MediaPlayer::copy() {
-	// if (this->overrideStream == nullptr)
-	//{
-	return AudioPlayer::copy();
-	//}
-	/*
-		AudioInfo outinfo = this->output->audioInfo();
-		DEBUG("Player is running with Samplerate=%d, Channels=%d and Bits per sample=%d", outinfo.sample_rate, outinfo.channels, outinfo.bits_per_sample);
-
-		AudioInfo from = this->overrideDecoder->audioInfo();
-		DEBUG("Decoder is running with Samplerate=%d, Channels=%d and Bits per sample=%d", from.sample_rate, from.channels, from.bits_per_sample);
-		AudioInfo out = this->overrideDecoder->audioInfoOut();
-		DEBUG("Decoder out is running with Samplerate=%d, Channels=%d and Bits per sample=%d", out.sample_rate, out.channels, out.bits_per_sample);
-
-		AudioInfo conv = this->overrideFormatConverter->audioInfo();
-		DEBUG("Conv is running with Samplerate=%d, Channels=%d and Bits per sample=%d", conv.sample_rate, conv.channels, conv.bits_per_sample);
-		AudioInfo convout = this->overrideFormatConverter->audioInfoOut();
-		DEBUG("Conv out is running with Samplerate=%d, Channels=%d and Bits per sample=%d", convout.sample_rate, convout.channels, convout.bits_per_sample);
-
-		size_t result = this->overrideCopy.copy();
-		long now = millis();
-		if (result > 0)
-		{
-			this->lastoverridecopytime = now;
-		}
-		else
-		{
-			if (lastoverridecopytime != 1 && now - this->lastoverridecopytime > 50)
-			{
-				// More than 50 milliseconds nothing copied, we assume playback has finished
-				INFO("Override playback finished, switching back to regular playback...");
-				this->overrideStream->end();
-				delete this->overrideStream;
-				this->overrideStream = nullptr;
-
-				if (this->isActive())
-				{
-					// Beware of the not reentrant mutexes!
-					INFO("Toggling active state");
-					AudioPlayer::setActive(false);
-					AudioPlayer::setActive(true);
-				}
-
-				INFO("Done");
-			}
-		}
-		return result;*/
-}
-
 const char *MediaPlayer::currentSong() {
-	return this->source->currentPlayFile();
+	return this->sourceSD->currentPlayFile();
 }
 
 int MediaPlayer::playProgressInPercent() {
-	return this->source->playProgressInPercent();
+	return this->sourceSD->playProgressInPercent();
 }

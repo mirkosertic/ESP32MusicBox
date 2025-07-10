@@ -16,10 +16,14 @@ RfidPlayerMode::RfidPlayerMode(Leds *leds, Sensors *sensors)
 void RfidPlayerMode::setup() {
 	Mode::setup();
 
+	this->wifiClient = new WiFiClient();
+
 	INFO("Initializing core components")
-	this->source = new SDMediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
+	this->sourceSD = new SDMediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
+	URLStream stream(*this->wifiClient);
+	this->sourceURL = new URLMediaPlayerSource(stream, "", 0);
 	this->decoder = new MP3DecoderHelix();
-	this->player = new MediaPlayer(*this->source, *this->i2sstream, *this->decoder);
+	this->player = new MediaPlayer(*this->sourceSD, *this->sourceURL, *this->i2sstream, *this->decoder);
 
 	// Inform the player what to output
 	this->player->setAudioInfo(defaultAudioInfo);
@@ -48,7 +52,7 @@ void RfidPlayerMode::setup() {
 	leds->setBootProgress(10);
 
 	// AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
-	this->source->begin();
+	this->sourceSD->begin();
 
 	leds->setBootProgress(30);
 
@@ -58,7 +62,6 @@ void RfidPlayerMode::setup() {
 	this->sensors->begin(this->app);
 
 	INFO("WiFi configuration and creating networking components. Free HEAP is %d", ESP.getFreeHeap());
-	this->wifiClient = new WiFiClient();
 	this->webserver = new Webserver(&SD, this->app, HTTP_SERVER_PORT, MP3_FILE, this->settings);
 	if (this->settings->isVoiceAssistantEnabled()) {
 		INFO("Initializing voice assistant client. Free HEAP is %d", ESP.getFreeHeap());
@@ -255,11 +258,11 @@ void RfidPlayerMode::setup() {
 	this->leds->setBootProgress(70);
 	INFO("NFC reader init finished");
 
-	this->source->setChangeIndexCallback([this](Stream *next) {
-        INFO("In info callback");
+	this->sourceSD->setChangeIndexCallback([this](Stream *next) {
+        INFO("In ChangeIndex callback");
         if (next != nullptr)
         {
-            const char *songinfo = this->source->toStr();
+            const char *songinfo = this->sourceSD->toStr();
             if (songinfo && this->mqtt != NULL)
             {
 	            this->mqtt->publishCurrentSong(String(songinfo));
