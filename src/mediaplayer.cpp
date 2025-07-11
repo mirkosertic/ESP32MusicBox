@@ -7,16 +7,6 @@ MediaPlayer::MediaPlayer(SDMediaPlayerSource &sourceSD, URLMediaPlayerSource &so
 	this->sourceSD = &sourceSD;
 	this->sourceURL = &sourceURL;
 	this->currentpath = new char[512];
-
-	this->overrideHelix = new MP3DecoderHelix();
-	this->overrideHelix->driver()->setInfoCallback([](MP3FrameInfo &info, void *ref) { INFO("Got libHelix Info %d bitrate %d bits per sample %d channels", info.bitrate, info.bitsPerSample, info.nChans); }, nullptr);
-
-	this->overrideFormatConverter = new FormatConverterStream(output);
-	this->overrideDecoder = new EncodedAudioStream(this->overrideFormatConverter, this->overrideHelix);
-	this->overrideHelix->addNotifyAudioChange(*this->overrideDecoder);
-	this->overrideDecoder->addNotifyAudioChange(*this->overrideFormatConverter);
-	this->overrideStream = nullptr;
-	this->lastoverridecopytime = -1;
 }
 
 bool MediaPlayer::setVolume(float volume) {
@@ -36,6 +26,7 @@ void MediaPlayer::playFromSD(String path, int index) {
 	INFO("Setting path");
 	this->sourceSD->setPath(currentpath);
 	INFO("Playing index %d", index);
+	this->setAudioSource(*this->sourceSD);
 	this->begin(index, true);
 }
 
@@ -44,37 +35,15 @@ char *MediaPlayer::getCurrentPath() {
 }
 
 void MediaPlayer::playURL(String url, bool forceMono) {
-	/*    INFO("Playing URL %s", url.c_str());
-
-		if (this->overrideStream != nullptr)
-		{
-			this->overrideStream->end();
-			delete this->overrideStream;
-		}
-		this->overrideStream = new URLStream(2024);
-		if (!this->overrideStream->begin(url.c_str()))
-		{
-			WARN("Could not begin stream from %s", url.c_str());
-		}
-		this->overrideDecoder->begin();
-
-		AudioInfo outputInfo = this->output->audioInfo();
-		DEBUG("Begin of Helix");
-		this->overrideHelix->begin();
-		DEBUG("Begin of decoder");
-		this->overrideDecoder->begin();
-		DEBUG("Begin of converter");
-		if (forceMono)
-		{
-			this->overrideFormatConverter->begin(AudioInfo(1, 1, 16), outputInfo);
-		}
-		else
-		{
-			this->overrideFormatConverter->begin(outputInfo, outputInfo);
-		}
-		DEBUG("Start of copy");
-		this->overrideCopy.begin(*this->overrideDecoder, *this->overrideStream);
-		this->lastoverridecopytime = -1;*/
+	INFO("Playing URL %s", url.c_str());
+	INFO("Player active=false");
+	this->setActive(false);
+	this->setAudioSource(*this->sourceURL);
+	INFO("Adding URL");
+	this->sourceURL->clear();
+	this->sourceURL->addURL(url.c_str());
+	INFO("Starting playback");
+	this->begin(0, true);
 }
 
 const char *MediaPlayer::currentSong() {

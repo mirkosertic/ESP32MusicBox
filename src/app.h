@@ -123,6 +123,8 @@ public:
 	void next() override;
 
 	void play(String path, int index);
+
+	void playURL(String url);
 };
 
 #endif

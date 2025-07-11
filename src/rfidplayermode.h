@@ -17,6 +17,7 @@
 
 class RfidPlayerMode : public Mode {
 private:
+	URLStream *urlStream;
 	SDMediaPlayerSource *sourceSD;
 	URLMediaPlayerSource *sourceURL;
 	MP3DecoderHelix *decoder;

@@ -521,6 +521,23 @@ void Webserver::initialize() {
 
       return response.send(); });
 
+	this->server->on("/webradio.html", HTTP_GET, [this](PsychicRequest *request) {
+
+      INFO("webserver() - Rendering /webradio.html");
+
+      // Chunked response to optimize RAM usage
+      size_t content_length = strlen_P(WEBRADIO_TEMPLATE);
+      
+      CustomPsychicStreamResponse response(request, "text/html");
+      response.setContentType("text/html");
+      response.addHeader("Cache-Control", "no-cache, must-revalidate");
+      response.setContentLength(content_length);
+
+      response.beginSend();
+      response.print(WEBRADIO_TEMPLATE);
+
+      return response.endSend(); });
+
 	// Toggle start stop
 	this->server->on("/startstop", HTTP_GET, [this](PsychicRequest *request) {
 
@@ -575,6 +592,24 @@ void Webserver::initialize() {
     int index = request->getParam("index")->value().toInt();
 
     this->app->play(path, index);
+
+    PsychicJsonResponse response = PsychicJsonResponse(request);
+    response.setContentType("application/json");
+    response.setCode(200);
+    response.addHeader("Cache-Control", "no-cache, must-revalidate");
+
+    // JsonObject result = response.getRoot();
+
+    return response.send(); });
+
+	// playwebradio
+	this->server->on("/playwebradio", HTTP_GET, [this](PsychicRequest *request) {
+    
+    INFO("webserver() - /playwebradio received");
+
+    String url = request->getParam("url")->value();
+
+    this->app->playURL(url);
 
     PsychicJsonResponse response = PsychicJsonResponse(request);
     response.setContentType("application/json");

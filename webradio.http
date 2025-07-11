@@ -1,0 +1,2 @@
+GET https://de2.api.radio-browser.info/json/stations/search?limit=50&codec=MP3&name=M%C3%BCnster&hidebroken=true&order=clickcount&reverse=true
+Content-Type: application/json

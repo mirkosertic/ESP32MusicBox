@@ -291,3 +291,11 @@ void App::play(String path, int index) {
 int App::playProgressInPercent() {
 	return this->player->playProgressInPercent();
 }
+
+void App::playURL(String url) {
+	const std::lock_guard<std::mutex> lock(this->loopmutex);
+
+	this->player->playURL(url, false);
+
+	this->publishState();
+}

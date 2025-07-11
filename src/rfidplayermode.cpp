@@ -20,8 +20,8 @@ void RfidPlayerMode::setup() {
 
 	INFO("Initializing core components")
 	this->sourceSD = new SDMediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
-	URLStream stream(*this->wifiClient);
-	this->sourceURL = new URLMediaPlayerSource(stream, "", 0);
+	this->urlStream = new URLStream(*this->wifiClient);
+	this->sourceURL = new URLMediaPlayerSource(*this->urlStream, "audio/mpeg", 0);
 	this->decoder = new MP3DecoderHelix();
 	this->player = new MediaPlayer(*this->sourceSD, *this->sourceURL, *this->i2sstream, *this->decoder);
 
@@ -353,6 +353,9 @@ void RfidPlayerMode::wifiConnected() {
 	this->leds->setState(PLAYER_STATUS);
 
 	this->wifiinitialized = true;
+
+	INFO("Enabling model sleep for BT/WiFi coexistence");
+	WiFi.setSleep(WIFI_PS_MIN_MODEM);
 
 	INFO("WiFi connected");
 	INFO("Max  HEAP  is %d", ESP.getHeapSize());

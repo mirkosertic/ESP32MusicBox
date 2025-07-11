@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <style>
+    /* Minimalistic but beautiful styles */
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .status-card,
+    .file-browser,
+    .rfid-status,
+    .system-status,
+    .player-controls {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .status-card h2,
+    .file-browser h2,
+    .rfid-status h2,
+    .system-status h2,
+    .player-controls h2 {
+      font-size: 1.3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .file-list {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .file-list li {
+      padding: 0.3rem 0;
+      border-bottom: 1px solid #e6e6e6;
+    }
+
+    .file-list li:hover {
+      background-color: #ddd;
+    }
+
+    .file-list li:last-child {
+      border-bottom: none;
+    }
+
+    .file-list li a {
+      color: #333;
+      text-decoration: none;
+      vertical-align: middle;
+      display: flex;
+      align-items: center;
+      height: 3rem;
+      gap: 1rem;
+    }
+
+    .file-list a img {
+      width: 3rem;
+    }
+
+    .file-list li a:hover {
+      color: #666;
+    }
+
+    .directory-nav {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .directory-nav a {
+      color: #666;
+      text-decoration: none;
+      margin-right: 0.3rem;
+    }
+
+    .directory-nav a img {
+      width: 1rem;
+    }
+
+    .directory-nav a:hover {
+      color: #333;
+    }
+
+    .rfid-tag {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid #e6e6e6;
+    }
+
+    .rfid-tag.active {
+      background-color: #f0f8ff;
+    }
+
+    .rfid-tag:last-child {
+      border-bottom: none;
+    }
+
+    .rfid-tag .tag-info {
+      display: flex;
+      align-items: center;
+    }
+
+    .rfid-tag .tag-info span {
+      margin-left: 0.3rem;
+    }
+
+    .rfid-tag .tag-actions button {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 0.3rem;
+    }
+
+    .rfid-tag .tag-actions button:hover {
+      background-color: #0056b3;
+    }
+
+    .rfid-tag .tag-actions button.disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .rfid-tag .tag-actions button.delete {
+      background-color: #dc3545;
+    }
+
+    .rfid-tag .tag-actions button.delete:hover {
+      background-color: #c82333;
+    }
+
+    .system-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .system-status .status-item {
+      display: flex;
+      align-items: center;
+    }
+
+    .system-status .status-item span {
+      margin-left: 0.3rem;
+    }
+
+    .system-status .status-icon {
+      font-size: 1.2rem;
+    }
+
+    .player-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .player-controls button {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 0 0.3rem;
+    }
+
+    .player-controls button:hover {
+      background-color: #0056b3;
+    }
+
+    .volume-control {
+      display: flex;
+      text-align: center;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    input[type="range"] {
+      max-width: 100%;
+      margin: 10px 0;
+      width: 20rem;
+    }
+
+    output {
+      font-size: 18px;
+    }
+
+    a {
+      color: black;
+      text-decoration: none;
+    }
+
+    a:visited {
+      color: black;
+      text-decoration: none;
+    }
+  </style>
+  <script id="playerstatustemplate" type="text/x-handlebars-template">
+    <h1>{{appname}}</h1>
+    
+    <div class="status-card">
+      <h2>Player Status</h2>
+      <p>Current song: {{songinfo}}
+      <div class="volume-control">
+        Volume: <input type="range" id="volume" min="0" max="100" value="{{volume}}" step="1"> <output for="volume">{{volume}} %</output>
+      </div>      
+      <br>Playback: {{playingstatus}}</p>
+    </div>
+
+    <div class="player-controls">
+      <button id="startstop">&#x23F8; Start/Stop</button>
+    </div>
+
+    <div class="rfid-status">
+      <h2>RFID Tag Scanner</h2>
+      {{#if tagscanner}}
+      <div class="rfid-tag active">
+        <div class="tag-info">
+          <span class="tag-icon">&#x1F4E6;</span>
+          <span>{{tagscanner.tagname}} {{tagscanner.info}}</span>
+        </div>
+        <div class="tag-actions">
+          <button id="assigntag">Assign Tag to current directory</button>
+          <button id="erasetag" class="delete">Clear Tag</button>
+        </div>
+      </div>
+      {{/if}}
+    </div>
+  </script>
+  <script id="systemstatustemplate" type="text/x-handlebars-template">
+    <div class="status-item">
+      <span class="status-icon">&#x1F4F6;</span>
+      <a href="/networks.html"><span>WIFI: {{wifistatus}}</span></a>
+    </div>
+    <div class="status-item">
+      <span class="status-icon">&#9881;</span>      
+      <a href="/settings.html"><span>Device Configuration</span></a>      
+    <div>
+  </script>
+  <script id="stationstemplate" type="text/x-handlebars-template">
+      <h2>Radio stations</h2>
+      <ul class="file-list">
+        {{#this}}
+        <li><a data-fileaction="play" data-url="{{url}}" data-homepage="{{homepage}}" data-stationnuuid="{{stationuuid}}"><img src="{{favicon}}">{{name}} ({{tags}})</a></li>
+        {{/this}}
+      </ul>
+    </div>
+  </script>
+</head>
+<body>
+  <div class="container">
+    <div id="status"></div>
+
+    <div id="files" class="file-browser"></div>
+
+    <div id="systemstatus" class="system-status"></div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js"></script>
+  <script>
+    const currentParams = new URLSearchParams(window.location.search);
+    const urlWithParams = currentParams.toString() ? `/index.json?${currentParams.toString()}` : '/index.json';
+
+    function updateVolumeChange(event) {
+      fetch(`/volume?volume=` + event.target.value)
+        .then(response => {
+          console.info('Volume update sent, response = ' + response.status);
+        })
+        .catch(error => {
+          console.error('Error updating volume:', error);
+        });
+      return true;
+    }
+
+    function startstop(event) {
+      fetch('/startstop')
+        .then(response => {
+          console.info('start/stop sent, response = ' + response.status);
+        })
+        .catch(error => {
+          console.error('Error start/stop:', error);
+        });
+    }
+
+    function assigntag(event) {
+
+      const currentpath = document.getElementById('currentdir').getAttribute('data-path');
+
+      fetch('/assign?path=' + encodeURIComponent(currentpath))
+        .then(response => {
+          console.info('assign tag sent, response = ' + response.status);
+        })
+        .catch(error => {
+          console.error('Error assigning tag:', error);
+        });
+    }
+
+    function erasetag(event) {
+      fetch('/delete')
+        .then(response => {
+          console.info('erase tag sent, response = ' + response.status);
+        })
+        .catch(error => {
+          console.error('Error erasing tag:', error);
+        });
+    }
+
+    function play(url) {
+      fetch('/playwebradio?url=' + encodeURIComponent(url))
+        .then(response => {
+          console.info('play sent, response = ' + response.status);
+        })
+        .catch(error => {
+          console.error('Error sending play:', error);
+        });
+    }
+
+    var playerstatustemplate = Handlebars.compile(document.getElementById("playerstatustemplate").innerHTML);
+    var systemstatustemplate = Handlebars.compile(document.getElementById("systemstatustemplate").innerHTML);
+    var stationstemplate = Handlebars.compile(document.getElementById("stationstemplate").innerHTML);
+
+    function statusupdate() {
+      fetch('/status.json')
+        .then(response => {
+          if (!response.ok) {
+            console.log('Error fetching, Using default data');
+            return { "appname": "Dummy", "wifistatus": "Okay", "stateversion": 0, "playingstatus": "Stopped", "volume": 100, "playbackprogress": 0, "songinfo": "-", "success": true, "basepath": "/", "base": "/" };
+          }
+          return response.json();
+        })
+        .then(data => {
+          document.getElementById('status').innerHTML = playerstatustemplate(data);
+          document.getElementById('systemstatus').innerHTML = systemstatustemplate(data);
+          document.title = data.appname;
+
+          const volumeSlider = document.getElementById('volume');
+          const output = document.querySelector('output');
+
+          function updateVolume(event) {
+            output.textContent = event.target.value + " %";
+          };
+
+          volumeSlider.addEventListener('input', updateVolume);
+          volumeSlider.addEventListener('change', updateVolumeChange);
+
+          document.getElementById("startstop").addEventListener("click", startstop);
+          
+          const assigntagebutton = document.getElementById("assigntag");
+          if (assigntagebutton)  {
+            assigntagebutton.addEventListener("click", assigntag);
+          }
+          const erasetagbutton = document.getElementById("erasetag");
+          if (erasetagbutton)  {
+            erasetagbutton.addEventListener("click", erasetag);
+          }
+
+          setTimeout((event) => statusupdate(event), 500);
+        })
+        .catch(error => {
+          console.error('Error fetching data:', error);
+        });
+    }
+
+    function stationsupdate() {
+
+      document.body.style.cursor = 'wait';
+
+      fetch('https://de2.api.radio-browser.info/json/stations/search?limit=50&codec=MP3&name=M%C3%BCnster&hidebroken=true&order=clickcount&reverse=true', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }})
+        .then(response => {
+          if (!response.ok) {
+            console.log('Error fetching, Using default data');
+            return { "success": true, "basepath": "/", "base": "/", "files": [] };
+          }
+          return response.json();
+        })
+        .then(data => {
+          document.getElementById('files').innerHTML = stationstemplate(data);
+
+          const elements = document.querySelectorAll('[data-fileaction]');
+          elements.forEach(element => {
+            element.addEventListener('click', function (event) {
+              const action = event.target.getAttribute('data-fileaction');
+
+              switch (action) {
+                case 'play': {
+                  const url = event.target.getAttribute('data-url');
+                  console.log('Playing url ' + url);
+                  play(url);
+                  break;
+                }
+                default:
+                  console.log('Unknown aktion : ', action);
+              }
+            });
+          });
+
+          document.body.style.cursor = 'default';
+        })
+        .catch(error => {
+
+          document.body.style.cursor = 'default';          
+          console.error('Error fetching data:', error);
+        });
+    }
+
+    setTimeout((event) => statusupdate(event), 500);
+    stationsupdate();
+  </script>
+</body>
+</html>
