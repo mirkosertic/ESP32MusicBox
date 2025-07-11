@@ -354,8 +354,8 @@ void RfidPlayerMode::wifiConnected() {
 
 	this->wifiinitialized = true;
 
-	INFO("Enabling model sleep for BT/WiFi coexistence");
-	WiFi.setSleep(WIFI_PS_MIN_MODEM);
+	INFO("Enabling modem sleep for BT/WiFi coexistence");
+	WiFi.setSleep(true);
 
 	INFO("WiFi connected");
 	INFO("Max  HEAP  is %d", ESP.getHeapSize());
