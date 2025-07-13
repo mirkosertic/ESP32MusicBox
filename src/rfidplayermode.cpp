@@ -422,8 +422,8 @@ ModeStatus RfidPlayerMode::loop() {
 		if (command.version == COMMAND_VERSION) {
 			if (command.command == COMMAND_PLAY_DIRECTORY) {
 				String path(String((char *) &command.path[0]));
-				// In BT Mode we always play with 100% volume, as the volume is controlled by the headphones
-				int volume = this->bluetoothSpeakerConnected ? 100 : (int) command.volume;
+				// In BT Mode we always play with 80% volume, as the volume is controlled by the headphones
+				int volume = this->bluetoothSpeakerConnected ? 80 : (int) command.volume;
 				INFO("Playing %s from index %d with volume %d", path.c_str(), (int) command.index, volume);
 
 				this->app->setVolume(volume / 100.0);
