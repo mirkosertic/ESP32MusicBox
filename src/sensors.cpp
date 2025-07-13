@@ -3,15 +3,6 @@
 #include "logging.h"
 #include "pins.h"
 
-void sensorsdelegate(void *arguments) {
-	INFO("Sensors task started");
-	Sensors *sensors = (Sensors *) arguments;
-	while (true) {
-		sensors->loop();
-		delay(15);
-	}
-}
-
 Sensors::Sensors() {
 	pinMode(GPIO_VOLTAGE_MEASURE, INPUT);
 
@@ -53,9 +44,6 @@ Sensors::Sensors() {
 
 void Sensors::begin(UserfeedbackHandler *handler) {
 	this->handler = handler;
-
-	// Start the loop as a separate task running in the background
-	xTaskCreate(sensorsdelegate, "Sensors", 8192, this, 2, NULL);
 }
 
 Sensors::~Sensors() {

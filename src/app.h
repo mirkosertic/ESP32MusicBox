@@ -110,7 +110,7 @@ public:
 
 	int playProgressInPercent();
 
-	void setVolume(float volume);
+	void setVolume(float volume, bool publishstate = true);
 
 	bool volumeUp() override;
 

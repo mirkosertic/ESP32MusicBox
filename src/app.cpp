@@ -225,7 +225,7 @@ bool App::volumeDown() {
 	if (volume >= 0.02) {
 		INFO("Decrementing volume");
 		this->leds->setState(VOLUME_CHANGE);
-		this->setVolume(volume - 0.02);
+		this->setVolume(volume - 0.02, false);
 		return true;
 	}
 	return false;
@@ -236,19 +236,21 @@ bool App::volumeUp() {
 	if (volume <= 0.98) {
 		INFO("Incrementing volume");
 		this->leds->setState(VOLUME_CHANGE);
-		this->setVolume(volume + 0.02);
+		this->setVolume(volume + 0.02, false);
 		return true;
 	}
 	return false;
 }
 
-void App::setVolume(float volume) {
+void App::setVolume(float volume, bool publishstate) {
 	const std::lock_guard<std::mutex> lock(this->loopmutex);
 
 	INFO("Setting volume to %f", volume);
 	this->player->setVolume(volume);
 
-	this->publishState();
+	if (publishstate) {
+		this->publishState();
+	}
 }
 
 void App::toggleActiveState() {
@@ -261,22 +263,30 @@ void App::toggleActiveState() {
 
 void App::previous() {
 	const std::lock_guard<std::mutex> lock(this->loopmutex);
-	if (this->player->hasPrevious()) {
-		INFO("Previous title");
-		this->player->previous();
+	if (this->player->isActive()) {
+		if (this->player->hasPrevious()) {
+			INFO("Previous title");
+			this->player->previous();
 
-		this->publishState();
+			this->publishState();
+		} else {
+			WARN("Already at the beginning!");
+		}
 	} else {
-		WARN("Already at the beginning!");
+		WARN("Cannot go to previous title as player is not active!");
 	}
 }
 
 void App::next() {
 	const std::lock_guard<std::mutex> lock(this->loopmutex);
-	if (!this->player->next()) {
-		WARN("No more next titles!");
+	if (this->player->isActive()) {
+		if (!this->player->next()) {
+			WARN("No more next titles!");
+		} else {
+			this->publishState();
+		}
 	} else {
-		this->publishState();
+		WARN("Cannot go to next title as player is not active!");
 	}
 }
 

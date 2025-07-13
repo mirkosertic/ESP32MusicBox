@@ -108,10 +108,10 @@ void Settings::initializeWifiFromSettings() {
 		WiFi.disconnect();
 		INFO("Connecting to WiFi with SID...");
 		WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
-		WiFi.setSleep(true);		
+		WiFi.setSleep(true);
 		WiFi.setHostname(computeTechnicalName().c_str());
 		WiFi.begin(this->wlan_sid, this->wlan_pwd);
-		WiFi.setSleep(true);		
+		WiFi.setSleep(true);
 	} else {
 		WARN("WiFi is disabled!");
 	}

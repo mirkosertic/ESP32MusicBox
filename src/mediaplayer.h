@@ -18,8 +18,6 @@ private:
 public:
 	MediaPlayer(SDMediaPlayerSource &sourceSD, URLMediaPlayerSource &sourceURL, Print &output, AudioDecoder &decoder);
 
-	virtual bool setVolume(float volume) override;
-
 	const char *currentSong();
 
 	int playProgressInPercent();

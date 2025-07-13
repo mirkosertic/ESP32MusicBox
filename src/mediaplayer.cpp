@@ -9,10 +9,6 @@ MediaPlayer::MediaPlayer(SDMediaPlayerSource &sourceSD, URLMediaPlayerSource &so
 	this->currentpath = new char[512];
 }
 
-bool MediaPlayer::setVolume(float volume) {
-	return AudioPlayer::setVolume(volume);
-}
-
 bool MediaPlayer::hasPrevious() {
 	return this->sourceSD->index() > 0;
 }
