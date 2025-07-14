@@ -23,6 +23,8 @@ public:
 		AVRCCallback avrcCallback,
 		ReadDataCallback readDataCallback);
 	void start(String name);
+
+	void end();
 };
 
 #endif

@@ -17,7 +17,7 @@
 
 class RfidPlayerMode : public Mode {
 private:
-	URLStream *urlStream;
+	ICYStream *urlStream;
 	SDMediaPlayerSource *sourceSD;
 	URLMediaPlayerSource *sourceURL;
 	MP3DecoderHelix *decoder;
@@ -44,7 +44,7 @@ public:
 
 	virtual void setup() override;
 	virtual ModeStatus loop() override;
-	virtual void prepareDeepSleep() override;
+	virtual void shutdown() override;
 };
 
 #endif

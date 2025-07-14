@@ -31,7 +31,7 @@ public:
 
 	virtual void setup();
 	virtual ModeStatus loop();
-	virtual void prepareDeepSleep() = 0;
+	virtual void shutdown() = 0;
 };
 
 #endif

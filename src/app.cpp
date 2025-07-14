@@ -7,7 +7,7 @@
 #include <esp_mac.h>
 #include <esp_system.h>
 
-App::App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *settings) {
+App::App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *settings, BluetoothSource *bluetoothsource) {
 	this->leds = leds;
 	this->tagscanner = tagscanner;
 	this->stateversion = 0;
@@ -16,6 +16,7 @@ App::App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *sett
 
 	this->player = player;
 	this->settings = settings;
+	this->bluetoothsource = bluetoothsource;
 }
 
 App::~App() {
@@ -223,7 +224,7 @@ bool App::volumeDown() {
 
 	float volume = this->getVolume();
 	if (volume >= 0.02) {
-		INFO("Decrementing volume");
+		DEBUG("Decrementing volume");
 		this->leds->setState(VOLUME_CHANGE);
 		this->setVolume(volume - 0.02, false);
 		return true;
@@ -234,7 +235,7 @@ bool App::volumeDown() {
 bool App::volumeUp() {
 	float volume = this->getVolume();
 	if (volume <= 0.98) {
-		INFO("Incrementing volume");
+		DEBUG("Incrementing volume");
 		this->leds->setState(VOLUME_CHANGE);
 		this->setVolume(volume + 0.02, false);
 		return true;
@@ -245,7 +246,7 @@ bool App::volumeUp() {
 void App::setVolume(float volume, bool publishstate) {
 	const std::lock_guard<std::mutex> lock(this->loopmutex);
 
-	INFO("Setting volume to %f", volume);
+	DEBUG("Setting volume to %f", volume);
 	this->player->setVolume(volume);
 
 	if (publishstate) {
@@ -305,7 +306,16 @@ int App::playProgressInPercent() {
 void App::playURL(String url) {
 	const std::lock_guard<std::mutex> lock(this->loopmutex);
 
+	INFO("Stopping Bluetooth support due to WiFi / BT coexistence problems...")
+	this->bluetoothsource->end();
+
 	this->player->playURL(url, false);
 
 	this->publishState();
+}
+
+void App::shutdown() {
+	INFO("Shutting down everything")
+	this->leds->end();
+	esp_deep_sleep_start();
 }

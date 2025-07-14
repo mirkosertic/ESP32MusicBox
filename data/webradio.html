@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,6 +24,10 @@
     h1 {
       font-size: 1.8rem;
       margin-bottom: 0.75rem;
+    }
+
+    h1 a {
+      padding-right: 0.5rem;
     }
 
     .status-card,
@@ -219,9 +224,48 @@
       color: black;
       text-decoration: none;
     }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .search-bar input[type="text"] {
+      flex: 1;
+      padding: 0.4rem 0.8rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+      background: #fafafa;
+      transition: border 0.2s;
+    }
+
+    .search-bar input[type="text"]:focus {
+      border: 1.5px solid #007bff;
+      outline: none;
+    }
+
+    .search-bar button {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .search-bar button:hover {
+      background-color: #0056b3;
+    }
   </style>
   <script id="playerstatustemplate" type="text/x-handlebars-template">
-    <h1>{{appname}}</h1>
+    <h1><a href="/shutdown">&#x23FC;</a>{{appname}}</h1>
     
     <div class="status-card">
       <h2>Player Status</h2>
@@ -268,14 +312,19 @@
   </script>
   <script id="stationstemplate" type="text/x-handlebars-template">
       <h2>Radio stations</h2>
+      <div class="search-bar">
+        <input type="text" id="station-search" placeholder="Search for stations..." value="{{searchstring}}" />
+        <button id="station-search-btn">&#128269; Search</button>
+      </div>
       <ul class="file-list">
-        {{#this}}
-        <li><a data-fileaction="play" data-url="{{url}}" data-homepage="{{homepage}}" data-stationnuuid="{{stationuuid}}"><img src="{{favicon}}">{{name}} ({{tags}})</a></li>
-        {{/this}}
+        {{#stations}}
+        <li><a data-fileaction="play" data-url="{{url}}" data-homepage="{{homepage}}" data-stationnuuid="{{stationuuid}}"><img src="{{favicon}}" title="{{tags}}">{{name}}</a></li>
+        {{/stations}}
       </ul>
     </div>
   </script>
 </head>
+
 <body>
   <div class="container">
     <div id="status"></div>
@@ -372,13 +421,13 @@
           volumeSlider.addEventListener('change', updateVolumeChange);
 
           document.getElementById("startstop").addEventListener("click", startstop);
-          
+
           const assigntagebutton = document.getElementById("assigntag");
-          if (assigntagebutton)  {
+          if (assigntagebutton) {
             assigntagebutton.addEventListener("click", assigntag);
           }
           const erasetagbutton = document.getElementById("erasetag");
-          if (erasetagbutton)  {
+          if (erasetagbutton) {
             erasetagbutton.addEventListener("click", erasetag);
           }
 
@@ -389,24 +438,39 @@
         });
     }
 
-    function stationsupdate() {
+    function stationsupdate(searchstring) {
 
       document.body.style.cursor = 'wait';
 
-      fetch('https://de2.api.radio-browser.info/json/stations/search?limit=50&codec=MP3&name=M%C3%BCnster&hidebroken=true&order=clickcount&reverse=true', {
+      const queryParams = new URLSearchParams();
+      queryParams.set('limit', '50');
+      queryParams.set('codec', 'MP3');
+      queryParams.set('name', searchstring);
+      queryParams.set('hidebroken', 'true');
+      queryParams.set('order', 'clickcount');
+      queryParams.set('reverse', 'true');
+
+      fetch('https://de2.api.radio-browser.info/json/stations/search?' + queryParams.toString(), {
         method: 'GET',
         headers: {
-            'Content-Type': 'application/json'
-        }})
+          'Content-Type': 'application/json'
+        }
+      })
         .then(response => {
           if (!response.ok) {
             console.log('Error fetching, Using default data');
-            return { "success": true, "basepath": "/", "base": "/", "files": [] };
+            return [];
           }
           return response.json();
         })
         .then(data => {
-          document.getElementById('files').innerHTML = stationstemplate(data);
+
+          var model = {
+            "stations": data,
+            "searchstring": searchstring
+          };
+          data.searchstring = searchstring;
+          document.getElementById('files').innerHTML = stationstemplate(model);
 
           const elements = document.querySelectorAll('[data-fileaction]');
           elements.forEach(element => {
@@ -426,17 +490,23 @@
             });
           });
 
+          document.getElementById("station-search-btn").addEventListener("click", function () {
+            var searchstring = document.getElementById("station-search").value;
+            stationsupdate(searchstring);
+          });
+
           document.body.style.cursor = 'default';
         })
         .catch(error => {
 
-          document.body.style.cursor = 'default';          
+          document.body.style.cursor = 'default';
           console.error('Error fetching data:', error);
         });
     }
 
     setTimeout((event) => statusupdate(event), 500);
-    stationsupdate();
+    stationsupdate('Münster');
   </script>
 </body>
+
 </html>

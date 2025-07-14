@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,6 +24,10 @@
     h1 {
       font-size: 1.8rem;
       margin-bottom: 0.75rem;
+    }
+
+    h1 a {
+      padding-right: 0.5rem;
     }
 
     .status-card,
@@ -208,7 +213,7 @@
     }
   </style>
   <script id="playerstatustemplate" type="text/x-handlebars-template">
-    <h1>{{appname}}</h1>
+    <h1><a href="/shutdown">&#x23FC;</a>{{appname}}</h1>
     
     <div class="status-card">
       <h2>Player Status</h2>
@@ -274,6 +279,7 @@
     </div>
   </script>
 </head>
+
 <body>
   <div class="container">
     <div id="status"></div>
@@ -392,13 +398,13 @@
           document.getElementById("startstop").addEventListener("click", startstop);
           document.getElementById("prev").addEventListener("click", previous);
           document.getElementById("next").addEventListener("click", next);
-          
+
           const assigntagebutton = document.getElementById("assigntag");
-          if (assigntagebutton)  {
+          if (assigntagebutton) {
             assigntagebutton.addEventListener("click", assigntag);
           }
           const erasetagbutton = document.getElementById("erasetag");
-          if (erasetagbutton)  {
+          if (erasetagbutton) {
             erasetagbutton.addEventListener("click", erasetag);
           }
 
@@ -453,7 +459,7 @@
         })
         .catch(error => {
 
-          document.body.style.cursor = 'default';          
+          document.body.style.cursor = 'default';
           console.error('Error fetching data:', error);
         });
     }
@@ -462,4 +468,5 @@
     filesupdate('/');
   </script>
 </body>
+
 </html>

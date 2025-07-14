@@ -42,3 +42,8 @@ void BluetoothSource::start(String name) {
 
 	this->source->start();
 }
+
+void BluetoothSource::end() {
+	this->source->disconnect();
+	this->source->end();
+}

@@ -14,7 +14,7 @@ public:
 
 	void setup() override;
 	virtual ModeStatus loop() override;
-	virtual void prepareDeepSleep() override;
+	virtual void shutdown() override;
 };
 
 #endif

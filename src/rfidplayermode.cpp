@@ -20,62 +20,13 @@ void RfidPlayerMode::setup() {
 
 	INFO("Initializing core components")
 	this->sourceSD = new SDMediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
-	this->urlStream = new URLStream(*this->wifiClient);
+	this->urlStream = new ICYStream(*this->wifiClient);
 	this->sourceURL = new URLMediaPlayerSource(*this->urlStream, "audio/mpeg", 0);
 	this->decoder = new MP3DecoderHelix();
 	this->player = new MediaPlayer(*this->sourceSD, *this->sourceURL, *this->i2sstream, *this->decoder);
 
 	// Inform the player what to output
 	this->player->setAudioInfo(defaultAudioInfo);
-
-	this->tagscanner = new TagScanner(&Wire1, GPIO_PN532_IRQ, GPIO_PN532_RST);
-	this->app = new App(this->leds, this->tagscanner, this->player, this->settings);
-	INFO("Core components created. Free HEAP is %d", ESP.getFreeHeap());
-
-	INFO("Free HEAP is %d", ESP.getFreeHeap());
-
-	this->commandsHandle = xQueueCreate(10, sizeof(CommandData));
-	if (this->commandsHandle == NULL) {
-		WARN("Command queue could not be created. Halt.");
-		while (true)
-			;
-	}
-
-	// esp_task_wdt_init(30, true); // 30 Sekunden Timeout
-	// esp_task_wdt_add(NULL);
-	this->app->setDeviceType("ESP32 Musikbox");
-	this->app->setName(this->settings->getDeviceName());
-	this->app->setManufacturer("Mirko Sertic");
-	this->app->setVersion("v1.0");
-	this->app->setServerPort(HTTP_SERVER_PORT);
-
-	leds->setBootProgress(10);
-
-	// AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
-	this->sourceSD->begin();
-
-	leds->setBootProgress(30);
-
-	leds->setBootProgress(40);
-
-	// Button-Feedback goes to the app
-	this->sensors->begin(this->app);
-
-	INFO("WiFi configuration and creating networking components. Free HEAP is %d", ESP.getFreeHeap());
-	this->webserver = new Webserver(&SD, this->app, HTTP_SERVER_PORT, MP3_FILE, this->settings);
-	if (this->settings->isVoiceAssistantEnabled()) {
-		INFO("Initializing voice assistant client. Free HEAP is %d", ESP.getFreeHeap());
-		this->assistant = new VoiceAssistant(this->i2sstream, this->settings);
-	}
-	this->mqtt = new MQTT(*wifiClient, this->app);
-
-	WiFi.persistent(false);
-	WiFi.mode(WIFI_STA);
-	WiFi.setHostname(app->computeTechnicalName().c_str());
-	WiFi.setAutoReconnect(true);
-
-	this->settings->initializeWifiFromSettings();
-	this->wifienabled = this->settings->isWiFiEnabled();
 
 	INFO("Bluetooth initializing buffers. Free HEAP is %d", ESP.getFreeHeap());
 	this->buffer = new BufferRTOS<uint8_t>(0);
@@ -166,6 +117,54 @@ void RfidPlayerMode::setup() {
 	// Start output when buffer is 95% full
 	this->bluetoothout->begin(95);
 
+	this->tagscanner = new TagScanner(&Wire1, GPIO_PN532_IRQ, GPIO_PN532_RST);
+	this->app = new App(this->leds, this->tagscanner, this->player, this->settings, this->bluetoothsource);
+	INFO("Core components created. Free HEAP is %d", ESP.getFreeHeap());
+
+	this->commandsHandle = xQueueCreate(10, sizeof(CommandData));
+	if (this->commandsHandle == NULL) {
+		WARN("Command queue could not be created. Halt.");
+		while (true)
+			;
+	}
+
+	// esp_task_wdt_init(30, true); // 30 Sekunden Timeout
+	// esp_task_wdt_add(NULL);
+	this->app->setDeviceType("ESP32 Musikbox");
+	this->app->setName(this->settings->getDeviceName());
+	this->app->setManufacturer("Mirko Sertic");
+	this->app->setVersion("v1.0");
+	this->app->setServerPort(HTTP_SERVER_PORT);
+
+	leds->setBootProgress(10);
+
+	// AT THIS POINT THE SD CARD IS PROPERLY CONFIGURED
+	this->sourceSD->begin();
+
+	leds->setBootProgress(30);
+
+	leds->setBootProgress(40);
+
+	// Button-Feedback goes to the app
+	this->sensors->begin(this->app);
+
+	INFO("WiFi configuration and creating networking components. Free HEAP is %d", ESP.getFreeHeap());
+	this->webserver = new Webserver(&SD, this->app, HTTP_SERVER_PORT, MP3_FILE, this->settings);
+	if (this->settings->isVoiceAssistantEnabled()) {
+		INFO("Initializing voice assistant client. Free HEAP is %d", ESP.getFreeHeap());
+		this->assistant = new VoiceAssistant(this->i2sstream, this->settings);
+	}
+	this->mqtt = new MQTT(*wifiClient, this->app);
+
+	WiFi.persistent(false);
+	WiFi.mode(WIFI_STA);
+	WiFi.setHostname(app->computeTechnicalName().c_str());
+	WiFi.setAutoReconnect(true);
+
+	this->settings->initializeWifiFromSettings();
+	this->wifienabled = this->settings->isWiFiEnabled();
+
+	INFO("Initializing Bluetooth source")
 	this->bluetoothsource->start(this->app->computeTechnicalName());
 
 	INFO("Bluetooth source initialized. Free HEAP is %d", ESP.getFreeHeap());
@@ -446,9 +445,11 @@ ModeStatus RfidPlayerMode::loop() {
 	return MODE_IDLE;
 }
 
-void RfidPlayerMode::prepareDeepSleep() {
+void RfidPlayerMode::shutdown() {
+	INFO("Shutting down everything")
 	this->tagscanner->prepareDeepSleep();
 	if (WiFi.isConnected()) {
 		WiFi.disconnect();
 	}
+	this->app->shutdown();
 }

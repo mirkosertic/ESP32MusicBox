@@ -77,5 +77,8 @@ ModeStatus BoomboxMode::loop() {
 	return MODE_IDLE;
 }
 
-void BoomboxMode::prepareDeepSleep() {
+void BoomboxMode::shutdown() {
+	INFO("Shutting down everything")
+	this->leds->end();
+	esp_deep_sleep_start();
 }

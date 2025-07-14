@@ -100,10 +100,7 @@ void loop() {
 			//} else if (now - lastIdleTime > 5000) {
 			// Deep sleep
 			INFO("Beeing idle for too long, going to deepsleep");
-			leds->end();
-			mode->prepareDeepSleep();
-
-			esp_deep_sleep_start();
+			mode->shutdown();
 			INFO("This will not be logged...");
 		}
 	} else {

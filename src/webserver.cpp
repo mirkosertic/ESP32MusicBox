@@ -538,6 +538,21 @@ void Webserver::initialize() {
 
       return response.endSend(); });
 
+	// Shutdown
+	this->server->on("/shutdown", HTTP_GET, [this](PsychicRequest *request) {
+
+    INFO("webserver() - /shutdown received");
+    this->app->shutdown();
+
+    PsychicJsonResponse response = PsychicJsonResponse(request);
+    response.setContentType("application/json");
+    response.setCode(200);
+    response.addHeader("Cache-Control", "no-cache, must-revalidate");
+
+    // JsonObject result = response.getRoot();
+
+    return response.send(); });
+
 	// Toggle start stop
 	this->server->on("/startstop", HTTP_GET, [this](PsychicRequest *request) {
 

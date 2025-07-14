@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "settings.h"
 
+#include "bluetoothsource.h"
 #include "commands.h"
 #include "leds.h"
 #include "mediaplayer.h"
@@ -39,13 +40,14 @@ private:
 	MediaPlayer *player;
 	VoiceAssistant *assistant;
 	Settings *settings;
+	BluetoothSource *bluetoothsource;
 
 	std::mutex loopmutex;
 
 	ChangeNotifierCallback changecallback;
 
 public:
-	App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *settings);
+	App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *settings, BluetoothSource *bluetoothsource);
 	~App();
 
 	void begin(ChangeNotifierCallback callback);
@@ -125,6 +127,8 @@ public:
 	void play(String path, int index);
 
 	void playURL(String url);
+
+	void shutdown();
 };
 
 #endif
