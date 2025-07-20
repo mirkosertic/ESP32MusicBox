@@ -23,13 +23,17 @@ This project provides an ESP32 based music box with the following features:
 * SDCard Reader (SPI-Mode), is already mounted on a Lolin D32 Pro board
 * NeoPixel / WS2812 based LEDs for status visualization
 
-## Schematics
+## Final product
+
+![box](doc/box.png)
 
 The KiCad 9.0 project is located in the kicad folder.
 
 Here is the wiring schematic drawing:
 
 ![schematics](doc/schematics.svg)
+
+![pcb](doc/pcb.png)
 
 ## Manual
 

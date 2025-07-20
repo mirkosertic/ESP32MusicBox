@@ -28,6 +28,8 @@ private:
 	String deviceName = DEVICENAME;
 	std::vector<String> blueoothdeviceprefixes = {BLUETOOTH_DEVICEPREFIX};
 
+	float volumeIncrement = 0.015;
+
 public:
 	Settings(FS *fs, String configurationfilename);
 
@@ -63,6 +65,8 @@ public:
 	bool isValidDeviceToPairForBluetooth(String ssid);
 
 	String computeTechnicalName();
+
+	float getVolumeIncrement();
 };
 
 #endif

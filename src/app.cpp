@@ -223,10 +223,18 @@ void App::publishState() {
 bool App::volumeDown() {
 
 	float volume = this->getVolume();
-	if (volume >= 0.02) {
-		DEBUG("Decrementing volume");
+	if (volume > 0.0) {
+		DEBUG("Decrementing volume, old volume %f", volume);
+
+		volume -= settings->getVolumeIncrement();
+		if (volume < 0.0) {
+			volume = 0.0;
+		}
+
+		DEBUG("New volume %f", volume);
+
 		this->leds->setState(VOLUME_CHANGE);
-		this->setVolume(volume - 0.02, false);
+		this->setVolume(volume, false);
 		return true;
 	}
 	return false;
@@ -234,10 +242,18 @@ bool App::volumeDown() {
 
 bool App::volumeUp() {
 	float volume = this->getVolume();
-	if (volume <= 0.98) {
-		DEBUG("Incrementing volume");
+	if (volume < 1.0) {
+		DEBUG("Decrementing volume, old volume %f", volume);
+
+		volume += settings->getVolumeIncrement();
+		if (volume > 1.0) {
+			volume = 1.0;
+		}
+
+		DEBUG("New volume %f", volume);
+
 		this->leds->setState(VOLUME_CHANGE);
-		this->setVolume(volume + 0.02, false);
+		this->setVolume(volume, false);
 		return true;
 	}
 	return false;

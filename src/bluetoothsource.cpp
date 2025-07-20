@@ -13,7 +13,7 @@ BluetoothSource::BluetoothSource(BluetoothSourceConnectCallback connectCallback,
 	INFO("Bluetooth initializing A2DP source. Free HEAP is %d", ESP.getFreeHeap());
 	this->source = new BluetoothA2DPSource();
 	this->source->clean_last_connection();
-	this->source->set_reset_ble(true);
+	// this->source->set_reset_ble(true);
 	this->source->set_auto_reconnect(false);
 	this->source->set_ssid_callback(ssidFilterCallback);
 	this->source->set_discovery_mode_callback([](esp_bt_gap_discovery_state_t discoveryMode) {

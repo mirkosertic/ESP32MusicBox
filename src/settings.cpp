@@ -52,6 +52,11 @@ bool Settings::readFromConfig() {
 			JsonObject device = document["device"].as<JsonObject>();
 			this->deviceName = String(device["name"].as<String>());
 
+			JsonObject volume = document["volume"].as<JsonObject>();
+			if (volume) {
+				this->volumeIncrement = volume["increment"].as<float>();
+			}
+
 			return true;
 		}
 	}
@@ -87,6 +92,9 @@ bool Settings::writeToConfig() {
 	for (auto str : this->blueoothdeviceprefixes) {
 		prefixes.add(str);
 	}
+
+	JsonObject volume = doc["volume"].to<JsonObject>();
+	volume["increment"] = this->volumeIncrement;
 
 	File configFile = this->fs->open(configurationfilename, FILE_WRITE, true);
 	if (!configFile) {
@@ -201,6 +209,9 @@ String Settings::getSettingsAsJson() {
 		prefixes.add(str);
 	}
 
+	JsonObject volume = doc["volume"].to<JsonObject>();
+	volume["increment"] = this->volumeIncrement;
+
 	String result;
 	serializeJsonPretty(doc, result);
 
@@ -243,6 +254,9 @@ void Settings::setSettingsFromJson(String json) {
 		for (auto str : prefixes) {
 			this->blueoothdeviceprefixes.push_back(str);
 		}
+
+		JsonObject volume = document["volume"].to<JsonObject>();
+		this->volumeIncrement = volume["increment"].as<float>();
 
 		this->writeToConfig();
 	}
@@ -327,4 +341,9 @@ String Settings::computeTechnicalName() {
 	tn.replace(' ', '_');
 	tn.toLowerCase();
 	return tn;
+}
+
+float Settings::getVolumeIncrement() {
+	// return this->volumeIncrement;
+	return 0.011;
 }
