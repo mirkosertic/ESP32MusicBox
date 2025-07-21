@@ -18,6 +18,7 @@
 class RfidPlayerMode : public Mode {
 private:
 	ICYStream *urlStream;
+	Equalizer3Bands *equalizer;
 	SDMediaPlayerSource *sourceSD;
 	URLMediaPlayerSource *sourceURL;
 	MP3DecoderHelix *decoder;

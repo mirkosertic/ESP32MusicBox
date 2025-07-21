@@ -30,6 +30,10 @@ private:
 
 	float volumeIncrement = 0.015;
 
+	float equalizerLow = 1.0;
+	float equalizerMiddle = 1.0;
+	float equalizerHigh = 1.0;
+
 public:
 	Settings(FS *fs, String configurationfilename);
 
@@ -67,6 +71,10 @@ public:
 	String computeTechnicalName();
 
 	float getVolumeIncrement();
+
+	float getEqualizerLow();
+	float getEqualizerMiddle();
+	float getEqualizerHigh();
 };
 
 #endif

@@ -23,10 +23,20 @@ void RfidPlayerMode::setup() {
 	this->urlStream = new ICYStream(*this->wifiClient);
 	this->sourceURL = new URLMediaPlayerSource(*this->urlStream, "audio/mpeg", 0);
 	this->decoder = new MP3DecoderHelix();
-	this->player = new MediaPlayer(*this->sourceSD, *this->sourceURL, *this->i2sstream, *this->decoder);
+	this->equalizer = new Equalizer3Bands(*this->i2sstream);
+	this->player = new MediaPlayer(*this->sourceSD, *this->sourceURL, *this->equalizer, *this->decoder);
 
 	// Inform the player what to output
 	this->player->setAudioInfo(defaultAudioInfo);
+
+	// Initialize the equalizer
+	ConfigEqualizer3Bands &eqconfig = this->equalizer->defaultConfig();
+	eqconfig.copyFrom(defaultAudioInfo);
+	eqconfig.gain_low = this->settings->getEqualizerLow();
+	eqconfig.gain_medium = this->settings->getEqualizerMiddle();
+	eqconfig.gain_high = this->settings->getEqualizerHigh();
+	this->equalizer->begin(eqconfig);
+	INFO("Equalizer configured to Low: %f, Middle: %f and High: %f", eqconfig.gain_low, eqconfig.gain_medium, eqconfig.gain_high);
 
 	INFO("Bluetooth initializing buffers. Free HEAP is %d", ESP.getFreeHeap());
 	this->buffer = new BufferRTOS<uint8_t>(0);
@@ -55,7 +65,7 @@ void RfidPlayerMode::setup() {
             break;
         case ESP_A2D_CONNECTION_STATE_DISCONNECTING:
             INFO("bluetooth() - DI‚SCONNECTING. Sending player output to I2S");
-            this->player->setOutput(*this->i2sstream);
+            this->player->setOutput(*this->equalizer);
             break;
         } },
 		// SSID pairing callback

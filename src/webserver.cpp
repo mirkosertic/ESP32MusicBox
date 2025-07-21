@@ -1146,7 +1146,7 @@ void Webserver::begin() {
 	this->announceMDNS();
 	this->announceSSDP();
 
-	this->server->config.max_uri_handlers = 25;
+	this->server->config.max_uri_handlers = 30;
 	this->server->listen(wsport);
 
 	this->initialize();

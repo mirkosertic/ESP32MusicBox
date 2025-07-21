@@ -54,7 +54,48 @@ bool Settings::readFromConfig() {
 
 			JsonObject volume = document["volume"].as<JsonObject>();
 			if (volume) {
-				this->volumeIncrement = volume["increment"].as<float>();
+				if (volume["increment"].is<double>()) {
+					INFO("volume.increment is a double");
+					this->volumeIncrement = volume["increment"].as<double>();
+				} else if (volume["increment"].is<float>()) {
+					INFO("volume.increment is a float");
+					this->volumeIncrement = volume["increment"].as<float>();
+				} else {
+					WARN("volume.increment is not a number!");
+				}
+			}
+
+			JsonObject equalizer = document["equalizer"].as<JsonObject>();
+			if (equalizer) {
+				if (equalizer["low"].is<double>()) {
+					INFO("equalizer.low is a double");
+					this->equalizerLow = equalizer["low"].as<double>();
+				} else if (equalizer["low"].is<float>()) {
+					INFO("equalizer.low is a float");
+					this->equalizerLow = equalizer["low"].as<float>();
+				} else {
+					WARN("equalizer.low is not a number!");
+				}
+
+				if (equalizer["middle"].is<double>()) {
+					INFO("equalizer.middle is a double");
+					this->equalizerMiddle = equalizer["middle"].as<double>();
+				} else if (equalizer["middle"].is<float>()) {
+					INFO("equalizer.middle is a float");
+					this->equalizerMiddle = equalizer["middle"].as<float>();
+				} else {
+					WARN("equalizer.middle is not a number!");
+				}
+
+				if (equalizer["high"].is<double>()) {
+					INFO("equalizer.high is a double");
+					this->equalizerHigh = equalizer["high"].as<double>();
+				} else if (equalizer["middle"].is<float>()) {
+					INFO("equalizer.high is a float");
+					this->equalizerHigh = equalizer["high"].as<float>();
+				} else {
+					WARN("equalizer.high is not a number!");
+				}
 			}
 
 			return true;
@@ -95,6 +136,11 @@ bool Settings::writeToConfig() {
 
 	JsonObject volume = doc["volume"].to<JsonObject>();
 	volume["increment"] = this->volumeIncrement;
+
+	JsonObject equalizer = doc["equalizer"].to<JsonObject>();
+	equalizer["low"] = this->equalizerLow;
+	equalizer["middle"] = this->equalizerMiddle;
+	equalizer["high"] = this->equalizerHigh;
 
 	File configFile = this->fs->open(configurationfilename, FILE_WRITE, true);
 	if (!configFile) {
@@ -212,6 +258,11 @@ String Settings::getSettingsAsJson() {
 	JsonObject volume = doc["volume"].to<JsonObject>();
 	volume["increment"] = this->volumeIncrement;
 
+	JsonObject equalizer = doc["equalizer"].to<JsonObject>();
+	equalizer["low"] = this->equalizerLow;
+	equalizer["middle"] = this->equalizerMiddle;
+	equalizer["high"] = this->equalizerHigh;
+
 	String result;
 	serializeJsonPretty(doc, result);
 
@@ -255,8 +306,51 @@ void Settings::setSettingsFromJson(String json) {
 			this->blueoothdeviceprefixes.push_back(str);
 		}
 
-		JsonObject volume = document["volume"].to<JsonObject>();
-		this->volumeIncrement = volume["increment"].as<float>();
+		JsonObject volume = document["volume"].as<JsonObject>();
+		if (volume) {
+			if (volume["increment"].is<double>()) {
+				INFO("volume.increment is a double");
+				this->volumeIncrement = volume["increment"].as<double>();
+			} else if (volume["increment"].is<float>()) {
+				INFO("volume.increment is a float");
+				this->volumeIncrement = volume["increment"].as<float>();
+			} else {
+				WARN("volume.increment is not a number!");
+			}
+		}
+
+		JsonObject equalizer = document["equalizer"].as<JsonObject>();
+		if (equalizer) {
+			if (equalizer["low"].is<double>()) {
+				INFO("equalizer.low is a double");
+				this->equalizerLow = equalizer["low"].as<double>();
+			} else if (equalizer["low"].is<float>()) {
+				INFO("equalizer.low is a float");
+				this->equalizerLow = equalizer["low"].as<float>();
+			} else {
+				WARN("equalizer.low is not a number!");
+			}
+
+			if (equalizer["middle"].is<double>()) {
+				INFO("equalizer.middle is a double");
+				this->equalizerMiddle = equalizer["middle"].as<double>();
+			} else if (equalizer["middle"].is<float>()) {
+				INFO("equalizer.middle is a float");
+				this->equalizerMiddle = equalizer["middle"].as<float>();
+			} else {
+				WARN("equalizer.middle is not a number!");
+			}
+
+			if (equalizer["high"].is<double>()) {
+				INFO("equalizer.high is a double");
+				this->equalizerHigh = equalizer["high"].as<double>();
+			} else if (equalizer["middle"].is<float>()) {
+				INFO("equalizer.high is a float");
+				this->equalizerHigh = equalizer["high"].as<float>();
+			} else {
+				WARN("equalizer.high is not a number!");
+			}
+		}
 
 		this->writeToConfig();
 	}
@@ -344,6 +438,17 @@ String Settings::computeTechnicalName() {
 }
 
 float Settings::getVolumeIncrement() {
-	// return this->volumeIncrement;
-	return 0.011;
+	return this->volumeIncrement;
+}
+
+float Settings::getEqualizerLow() {
+	return this->equalizerLow;
+}
+
+float Settings::getEqualizerMiddle() {
+	return this->equalizerMiddle;
+}
+
+float Settings::getEqualizerHigh() {
+	return this->equalizerHigh;
 }

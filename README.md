@@ -15,6 +15,7 @@ This project provides an ESP32 based music box with the following features:
 * WebDAV support for file / content management
 * Optional Bluetooth A2DP output / Bluetooth Headphone output
 * Special mode to start in Bluetooth Speaker mode, so it works as a Boombox.
+* 3-band equalizer
 
 ## Supported hardware
 
