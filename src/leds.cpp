@@ -40,9 +40,7 @@ void Leds::setBootProgress(int percent) {
 
 	int progress = (int) (NUM_LEDS / 100.0 * min(percent, 100));
 	for (int i = 0; i < progress; i++) {
-		CHSV targetHSV = rgb2hsv_approximate(CRGB::White);
-		targetHSV.v = 60;
-		this->leds[i] = targetHSV;
+		this->leds[i] = CRGB::White;
 	}
 	FastLED.show();
 }
@@ -55,7 +53,7 @@ void Leds::renderPlayerStatusIdle(bool wifiEnabled, bool wifiConnected) {
 		color = CRGB::Orange;
 	}
 	float minv = 40;
-	float maxv = 80;
+	float maxv = 192;
 	int steps = 30;
 	int framepos = this->framecounter % (steps * 2);
 	int v = 0;
@@ -64,10 +62,8 @@ void Leds::renderPlayerStatusIdle(bool wifiEnabled, bool wifiConnected) {
 	} else {
 		v = (int) (maxv - ((maxv - minv) / steps * (framepos - steps)));
 	}
-	CHSV targetHSV = rgb2hsv_approximate(color);
-	targetHSV.v = v;
 	for (int i = 0; i < NUM_LEDS; i++) {
-		this->leds[i] = targetHSV;
+		this->leds[i] = color % v;
 	}
 	FastLED.show();
 }
@@ -106,10 +102,8 @@ void Leds::renderCardError() {
 		}
 		if (framepos > 5) {
 			// All Status Red
-			CHSV targetHSV = rgb2hsv_approximate(CRGB::Red);
-			targetHSV.v = 80;
 			for (int i = 0; i < NUM_LEDS; i++) {
-				this->leds[i] = targetHSV;
+				this->leds[i] = CRGB::Red;
 			}
 		}
 		FastLED.show();
@@ -130,10 +124,8 @@ void Leds::renderCardDetected() {
 		}
 		if (framepos > 5) {
 			// All Status Red
-			CHSV targetHSV = rgb2hsv_approximate(CRGB::Green);
-			targetHSV.v = 80;
 			for (int i = 0; i < NUM_LEDS; i++) {
-				this->leds[i] = targetHSV;
+				this->leds[i] = CRGB::Green % 192;
 			}
 		}
 		FastLED.show();
@@ -153,10 +145,8 @@ void Leds::renderBTConnecting() {
 			this->leds[i] = CRGB::Black;
 		}
 		if (framepos > 5) {
-			CHSV targetHSV = rgb2hsv_approximate(CRGB::Yellow);
-			targetHSV.v = 80;
 			for (int i = 0; i < NUM_LEDS; i++) {
-				this->leds[i] = targetHSV;
+				this->leds[i] = CRGB::Yellow % 192;
 			}
 		}
 		FastLED.show();
@@ -176,10 +166,8 @@ void Leds::renderBTConnected() {
 			this->leds[i] = CRGB::Black;
 		}
 		if (framepos > 5) {
-			CHSV targetHSV = rgb2hsv_approximate(CRGB::Blue);
-			targetHSV.v = 80;
 			for (int i = 0; i < NUM_LEDS; i++) {
-				this->leds[i] = targetHSV;
+				this->leds[i] = CRGB::Blue % 192;
 			}
 		}
 		FastLED.show();
@@ -222,6 +210,15 @@ void Leds::renderVolumeChange(int volumePercent) {
 	}
 }
 
+void Leds::renderRGBTest() {
+	for (int i = 0; i < NUM_LEDS; i++) {
+		this->leds[i].r = testr;
+		this->leds[i].g = testg;
+		this->leds[i].b = testb;
+	}
+	FastLED.show();
+}
+
 void Leds::loop(bool wifiEnabled, bool wifiConnected, bool playbackActive, int volumePercent, int progressPercent) {
 	long now = millis();
 	if (this->lastLoopTime + 40 < now) {
@@ -231,7 +228,9 @@ void Leds::loop(bool wifiEnabled, bool wifiConnected, bool playbackActive, int v
 			this->framecounter = 0;
 		}
 
-		if (this->state == CARD_ERROR) {
+		if (this->state == RGBTEST) {
+			this->renderRGBTest();
+		} else if (this->state == CARD_ERROR) {
 			this->renderCardError();
 		} else if (this->state == CARD_DETECTED) {
 			this->renderCardDetected();
@@ -257,4 +256,11 @@ void Leds::setBluetoothSpeakerConnected(bool value) {
 
 void Leds::end() {
 	FastLED.clear(true);
+}
+
+void Leds::rgbtest(int r, int g, int b) {
+	testr = r;
+	testg = g;
+	testb = b;
+	state = RGBTEST;
 }

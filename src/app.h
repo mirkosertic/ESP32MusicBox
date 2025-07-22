@@ -46,8 +46,10 @@ private:
 
 	ChangeNotifierCallback changecallback;
 
+	Equalizer3Bands *equalizer;
+
 public:
-	App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *settings, BluetoothSource *bluetoothsource);
+	App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *settings, BluetoothSource *bluetoothsource, Equalizer3Bands *equalizer);
 	~App();
 
 	void begin(ChangeNotifierCallback callback);
@@ -129,6 +131,14 @@ public:
 	void playURL(String url);
 
 	void shutdown();
+
+	void rgbtest(int r, int g, int b);
+
+	void equalizerLow(float value);
+
+	void equalizerMiddle(float value);
+
+	void equalizerHigh(float value);
 };
 
 #endif

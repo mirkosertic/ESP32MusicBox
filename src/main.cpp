@@ -85,8 +85,6 @@ void setup() {
 	INFO("Free PSRAM is %d", ESP.getFreePsram());
 }
 
-#define AUTO_SHUTDOWN_IN_MINUTES 10
-
 long lastIdleTime = -1;
 
 void loop() {

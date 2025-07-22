@@ -128,7 +128,7 @@ void RfidPlayerMode::setup() {
 	this->bluetoothout->begin(95);
 
 	this->tagscanner = new TagScanner(&Wire1, GPIO_PN532_IRQ, GPIO_PN532_RST);
-	this->app = new App(this->leds, this->tagscanner, this->player, this->settings, this->bluetoothsource);
+	this->app = new App(this->leds, this->tagscanner, this->player, this->settings, this->bluetoothsource, this->equalizer);
 	INFO("Core components created. Free HEAP is %d", ESP.getFreeHeap());
 
 	this->commandsHandle = xQueueCreate(10, sizeof(CommandData));

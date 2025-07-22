@@ -55,14 +55,14 @@ Sensors::~Sensors() {
 void Sensors::loop() {
 	static long lastcheck = millis();
 
-    // We check the buttons not in every main loop iteration, we check them timed...
+	// We check the buttons not in every main loop iteration, we check them timed...
 	long now = millis();
-    if (now - lastcheck > 30) {
+	if (now - lastcheck > 30) {
 		lastcheck = now;
 		this->prev->loop();
 		this->next->loop();
-	    this->startstop->loop();
-    }
+		this->startstop->loop();
+	}
 }
 
 bool Sensors::isStartStopPressed() {

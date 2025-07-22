@@ -11,6 +11,7 @@ enum LEDState {
 	VOLUME_CHANGE,
 	BTCONNECTING,
 	BTCONNECTED,
+	RGBTEST
 };
 
 class Leds {
@@ -22,6 +23,9 @@ private:
 	int framecounter;
 
 	bool btspeakerconnected;
+	int testr;
+	int testg;
+	int testb;
 
 	void renderPlayerStatusIdle(bool wifiEnabled, bool wifiConnected);
 	void renderPlayerStatusPlaying(int progressPercent);
@@ -30,6 +34,7 @@ private:
 	void renderVolumeChange(int volumePercent);
 	void renderBTConnected();
 	void renderBTConnecting();
+	void renderRGBTest();
 
 public:
 	Leds();
@@ -45,6 +50,8 @@ public:
 	void setBluetoothSpeakerConnected(bool value = true);
 
 	void end();
+
+	void rgbtest(int r, int g, int b);
 };
 
 #endif

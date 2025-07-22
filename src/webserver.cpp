@@ -553,6 +553,58 @@ void Webserver::initialize() {
 
     return response.send(); });
 
+	// LED Test
+	this->server->on("/ledtest", HTTP_GET, [this](PsychicRequest *request) {
+
+    INFO("webserver() - /ledtest received");
+  	int r = 255;
+    if (request->hasParam("r")) {
+		  r = request->getParam("r")->value().toInt();
+	  }
+	  int g = 255;
+	  if (request->hasParam("g")) {
+		  g = request->getParam("g")->value().toInt();
+	  }
+	  int b = 255;
+	  if (request->hasParam("b")) {
+		  b = request->getParam("b")->value().toInt();
+	  }
+
+	  this->app->rgbtest(r, g, b);
+
+	  PsychicJsonResponse response = PsychicJsonResponse(request);
+	  response.setContentType("application/json");
+	  response.setCode(200);
+	  response.addHeader("Cache-Control", "no-cache, must-revalidate");
+
+	  // JsonObject result = response.getRoot();
+
+	  return response.send(); });
+
+	// Equalizer
+	this->server->on("/equalizer", HTTP_GET, [this](PsychicRequest *request) {
+
+    INFO("webserver() - /equalizer received");
+
+    if (request->hasParam("low")) {
+  		this->app->equalizerLow(request->getParam("low")->value().toFloat());
+	  }
+	  if (request->hasParam("middle")) {
+		  this->app->equalizerMiddle(request->getParam("middle")->value().toFloat());
+	  }
+	  if (request->hasParam("high")) {
+		  this->app->equalizerHigh(request->getParam("high")->value().toFloat());
+	  }
+
+	  PsychicJsonResponse response = PsychicJsonResponse(request);
+	  response.setContentType("application/json");
+	  response.setCode(200);
+	  response.addHeader("Cache-Control", "no-cache, must-revalidate");
+
+	  // JsonObject result = response.getRoot();
+
+	  return response.send(); });
+
 	// Toggle start stop
 	this->server->on("/startstop", HTTP_GET, [this](PsychicRequest *request) {
 

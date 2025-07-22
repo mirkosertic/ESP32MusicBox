@@ -13,9 +13,12 @@ void SDMediaPlayerSource::setChangeIndexCallback(ChangeIndexCallback callback) {
 }
 
 Stream *SDMediaPlayerSource::selectStream(int index) {
-	INFO("Selecting next stream #%d", index);
+	INFO("Selecting next stream #%d, current path is %s", index, start_path);
 	this->currentStream = AudioSourceSD::selectStream(index);
 	this->changeindexcallback(this->currentStream);
+	if (this->currentStream != NULL) {
+		INFO("Got a new stream for this index!");
+	}
 	return this->currentStream;
 }
 

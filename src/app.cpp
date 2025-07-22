@@ -7,7 +7,7 @@
 #include <esp_mac.h>
 #include <esp_system.h>
 
-App::App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *settings, BluetoothSource *bluetoothsource) {
+App::App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *settings, BluetoothSource *bluetoothsource, Equalizer3Bands *equalizer) {
 	this->leds = leds;
 	this->tagscanner = tagscanner;
 	this->stateversion = 0;
@@ -17,6 +17,8 @@ App::App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *sett
 	this->player = player;
 	this->settings = settings;
 	this->bluetoothsource = bluetoothsource;
+
+	this->equalizer = equalizer;
 }
 
 App::~App() {
@@ -334,4 +336,29 @@ void App::shutdown() {
 	INFO("Shutting down everything")
 	this->leds->end();
 	esp_deep_sleep_start();
+}
+
+void App::rgbtest(int r, int g, int b) {
+	this->leds->rgbtest(r, g, b);
+}
+
+void App::equalizerLow(float value) {
+	INFO("Setting equalizer.low to %f", value);
+	ConfigEqualizer3Bands &eqconfig = this->equalizer->config();
+	eqconfig.gain_low = value;
+	this->equalizer->begin(eqconfig);
+}
+
+void App::equalizerMiddle(float value) {
+	INFO("Setting equalizer.middle to %f", value);
+	ConfigEqualizer3Bands &eqconfig = this->equalizer->config();
+	eqconfig.gain_medium = value;
+	this->equalizer->begin(eqconfig);
+}
+
+void App::equalizerHigh(float value) {
+	INFO("Setting equalizer.high to %f", value);
+	ConfigEqualizer3Bands &eqconfig = this->equalizer->config();
+	eqconfig.gain_high = value;
+	this->equalizer->begin(eqconfig);
 }
