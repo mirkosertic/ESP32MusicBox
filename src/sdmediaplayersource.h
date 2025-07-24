@@ -2,6 +2,7 @@
 #define SDMEDIAPLAYERSOURCE_H
 
 #include "mediaplayersource.h"
+#include "playstatemonitor.h"
 
 #include <AudioTools.h>
 #include <AudioTools/Disk/AudioSourceSD.h>
@@ -12,9 +13,10 @@ class SDMediaPlayerSource : public MediaPlayerSource, public AudioSourceSD {
 private:
 	ChangeIndexCallback changeindexcallback;
 	Stream *currentStream;
+	PlaystateMonitor *monitor;
 
 public:
-	SDMediaPlayerSource(const char *startFilePath = "/", const char *ext = ".mp3", bool setupIndex = true);
+	SDMediaPlayerSource(PlaystateMonitor *monitor, const char *startFilePath = "/", const char *ext = ".mp3", bool setupIndex = true);
 
 	void setChangeIndexCallback(ChangeIndexCallback callback);
 

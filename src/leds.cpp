@@ -125,7 +125,7 @@ void Leds::renderCardDetected() {
 		if (framepos > 5) {
 			// All Status Red
 			for (int i = 0; i < NUM_LEDS; i++) {
-				this->leds[i] = CRGB::Green % 192;
+				this->leds[i] = CRGB::Green;
 			}
 		}
 		FastLED.show();

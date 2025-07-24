@@ -32,6 +32,7 @@ private:
 	BufferRTOS<uint8_t> *buffer;
 	QueueStream<uint8_t> *bluetoothout;
 	BluetoothSource *bluetoothsource;
+	PlaystateMonitor *playstatemonitor;
 	QueueHandle_t commandsHandle;
 
 	bool bluetoothSpeakerConnected;

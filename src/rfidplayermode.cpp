@@ -19,7 +19,8 @@ void RfidPlayerMode::setup() {
 	this->wifiClient = new WiFiClient();
 
 	INFO("Initializing core components")
-	this->sourceSD = new SDMediaPlayerSource(STARTFILEPATH, MP3_FILE, true);
+	this->playstatemonitor = new PlaystateMonitor(&SD);
+	this->sourceSD = new SDMediaPlayerSource(this->playstatemonitor, STARTFILEPATH, MP3_FILE, true);
 	this->urlStream = new ICYStream(*this->wifiClient);
 	this->sourceURL = new URLMediaPlayerSource(*this->urlStream, "audio/mpeg", 0);
 	this->decoder = new MP3DecoderHelix();
@@ -437,7 +438,8 @@ ModeStatus RfidPlayerMode::loop() {
 
 				this->app->setVolume(volume / 100.0);
 
-				this->app->play(path, command.index);
+				// Check for last known playing position
+				this->app->play(path, this->playstatemonitor->lastPlayindexFor(path, command.index));
 			} else {
 				WARN("Unknown command : %d", command.command);
 			}

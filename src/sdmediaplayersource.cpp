@@ -2,10 +2,11 @@
 
 #include "logging.h"
 
-SDMediaPlayerSource::SDMediaPlayerSource(const char *startFilePath, const char *ext, bool setupIndex)
+SDMediaPlayerSource::SDMediaPlayerSource(PlaystateMonitor *monitor, const char *startFilePath, const char *ext, bool setupIndex)
 	: AudioSourceSD(startFilePath, ext, setupIndex) {
 	this->is_sd_setup = true;
 	this->currentStream = NULL;
+	this->monitor = monitor;
 }
 
 void SDMediaPlayerSource::setChangeIndexCallback(ChangeIndexCallback callback) {
@@ -18,6 +19,7 @@ Stream *SDMediaPlayerSource::selectStream(int index) {
 	this->changeindexcallback(this->currentStream);
 	if (this->currentStream != NULL) {
 		INFO("Got a new stream for this index!");
+		this->monitor->markPlayState(String(this->start_path), index);
 	}
 	return this->currentStream;
 }

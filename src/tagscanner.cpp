@@ -102,7 +102,7 @@ void TagScanner::scan() {
 	// 'uid' will be populated with the UID, and uidLength will indicate
 	// if the uid is 4 bytes (Mifare Classic) or 7 bytes (Mifare Ultralight)
 	INFO("Trying to read a card");
-	bool tagscannersuccess = this->pn532->readPassiveTargetID(PN532_MIFARE_ISO14443A, &tagscanneruid[0], &tagscanneruidLength, 200);
+	bool tagscannersuccess = this->pn532->readPassiveTargetID(PN532_MIFARE_ISO14443A, &tagscanneruid[0], &tagscanneruidLength, 100);
 
 	if (tagscannersuccess) {
 
