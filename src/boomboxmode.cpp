@@ -13,6 +13,8 @@ BoomboxMode::BoomboxMode(Leds *leds, Sensors *sensors)
 void BoomboxMode::setup() {
 	Mode::setup();
 
+	AudioToolsLogger.begin(Serial, AudioToolsLogLevel::Warning);
+
 	this->leds->setBootProgress(10);
 
 	INFO("Bluetooth sink configuration. Free HEAP is %d", ESP.getFreeHeap());

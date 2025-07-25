@@ -24,6 +24,8 @@ void MediaPlayer::playFromSD(String path, int index) {
 	INFO("Playing index %d", index);
 	this->setAudioSource(*this->sourceSD);
 	this->begin(index, true);
+
+	this->resetPlayDirection();
 }
 
 char *MediaPlayer::getCurrentPath() {
@@ -48,4 +50,9 @@ const char *MediaPlayer::currentSong() {
 
 int MediaPlayer::playProgressInPercent() {
 	return this->sourceSD->playProgressInPercent();
+}
+
+void MediaPlayer::resetPlayDirection() {
+	this->stream_increment = 1;
+	INFO("Stream increment set to %d", stream_increment);
 }

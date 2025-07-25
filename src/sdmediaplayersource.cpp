@@ -20,6 +20,8 @@ Stream *SDMediaPlayerSource::selectStream(int index) {
 	if (this->currentStream != NULL) {
 		INFO("Got a new stream for this index!");
 		this->monitor->markPlayState(String(this->start_path), index);
+	} else {
+		INFO("No new stream found for this index!");
 	}
 	return this->currentStream;
 }

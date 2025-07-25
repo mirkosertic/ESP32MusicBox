@@ -286,11 +286,11 @@ void App::previous() {
 		if (this->player->hasPrevious()) {
 			INFO("Previous title");
 			this->player->previous();
-
 			this->publishState();
 		} else {
 			WARN("Already at the beginning!");
 		}
+		this->player->resetPlayDirection();
 	} else {
 		WARN("Cannot go to previous title as player is not active!");
 	}
@@ -304,6 +304,7 @@ void App::next() {
 		} else {
 			this->publishState();
 		}
+		this->player->resetPlayDirection();
 	} else {
 		WARN("Cannot go to next title as player is not active!");
 	}

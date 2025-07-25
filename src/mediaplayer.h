@@ -29,6 +29,8 @@ public:
 	void playFromSD(String path, int index);
 
 	char *getCurrentPath();
+
+	void resetPlayDirection();
 };
 
 #endif

@@ -16,6 +16,8 @@ RfidPlayerMode::RfidPlayerMode(Leds *leds, Sensors *sensors)
 void RfidPlayerMode::setup() {
 	Mode::setup();
 
+	AudioToolsLogger.begin(Serial, AudioToolsLogLevel::Warning);
+
 	this->wifiClient = new WiFiClient();
 
 	INFO("Initializing core components")
