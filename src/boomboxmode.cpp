@@ -60,7 +60,7 @@ ModeStatus BoomboxMode::loop() {
 	int pincode = this->bluetoothsink->pinCode();
 	if (pincode != 0 && !this->connected) {
 		DEBUG("Got PIN code %d for confirmation", pincode);
-		if (this->sensors->isPreviousPressed()) {
+		if (this->sensors->isNextPressed()) {
 			this->bluetoothsink->confirmPinCode();
 		} else {
 			static bool switchstate = false;

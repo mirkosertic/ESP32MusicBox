@@ -57,12 +57,12 @@ void setup() {
 	leds->setState(BOOT);
 
 	sensors = new Sensors();
-	if (!sensors->isPreviousPressed()) {
-		INFO("Booting into RFID player mode");
-		mode = new RfidPlayerMode(leds, sensors);
-	} else {
+	if (sensors->isNextPressed()) {
 		INFO("Booting into Bluetooth Boombox mode");
 		mode = new BoomboxMode(leds, sensors);
+	} else {
+		INFO("Booting into RFID player mode");
+		mode = new RfidPlayerMode(leds, sensors);
 	}
 
 	mode->setup();

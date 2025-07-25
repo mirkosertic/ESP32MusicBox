@@ -31,6 +31,7 @@ void PlaystateMonitor::markPlayState(String directory, int index) {
 
 	// We store the progress with the path as its key and the index as the value
 	document[directory] = index;
+	document['.lastused'] = directory;
 
 	// Write it back to FS
 	configFile = this->fs->open(PLAYSTATE_CONFIG_FILE, FILE_WRITE, true);
