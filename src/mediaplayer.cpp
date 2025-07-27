@@ -56,3 +56,7 @@ void MediaPlayer::resetPlayDirection() {
 	this->stream_increment = 1;
 	INFO("Stream increment set to %d", stream_increment);
 }
+
+String MediaPlayer::currentDirectory() {
+	return String(currentpath);
+}

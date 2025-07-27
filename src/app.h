@@ -8,6 +8,7 @@
 #include "commands.h"
 #include "leds.h"
 #include "mediaplayer.h"
+#include "playstatemonitor.h"
 #include "tagscanner.h"
 #include "userfeedbackhandler.h"
 #include "voiceassistant.h"
@@ -47,9 +48,10 @@ private:
 	ChangeNotifierCallback changecallback;
 
 	Equalizer3Bands *equalizer;
+	PlaystateMonitor *monitor;
 
 public:
-	App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *settings, BluetoothSource *bluetoothsource, Equalizer3Bands *equalizer);
+	App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *settings, BluetoothSource *bluetoothsource, Equalizer3Bands *equalizer, PlaystateMonitor *monitor);
 	~App();
 
 	void begin(ChangeNotifierCallback callback);

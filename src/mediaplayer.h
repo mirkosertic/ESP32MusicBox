@@ -31,6 +31,8 @@ public:
 	char *getCurrentPath();
 
 	void resetPlayDirection();
+
+	String currentDirectory();
 };
 
 #endif

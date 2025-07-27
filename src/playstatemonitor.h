@@ -12,6 +12,8 @@ public:
 
 	void markPlayState(String directory, int index);
 	int lastPlayindexFor(String directory, int defaultIndex);
+
+	String lastPlaybackDirectory();
 };
 
 #endif

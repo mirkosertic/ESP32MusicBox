@@ -7,7 +7,7 @@
 #include <esp_mac.h>
 #include <esp_system.h>
 
-App::App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *settings, BluetoothSource *bluetoothsource, Equalizer3Bands *equalizer) {
+App::App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *settings, BluetoothSource *bluetoothsource, Equalizer3Bands *equalizer, PlaystateMonitor *monitor) {
 	this->leds = leds;
 	this->tagscanner = tagscanner;
 	this->stateversion = 0;
@@ -19,6 +19,7 @@ App::App(Leds *leds, TagScanner *tagscanner, MediaPlayer *player, Settings *sett
 	this->bluetoothsource = bluetoothsource;
 
 	this->equalizer = equalizer;
+	this->monitor = monitor;
 }
 
 App::~App() {
@@ -276,7 +277,22 @@ void App::toggleActiveState() {
 	const std::lock_guard<std::mutex> lock(this->loopmutex);
 
 	INFO("Toggling player state");
-	this->player->setActive(!this->player->isActive());
+	bool oldState = this->player->isActive();
+	if (!oldState && String("/").equals(this->player->currentDirectory())) {
+		INFO("Trying to find the last playback direytory after boot");
+		// we are in the root directory, so initial stand after booting.
+		// We try to find the lastest playback directory and index to start from there
+		String lastDirectory = this->monitor->lastPlaybackDirectory();
+		if (lastDirectory.length() > 0) {
+			int index = this->monitor->lastPlayindexFor(lastDirectory, 0);
+			INFO("Playing directory %s at index %d", lastDirectory.c_str(), index);
+			this->play(lastDirectory, index);
+		} else {
+			INFO("No last playback directory found");
+		}
+	} else {
+		this->player->setActive(!oldState);
+	}
 	this->publishState();
 }
 

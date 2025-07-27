@@ -70,3 +70,30 @@ int PlaystateMonitor::lastPlayindexFor(String directory, int defaultIndex) {
 	INFO("No last index found for directory %s. Starting with default %d", directory.c_str(), defaultIndex);
 	return defaultIndex;
 }
+
+String PlaystateMonitor::lastPlaybackDirectory() {
+	// Try to read configuration file from fs...
+	File configFile = this->fs->open(PLAYSTATE_CONFIG_FILE, FILE_READ);
+	JsonDocument document;
+	if (!configFile) {
+		INFO("No playstate config file detected!");
+		return "";
+	}
+	DeserializationError error = deserializeJson(document, configFile);
+	configFile.close();
+
+	if (error) {
+		WARN("Could not read playstate config file!");
+		return "";
+	}
+
+	// We store the progress with the path as its key and the index as the value
+	if (document[".lastused"].is<String>()) {
+		String result = document[".lastused"].as<String>();
+		INFO("Last playback directory was %s", result.c_str());
+		return result;
+	}
+
+	INFO("No last used directory found");
+	return "";
+}
