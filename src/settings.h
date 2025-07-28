@@ -75,6 +75,8 @@ public:
 	float getEqualizerLow();
 	float getEqualizerMiddle();
 	float getEqualizerHigh();
+
+	float getBootVolume();
 };
 
 #endif

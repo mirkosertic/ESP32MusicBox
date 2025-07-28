@@ -276,9 +276,9 @@ void App::setVolume(float volume, bool publishstate) {
 void App::toggleActiveState() {
 	const std::lock_guard<std::mutex> lock(this->loopmutex);
 
-	INFO("Toggling player state");
+	INFO("Toggling player state, player directory is %s", this->player->currentDirectory().c_str());
 	bool oldState = this->player->isActive();
-	if (!oldState && String("/").equals(this->player->currentDirectory())) {
+	if (!oldState && (String("/").equals(this->player->currentDirectory())) || (this->player->currentDirectory().length() == 0)) {
 		INFO("Trying to find the last playback direytory after boot");
 		// we are in the root directory, so initial stand after booting.
 		// We try to find the lastest playback directory and index to start from there
@@ -286,14 +286,17 @@ void App::toggleActiveState() {
 		if (lastDirectory.length() > 0) {
 			int index = this->monitor->lastPlayindexFor(lastDirectory, 0);
 			INFO("Playing directory %s at index %d", lastDirectory.c_str(), index);
-			this->play(lastDirectory, index);
+
+			this->player->playFromSD(lastDirectory, index);
+
+			this->publishState();
 		} else {
 			INFO("No last playback directory found");
 		}
 	} else {
 		this->player->setActive(!oldState);
+		this->publishState();
 	}
-	this->publishState();
 }
 
 void App::previous() {

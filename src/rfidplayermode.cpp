@@ -319,9 +319,7 @@ void RfidPlayerMode::setup() {
 
 	this->leds->setBootProgress(90);
 
-	// setup player, the player runs with default volume
-	// TODO: Store in configuration?
-	this->player->setVolume(0.6);
+	this->player->setVolume(settings->getBootVolume());
 
 	// Start the physical button controller logic
 	this->sensors->begin(this->app);

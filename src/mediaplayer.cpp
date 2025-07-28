@@ -7,6 +7,7 @@ MediaPlayer::MediaPlayer(SDMediaPlayerSource &sourceSD, URLMediaPlayerSource &so
 	this->sourceSD = &sourceSD;
 	this->sourceURL = &sourceURL;
 	this->currentpath = new char[512];
+	strcpy(this->currentpath, String("/").c_str());
 }
 
 bool MediaPlayer::hasPrevious() {

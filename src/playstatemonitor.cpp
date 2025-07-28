@@ -31,7 +31,7 @@ void PlaystateMonitor::markPlayState(String directory, int index) {
 
 	// We store the progress with the path as its key and the index as the value
 	document[directory] = index;
-	document['.lastused'] = directory;
+	document["lastused"] = directory;
 
 	// Write it back to FS
 	configFile = this->fs->open(PLAYSTATE_CONFIG_FILE, FILE_WRITE, true);
@@ -88,8 +88,8 @@ String PlaystateMonitor::lastPlaybackDirectory() {
 	}
 
 	// We store the progress with the path as its key and the index as the value
-	if (document[".lastused"].is<String>()) {
-		String result = document[".lastused"].as<String>();
+	if (document["lastused"].is<String>()) {
+		String result = document["lastused"].as<String>();
 		INFO("Last playback directory was %s", result.c_str());
 		return result;
 	}

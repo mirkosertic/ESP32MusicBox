@@ -452,3 +452,7 @@ float Settings::getEqualizerMiddle() {
 float Settings::getEqualizerHigh() {
 	return this->equalizerHigh;
 }
+
+float Settings::getBootVolume() {
+	return 0.2;
+}
