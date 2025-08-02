@@ -73,16 +73,16 @@ void Leds::renderPlayerStatusPlaying(int progressPercent) {
 		this->leds[i] = CRGB::Black;
 	}
 
-	int maxbrightness = 80;
+	int maxbrightness = 255;
 
 	int total = NUM_LEDS * maxbrightness;
 	int progress = (int) (total / 100.0 * progressPercent);
 	int index = 0;
 	while (progress > 0) {
+		CRGB color = this->btspeakerconnected ? CRGB::Blue : CRGB::Green;
 		int v = min(maxbrightness, progress);
-		CHSV targetHSV = rgb2hsv_approximate(this->btspeakerconnected ? CRGB::Blue : CRGB::Green);
-		targetHSV.v = v;
-		this->leds[index++] = targetHSV;
+		color = color.fadeToBlackBy(255 - v);
+		this->leds[index++] = color;
 		progress -= v;
 	}
 	FastLED.show();
