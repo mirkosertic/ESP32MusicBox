@@ -307,7 +307,9 @@ void App::previous() {
 			this->player->previous();
 			this->publishState();
 		} else {
-			WARN("Already at the beginning!");
+			WARN("Already at the beginning, starting again!");
+			this->player->previous(0);
+			this->publishState();
 		}
 		this->player->resetPlayDirection();
 	} else {

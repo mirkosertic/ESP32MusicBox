@@ -4,6 +4,15 @@
 
 #include <ArduinoJson.h>
 
+void mqttTaskCallback(void *parameters) {
+	MQTT *target = (MQTT *) parameters;
+	INFO("MQTT polling task started");
+	while (true) {
+		target->loop();
+		vTaskDelay(10);
+	}
+}
+
 MQTT::MQTT(WiFiClient &wifiClient, App *app) {
 	this->app = app;
 	this->pubsubclient = new PubSubClient(wifiClient);
@@ -37,6 +46,8 @@ void MQTT::begin(String host, int port, String username, String password, String
                                         } });
 
 	this->initialized = true;
+	INFO("Starting new MQTT Task");
+	xTaskCreate(mqttTaskCallback, "MQTT", 16384, this, 10, &this->loopHandle);
 }
 
 void MQTT::loop() {

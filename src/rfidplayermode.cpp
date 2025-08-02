@@ -402,8 +402,6 @@ ModeStatus RfidPlayerMode::loop() {
 				lastchecktime = now;
 			}
 		} else {
-			this->mqtt->loop();
-
 			this->webserver->loop();
 
 			// The hole thing here is that the audiolib and the audioplayer are not

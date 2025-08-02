@@ -36,6 +36,8 @@ private:
 
 	String configurationUrl;
 
+	TaskHandle_t loopHandle;
+
 	String announceButton(String buttonId, String title, String icon, const std::function<void()> &clickHandler);
 
 	String announceNumber(String numberId, String title, String icon, String mode, float min, float max, const std::function<void(String)> &changeHandler);
