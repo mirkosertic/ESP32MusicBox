@@ -6,6 +6,8 @@
 Sensors::Sensors() {
 	pinMode(GPIO_VOLTAGE_MEASURE, INPUT);
 
+	this->resetCommandSent = false;
+
 	this->startstop = new Button(GPIO_STARTSTOP, 300, [this](ButtonAction action) {
         if (action == PRESSED)
         {
@@ -19,7 +21,7 @@ Sensors::Sensors() {
             INFO("Prev button released");            
             this->handler->previous();
         }
-        if (action == PRESSED_FOR_LONG_TIME)
+        if (action == PRESSED_FOR_LONG_TIME && !this->next->isPressesForALongTime())
         {   
             if (this->handler->volumeDown())
             {
@@ -33,7 +35,7 @@ Sensors::Sensors() {
             INFO("Next button released");                        
             this->handler->next();
         }
-        if (action == PRESSED_FOR_LONG_TIME)
+        if (action == PRESSED_FOR_LONG_TIME && !this->prev->isPressesForALongTime())
         {
             if (this->handler->volumeUp())
             {
@@ -62,6 +64,18 @@ void Sensors::loop() {
 		this->prev->loop();
 		this->next->loop();
 		this->startstop->loop();
+
+		if (this->prev->isPressesForALongTime() && this->next->isPressesForALongTime()) {
+			if (!this->resetCommandSent) {
+				INFO("Resetting playback to start");
+				this->resetCommandSent = true;
+				this->handler->resetPlaybackToStart();
+			} else {
+				DEBUG("Reset command already sent.");
+			}
+		} else {
+			this->resetCommandSent = false;
+		}
 	}
 }
 

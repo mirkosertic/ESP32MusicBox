@@ -7,6 +7,7 @@
 Button::Button(int pin, long sensitivity, ButtonHandler handler) {
 	this->pin = pin;
 	this->pressed = false;
+	this->pressedForLongTime = false;
 	this->statetime = 0;
 	this->sensitivity = sensitivity;
 	this->handler = handler;
@@ -19,7 +20,12 @@ bool Button::isPressed() {
 	return input == HIGH;
 }
 
+bool Button::isPressesForALongTime() {
+	return pressedForLongTime;
+}
+
 void Button::loop() {
+	this->pressedForLongTime = false;
 	long currenttime = millis();
 	if (!this->isPressed()) {
 		// Open
@@ -45,6 +51,7 @@ void Button::loop() {
 	}
 
 	if (this->pressed && (currenttime - this->statetime) > sensitivity) {
+		this->pressedForLongTime = true;
 		this->handler(PRESSED_FOR_LONG_TIME);
 	}
 }

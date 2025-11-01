@@ -11,6 +11,7 @@ private:
 	Button *prev;
 	Button *next;
 	Button *startstop;
+	bool resetCommandSent;
 
 public:
 	Sensors();

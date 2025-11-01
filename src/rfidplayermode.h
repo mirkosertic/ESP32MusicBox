@@ -14,6 +14,7 @@
 #include "webserver.h"
 
 #include <AudioTools/AudioCodecs/CodecMP3Helix.h>
+#include <AudioTools/Communication/HTTP/ICYStream.h>
 
 class RfidPlayerMode : public Mode {
 private:

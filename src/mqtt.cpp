@@ -138,7 +138,7 @@ String MQTT::announceButton(String buttonId, String title, String icon, const st
 	String stateTopic = topicPrefix + "/state";
 
 	JsonDocument discoverypayload;
-	discoverypayload["object_id"] = objectId;
+	discoverypayload["default_entity_id"] = objectId;
 	discoverypayload["unique_id"] = objectId;
 	discoverypayload["state_topic"] = stateTopic;
 	discoverypayload["command_topic"] = commandTopic;
@@ -183,7 +183,7 @@ String MQTT::announceNumber(String numberId, String title, String icon, String m
 	String stateTopic = topicPrefix + "/state";
 
 	JsonDocument discoverypayload;
-	discoverypayload["object_id"] = objectId;
+	discoverypayload["default_entity_id"] = objectId;
 	discoverypayload["unique_id"] = objectId;
 	discoverypayload["state_topic"] = stateTopic;
 	discoverypayload["command_topic"] = commandTopic;
@@ -227,7 +227,7 @@ String MQTT::announceSensor(String notifyId, String title, String icon, String d
 	String stateTopic = topicPrefix + "/state";
 
 	JsonDocument discoverypayload;
-	discoverypayload["object_id"] = objectId;
+	discoverypayload["default_entity_id"] = objectId;
 	discoverypayload["unique_id"] = objectId;
 	discoverypayload["state_topic"] = stateTopic;
 	discoverypayload["name"] = title;
@@ -269,7 +269,7 @@ String MQTT::announceTagscanner(String notifyId) {
 	String topic = topicPrefix + "/state";
 
 	JsonDocument discoverypayload;
-	discoverypayload["object_id"] = objectId;
+	discoverypayload["default_entity_id"] = objectId;
 	discoverypayload["unique_id"] = objectId;
 	discoverypayload["topic"] = topic;
 	discoverypayload["value_template"] = "{{value_json.UID}}";

@@ -17,6 +17,7 @@ private:
 	int pin;
 	long statetime;
 	bool pressed;
+	bool pressedForLongTime;
 	long sensitivity;
 	ButtonHandler handler;
 
@@ -26,6 +27,8 @@ public:
 	void loop();
 
 	bool isPressed();
+
+	bool isPressesForALongTime();
 };
 
 #endif

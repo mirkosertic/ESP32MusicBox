@@ -14,6 +14,8 @@ public:
 	virtual void previous() = 0;
 
 	virtual void next() = 0;
+
+	virtual void resetPlaybackToStart() = 0;
 };
 
 #endif

@@ -331,6 +331,18 @@ void App::next() {
 	}
 }
 
+void App::resetPlaybackToStart() {
+	const std::lock_guard<std::mutex> lock(this->loopmutex);
+	if (this->player->isActive()) {
+		INFO("Resetting playback to start index 0");
+		this->leds->setState(CARD_DETECTED);
+		this->player->begin(0, true);
+		this->publishState();
+	} else {
+		WARN("Cannot reset playback to start as player is not active!");
+	}
+}
+
 void App::play(String path, int index) {
 	const std::lock_guard<std::mutex> lock(this->loopmutex);
 

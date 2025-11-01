@@ -48,3 +48,4 @@ Status visualization with LEDs:
 - Leds green to red - While changing volume
 - Keep button 1 pressed during startup. Leds will turn blue to indicate Bluetooth Speaker mode.
 - Yellow flashing LEDs indicate a Bluetooth pairing request while in Speaker mode. Press button 1 again to confirm the pairing. LEDs will flash in blue to confirm pairing
+- Keep button 1 and button 2 pressed during playback to start from beginning

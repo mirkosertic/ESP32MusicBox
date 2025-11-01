@@ -71,3 +71,8 @@ bool BluetoothSink::volumeDown() {
 	this->sink->volume_down();
 	return false;
 }
+
+void BluetoothSink::resetPlaybackToStart() {
+	INFO("Sending Reset Playback To Start command to Bluetooth device");
+	this->sink->rewind();
+}

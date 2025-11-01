@@ -18,6 +18,7 @@ class Leds {
 private:
 	LEDState state;
 	CRGB leds[NUM_LEDS];
+	CRGB templeds[NUM_LEDS];
 	long lastStateTime;
 	long lastLoopTime;
 	int framecounter;
@@ -35,6 +36,8 @@ private:
 	void renderBTConnected();
 	void renderBTConnecting();
 	void renderRGBTest();
+
+	void show();
 
 public:
 	Leds();

@@ -128,6 +128,8 @@ public:
 
 	void next() override;
 
+	void resetPlaybackToStart() override;
+
 	void play(String path, int index);
 
 	void playURL(String url);

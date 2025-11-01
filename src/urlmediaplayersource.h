@@ -3,6 +3,8 @@
 
 #include "mediaplayersource.h"
 
+#include <AudioTools.h>
+#include <AudioTools/Communication/HTTP/AbstractURLStream.h>
 #include <AudioTools/Disk/AudioSourceURL.h>
 
 class URLMediaPlayerSource : public MediaPlayerSource, public AudioSourceDynamicURL {

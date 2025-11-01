@@ -32,6 +32,7 @@ public:
 	virtual void next() override;
 	virtual bool volumeUp() override;
 	virtual bool volumeDown() override;
+	virtual void resetPlaybackToStart() override;
 };
 
 #endif

@@ -11,4 +11,4 @@ kicad/lolin_d32_pro/musicbox-backups/*
 kicad/lolin_d32_pro/*.lck
 kicad/lolin_d32_pro/*.bak
 kicad/lolin_d32_pro/fp-info-cache
-
+Wconfig/secrets.txt

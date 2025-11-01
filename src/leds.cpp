@@ -15,14 +15,24 @@ Leds::Leds() {
 		this->leds[i] = CRGB::Black;
 	}
 
-	FastLED.addLeds<NEOPIXEL, GPIO_NEOPIXEL_DATA>(leds, NUM_LEDS);
+	FastLED.addLeds<NEOPIXEL, GPIO_NEOPIXEL_DATA>(templeds, NUM_LEDS);
 
 	this->lastLoopTime = 0;
 	this->framecounter = 0;
 }
 
-void Leds::begin() {
+void Leds::show() {
+	// Reverse the order into the temporary array
+	for (int i = 0; i < NUM_LEDS; i++) {
+		templeds[NUM_LEDS - 1 - i] = leds[i];
+	}
+
+	// Show the reversed data from the temporary array
 	FastLED.show();
+}
+
+void Leds::begin() {
+	this->show();
 }
 
 void Leds::setState(LEDState state) {
@@ -42,7 +52,7 @@ void Leds::setBootProgress(int percent) {
 	for (int i = 0; i < progress; i++) {
 		this->leds[i] = CRGB::White;
 	}
-	FastLED.show();
+	this->show();
 }
 
 void Leds::renderPlayerStatusIdle(bool wifiEnabled, bool wifiConnected) {
@@ -65,7 +75,7 @@ void Leds::renderPlayerStatusIdle(bool wifiEnabled, bool wifiConnected) {
 	for (int i = 0; i < NUM_LEDS; i++) {
 		this->leds[i] = color % v;
 	}
-	FastLED.show();
+	this->show();
 }
 
 void Leds::renderPlayerStatusPlaying(int progressPercent) {
@@ -85,7 +95,7 @@ void Leds::renderPlayerStatusPlaying(int progressPercent) {
 		this->leds[index++] = color;
 		progress -= v;
 	}
-	FastLED.show();
+	this->show();
 }
 
 void Leds::renderCardError() {
@@ -106,7 +116,7 @@ void Leds::renderCardError() {
 				this->leds[i] = CRGB::Red;
 			}
 		}
-		FastLED.show();
+		this->show();
 	}
 }
 
@@ -128,7 +138,7 @@ void Leds::renderCardDetected() {
 				this->leds[i] = CRGB::Green;
 			}
 		}
-		FastLED.show();
+		this->show();
 	}
 }
 
@@ -149,7 +159,7 @@ void Leds::renderBTConnecting() {
 				this->leds[i] = CRGB::Yellow % 192;
 			}
 		}
-		FastLED.show();
+		this->show();
 	}
 }
 
@@ -170,7 +180,7 @@ void Leds::renderBTConnected() {
 				this->leds[i] = CRGB::Blue % 192;
 			}
 		}
-		FastLED.show();
+		this->show();
 	}
 }
 
@@ -205,7 +215,7 @@ void Leds::renderVolumeChange(int volumePercent) {
 				this->leds[index++] = color;
 				progress -= v;
 			}
-			FastLED.show();
+			this->show();
 		}
 	}
 }
@@ -216,7 +226,7 @@ void Leds::renderRGBTest() {
 		this->leds[i].g = testg;
 		this->leds[i].b = testb;
 	}
-	FastLED.show();
+	this->show();
 }
 
 void Leds::loop(bool wifiEnabled, bool wifiConnected, bool playbackActive, int volumePercent, int progressPercent) {
