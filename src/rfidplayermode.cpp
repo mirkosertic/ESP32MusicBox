@@ -172,6 +172,8 @@ void RfidPlayerMode::setup() {
 	WiFi.persistent(false);
 	WiFi.mode(WIFI_STA);
 	WiFi.setHostname(app->computeTechnicalName().c_str());
+	WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
+	WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
 	WiFi.setAutoReconnect(true);
 
 	this->settings->initializeWifiFromSettings();
