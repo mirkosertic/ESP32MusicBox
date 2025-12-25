@@ -982,7 +982,7 @@ void Webserver::initialize() {
         return ESP_FAIL;
       }
 
-      close(content);
+      content.close();
 
       return ESP_OK; });
 	puthandler->onRequest([this](PsychicRequest *request) {
