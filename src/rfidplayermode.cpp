@@ -116,7 +116,7 @@ void RfidPlayerMode::setup() {
                 }
                 } },
 		// Read data callback
-		[](uint8_t *data, int32_t len) {
+		[](uint8_t *data, int32_t len) -> int32_t {
 			if (globalRfidPlayerMode->buffer->available() < len) {
 				// Need more data
 				return 0;
