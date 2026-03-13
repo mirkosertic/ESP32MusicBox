@@ -130,6 +130,7 @@ Webserver::Webserver(FS *fs, App *app, uint16_t wsportnumber, const char *ext, S
 	this->server = new PsychicHttpServer();
 	this->ext = ext;
 	this->settings = settings;
+	this->udp = nullptr;
 }
 
 Webserver::~Webserver() {
@@ -1130,6 +1131,7 @@ void Webserver::loop() {
 	// SSDP
 
 	// Incoming messages
+	if (!this->udp) return;
 	int packetSize = this->udp->parsePacket();
 	if (packetSize) {
 		char packetBuffer[512];
