@@ -33,8 +33,8 @@ void RfidPlayerMode::setup() {
 	this->player->setAudioInfo(defaultAudioInfo);
 
 	// Initialize the equalizer
-	ConfigEqualizer3Bands eqconfig = this->equalizer->defaultConfig();
-	eqconfig.copyFrom(defaultAudioInfo);
+	ConfigEqualizer3Bands& eqconfig = this->equalizer->config();
+	eqconfig.bits_per_sample = 16;
 	eqconfig.gain_low = this->settings->getEqualizerLow();
 	eqconfig.gain_medium = this->settings->getEqualizerMiddle();
 	eqconfig.gain_high = this->settings->getEqualizerHigh();
