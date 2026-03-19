@@ -6,8 +6,9 @@
 #include "pins.h"
 
 DEFINE_GRADIENT_PALETTE(volume_heatmap) {
-	224, 0, 255, 0,
-	224, 255, 0, 0};
+	0, 0, 255, 0,
+	128, 160, 0, 0,
+	255, 255, 0, 0};
 
 Leds::Leds() {
 	this->btspeakerconnected = false;
@@ -269,6 +270,7 @@ void Leds::end() {
 }
 
 void Leds::rgbtest(int r, int g, int b) {
+	INFO("Setting RGB testcolor to r=%d g=%d b=%d", r, g, b);
 	testr = r;
 	testg = g;
 	testb = b;

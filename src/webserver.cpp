@@ -128,6 +128,7 @@ Webserver::Webserver(FS *fs, App *app, uint16_t wsportnumber, const char *ext, S
 	this->app = app;
 	this->wsport = wsportnumber;
 	this->server = new PsychicHttpServer();
+  this->server->config.stack_size = 8192;
 	this->ext = ext;
 	this->settings = settings;
 	this->udp = nullptr;
@@ -476,7 +477,7 @@ void Webserver::initialize() {
     return response.send(); });
 
 	// LED Test
-	this->server->on("/ledtest", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* resp) {
+	this->server->on("/ledtest", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* response) {
 
     INFO("webserver() - /ledtest received");
   	int r = 255;
@@ -494,14 +495,12 @@ void Webserver::initialize() {
 
 	  this->app->rgbtest(r, g, b);
 
-	  PsychicJsonResponse response = PsychicJsonResponse(resp);
-	  response.setContentType("application/json");
-	  response.setCode(200);
-	  response.addHeader("Cache-Control", "no-cache, must-revalidate");
+	  //PsychicJsonResponse response = PsychicJsonResponse(resp);
+	  response->setContentType("application/json");
+	  response->setCode(200);
+	  response->addHeader("Cache-Control", "no-cache, must-revalidate");
 
-	  // JsonObject result = response.getRoot();
-
-	  return response.send(); });
+	  return response->send(); });
 
 	// Equalizer
 	this->server->on("/equalizer", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* resp) {
