@@ -128,7 +128,7 @@ Webserver::Webserver(FS *fs, App *app, uint16_t wsportnumber, const char *ext, S
 	this->app = app;
 	this->wsport = wsportnumber;
 	this->server = new PsychicHttpServer();
-  this->server->config.stack_size = 8192;
+  this->server->config.stack_size = 16384;
 	this->ext = ext;
 	this->settings = settings;
 	this->udp = nullptr;
@@ -167,7 +167,6 @@ void Webserver::initialize() {
       PsychicStreamResponse strresp(response, "text/html");
 
       strresp.addHeader("Cache-Control", "no-cache, must-revalidate");
-      strresp.setContentType("text/html");
       strresp.setContentLength(content_length);
 
       strresp.beginSend();
@@ -178,12 +177,8 @@ void Webserver::initialize() {
 
       INFO("webserver() - Rendering /status.json");
 
-      PsychicJsonResponse response = PsychicJsonResponse(resp);
-      response.setContentType("application/json");
-      response.setCode(200);
-      response.addHeader("Cache-Control", "no-cache, must-revalidate");
-
-      JsonObject result = response.getRoot();
+      JsonDocument doc;
+      JsonObject result = doc.to<JsonObject>();
 
       if (this->app->getTagPresent())
       {
@@ -216,18 +211,19 @@ void Webserver::initialize() {
         result["songinfo"] = "-";
       }
 
-      return response.send(); });
+      PsychicStreamResponse response(resp, "application/json");
+      response.setCode(200);
+      response.addHeader("Cache-Control", "no-cache, must-revalidate");
+      response.beginSend();
+      serializeJson(doc, response);
+      return response.endSend(); });
 
 	this->server->on("/files.json", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* resp) {
 
       INFO("webserver() - Rendering /files.json");
 
-      PsychicJsonResponse response = PsychicJsonResponse(resp);
-      response.setContentType("application/json");
-      response.setCode(200);
-      response.addHeader("Cache-Control", "no-cache, must-revalidate");
-
-      JsonObject result = response.getRoot();
+      JsonDocument doc;
+      JsonObject result = doc.to<JsonObject>();
 
       INFO("webserver() - FS scan");
       File root;
@@ -299,7 +295,12 @@ void Webserver::initialize() {
       }
       INFO("webserver() - FS scan done");
 
-      return response.send(); });
+      PsychicStreamResponse response(resp, "application/json");
+      response.setCode(200);
+      response.addHeader("Cache-Control", "no-cache, must-revalidate");
+      response.beginSend();
+      serializeJson(doc, response);
+      return response.endSend(); });
 
 	this->server->on("/networks.html", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* resp) {
 
@@ -310,7 +311,6 @@ void Webserver::initialize() {
 
       PsychicStreamResponse response(resp, "text/html");
       response.addHeader("Cache-Control", "no-cache, must-revalidate");
-      response.setContentType("text/html");
       response.setContentLength(content_length);
 
       response.beginSend();
@@ -322,12 +322,8 @@ void Webserver::initialize() {
 
       INFO("webserver() - Rendering /networks.json");
 
-      PsychicJsonResponse response = PsychicJsonResponse(resp);
-      response.setContentType("application/json");
-      response.setCode(200);
-      response.addHeader("Cache-Control", "no-cache, must-revalidate");
-
-      JsonObject result = response.getRoot();
+      JsonDocument doc;
+      JsonObject result = doc.to<JsonObject>();
 
       result["appname"] = this->app->getName();
       result["wifistatus"] = categorizeRSSI(WiFi.RSSI());
@@ -393,7 +389,12 @@ void Webserver::initialize() {
       // Delete the scan result to free memory for code below.
       WiFi.scanDelete();
 
-      return response.send(); });
+      PsychicStreamResponse response(resp, "application/json");
+      response.setCode(200);
+      response.addHeader("Cache-Control", "no-cache, must-revalidate");
+      response.beginSend();
+      serializeJson(doc, response);
+      return response.endSend(); });
 
 	this->server->on("/settings.html", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* resp) {
 
@@ -403,7 +404,6 @@ void Webserver::initialize() {
       size_t content_length = strlen_P(SETTINGS_TEMPLATE);
       
       PsychicStreamResponse response(resp, "text/html");
-      response.setContentType("text/html");
       response.addHeader("Cache-Control", "no-cache, must-revalidate");
       response.setContentLength(content_length);
 
@@ -416,18 +416,19 @@ void Webserver::initialize() {
 
       INFO("webserver() - Rendering /settings.json");
 
-      PsychicJsonResponse response = PsychicJsonResponse(resp);
-      response.setContentType("application/json");
-      response.setCode(200);
-      response.addHeader("Cache-Control", "no-cache, must-revalidate");
-
-      JsonObject result = response.getRoot();
+      JsonDocument doc;
+      JsonObject result = doc.to<JsonObject>();
 
       result["appname"] = this->app->getName();
-      result["wifistatus"] = categorizeRSSI(WiFi.RSSI());    
-      result["settingsjson"] = this->settings->getSettingsAsJson();   
+      result["wifistatus"] = categorizeRSSI(WiFi.RSSI());
+      result["settingsjson"] = this->settings->getSettingsAsJson();
 
-      return response.send(); });
+      PsychicStreamResponse response(resp, "application/json");
+      response.setCode(200);
+      response.addHeader("Cache-Control", "no-cache, must-revalidate");
+      response.beginSend();
+      serializeJson(doc, response);
+      return response.endSend(); });
 
 	this->server->on("/updateconfig", HTTP_POST, [this](PsychicRequest *request, PsychicResponse* response) {
 
@@ -452,7 +453,6 @@ void Webserver::initialize() {
       size_t content_length = strlen_P(WEBRADIO_TEMPLATE);
       
       PsychicStreamResponse response(resp, "text/html");
-      response.setContentType("text/html");
       response.addHeader("Cache-Control", "no-cache, must-revalidate");
       response.setContentLength(content_length);
 
@@ -467,14 +467,15 @@ void Webserver::initialize() {
     INFO("webserver() - /shutdown received");
     this->app->shutdown();
 
-    PsychicJsonResponse response = PsychicJsonResponse(resp);
-    response.setContentType("application/json");
+    JsonDocument doc;
+    doc.to<JsonObject>();
+
+    PsychicStreamResponse response(resp, "application/json");
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
-
-    // JsonObject result = response.getRoot();
-
-    return response.send(); });
+    response.beginSend();
+    serializeJson(doc, response);
+    return response.endSend(); });
 
 	// LED Test
 	this->server->on("/ledtest", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* response) {
@@ -517,14 +518,15 @@ void Webserver::initialize() {
 		  this->app->equalizerHigh(request->getParam("high")->value().toFloat());
 	  }
 
-	  PsychicJsonResponse response = PsychicJsonResponse(resp);
-	  response.setContentType("application/json");
+	  JsonDocument doc;
+	  doc.to<JsonObject>();
+
+	  PsychicStreamResponse response(resp, "application/json");
 	  response.setCode(200);
 	  response.addHeader("Cache-Control", "no-cache, must-revalidate");
-
-	  // JsonObject result = response.getRoot();
-
-	  return response.send(); });
+	  response.beginSend();
+	  serializeJson(doc, response);
+	  return response.endSend(); });
 
 	// Toggle start stop
 	this->server->on("/startstop", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* resp) {
@@ -532,14 +534,15 @@ void Webserver::initialize() {
     INFO("webserver() - /startstop received");
     this->app->toggleActiveState();
 
-    PsychicJsonResponse response = PsychicJsonResponse(resp);
-    response.setContentType("application/json");
+    JsonDocument doc;
+    doc.to<JsonObject>();
+
+    PsychicStreamResponse response(resp, "application/json");
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
-
-    // JsonObject result = response.getRoot();
-
-    return response.send(); });
+    response.beginSend();
+    serializeJson(doc, response);
+    return response.endSend(); });
 
 	// Next
 	this->server->on("/next", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* resp) {
@@ -547,14 +550,15 @@ void Webserver::initialize() {
     INFO("webserver() - /next received");
     this->app->next();
 
-    PsychicJsonResponse response = PsychicJsonResponse(resp);
-    response.setContentType("application/json");
+    JsonDocument doc;
+    doc.to<JsonObject>();
+
+    PsychicStreamResponse response(resp, "application/json");
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
-
-    // JsonObject result = response.getRoot();
-
-    return response.send(); });
+    response.beginSend();
+    serializeJson(doc, response);
+    return response.endSend(); });
 
 	// Previous
 	this->server->on("/previous", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* resp) {
@@ -562,14 +566,15 @@ void Webserver::initialize() {
     INFO("webserver() - /previous received");
     this->app->previous();
 
-    PsychicJsonResponse response = PsychicJsonResponse(resp);
-    response.setContentType("application/json");
+    JsonDocument doc;
+    doc.to<JsonObject>();
+
+    PsychicStreamResponse response(resp, "application/json");
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
-
-    // JsonObject result = response.getRoot();
-
-    return response.send(); });
+    response.beginSend();
+    serializeJson(doc, response);
+    return response.endSend(); });
 
 	// play
 	this->server->on("/play", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* resp) {
@@ -581,14 +586,15 @@ void Webserver::initialize() {
 
     this->app->play(path, index);
 
-    PsychicJsonResponse response = PsychicJsonResponse(resp);
-    response.setContentType("application/json");
+    JsonDocument doc;
+    doc.to<JsonObject>();
+
+    PsychicStreamResponse response(resp, "application/json");
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
-
-    // JsonObject result = response.getRoot();
-
-    return response.send(); });
+    response.beginSend();
+    serializeJson(doc, response);
+    return response.endSend(); });
 
 	// playwebradio
 	this->server->on("/playwebradio", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* resp) {
@@ -599,14 +605,15 @@ void Webserver::initialize() {
 
     this->app->playURL(url);
 
-    PsychicJsonResponse response = PsychicJsonResponse(resp);
-    response.setContentType("application/json");
+    JsonDocument doc;
+    doc.to<JsonObject>();
+
+    PsychicStreamResponse response(resp, "application/json");
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
-
-    // JsonObject result = response.getRoot();
-
-    return response.send(); });
+    response.beginSend();
+    serializeJson(doc, response);
+    return response.endSend(); });
 
 	// volume
 	this->server->on("/volume", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* resp) {
@@ -617,14 +624,15 @@ void Webserver::initialize() {
 
     this->app->setVolume(volume / 100.0f);
 
-    PsychicJsonResponse response = PsychicJsonResponse(resp);
-    response.setContentType("application/json");
+    JsonDocument doc;
+    doc.to<JsonObject>();
+
+    PsychicStreamResponse response(resp, "application/json");
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
-
-    // JsonObject result = response.getRoot();
-
-    return response.send(); });
+    response.beginSend();
+    serializeJson(doc, response);
+    return response.endSend(); });
 
 	// assign
 	this->server->on("/assign", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* resp) {
@@ -646,14 +654,15 @@ void Webserver::initialize() {
 
     this->app->writeCommandToTag(command);
 
-    PsychicJsonResponse response = PsychicJsonResponse(resp);
-    response.setContentType("application/json");
+    JsonDocument doc;
+    doc.to<JsonObject>();
+
+    PsychicStreamResponse response(resp, "application/json");
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
-
-    // JsonObject result = response.getRoot();
-
-    return response.send(); });
+    response.beginSend();
+    serializeJson(doc, response);
+    return response.endSend(); });
 
 	// delete
 	this->server->on("/delete", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* resp) {
@@ -661,14 +670,15 @@ void Webserver::initialize() {
 
     this->app->clearTag();
 
-    PsychicJsonResponse response = PsychicJsonResponse(resp);
-    response.setContentType("application/json");
+    JsonDocument doc;
+    doc.to<JsonObject>();
+
+    PsychicStreamResponse response(resp, "application/json");
     response.setCode(200);
     response.addHeader("Cache-Control", "no-cache, must-revalidate");
-
-    // JsonObject result = response.getRoot();
-
-    return response.send(); });
+    response.beginSend();
+    serializeJson(doc, response);
+    return response.endSend(); });
 
 	this->server->on("/description.xml", HTTP_GET, [this](PsychicRequest *request, PsychicResponse* resp) {
                     INFO("webserver() - /description.xml received");
@@ -676,7 +686,6 @@ void Webserver::initialize() {
                     String data = this->getSSDPDescription();
 
                     PsychicStreamResponse response(resp, "application/xml");
-                    response.setContentType("application/xml");
                     response.addHeader("Cache-Control", "no-cache, must-revalidate");
                     response.setContentLength(data.length());
 
